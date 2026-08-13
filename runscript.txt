@@ -1,0 +1,13 @@
+
+python maket_hunter.py fetch "archon continuity"
+python maket_hunter.py fetch archon_continuity --slug
+
+
+python maket_hunter.py plot archon_continuity
+python maket_hunter.py plot archon_continuity --days 7
+
+python maket_hunter.py refresh-items --force
+
+python maket_hunter.py fetch-file mods.txt --slug
+
+
