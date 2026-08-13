@@ -1,6 +1,6 @@
-# Maket Hunter 🪐
+# Maket Hunter
 
-A little CLI that stalks [Warframe Market](https://warframe.market) prices so you don't have to alt-tab mid-mission.
+A little tool that stalks [Warframe Market](https://warframe.market) prices so you don't have to alt-tab mid-mission.
 
 Point it at an item (or a whole list of mods), and it snapshots the current buy/sell orders into a local database. Run it a few times over a few days and you've got a price history you can plot — enough to spot when a mod is actually worth selling, or when someone's dumping cheap copies.
 
