@@ -1,0 +1,60 @@
+from wfm.models import Item
+from wfm.store.items import ItemsRepo
+
+MIRAGE = Item(
+    slug="mirage_prime_set",
+    name="Mirage Prime Set",
+    url_name="mirage_prime_set",
+    tags=("set", "prime"),
+    is_set=True,
+    ducats=0,
+)
+CONTINUITY = Item(
+    slug="primed_continuity",
+    name="Primed Continuity",
+    url_name="primed_continuity",
+    tags=("mod", "primed"),
+    max_rank=10,
+    canonical_rank=10,
+)
+
+
+def test_upsert_and_get_round_trip(conn):
+    repo = ItemsRepo(conn)
+    assert repo.upsert_many([MIRAGE, CONTINUITY]) == 2
+    got = repo.get("primed_continuity")
+    assert got == CONTINUITY
+    assert got.tags == ("mod", "primed")
+
+
+def test_get_missing_returns_none(conn):
+    assert ItemsRepo(conn).get("nope") is None
+
+
+def test_upsert_updates_in_place(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many([MIRAGE])
+    repo.upsert_many([Item(slug="mirage_prime_set", name="Renamed", url_name="mirage_prime_set")])
+    assert repo.count() == 1
+    assert repo.get("mirage_prime_set").name == "Renamed"
+
+
+def test_search_is_case_insensitive_and_substring(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many([MIRAGE, CONTINUITY])
+    assert [i.slug for i in repo.search("continu")] == ["primed_continuity"]
+    assert [i.slug for i in repo.search("PRIME")] == ["mirage_prime_set", "primed_continuity"]
+    assert repo.search("zzz") == []
+
+
+def test_search_treats_underscore_as_a_literal(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many([MIRAGE, CONTINUITY])
+    assert repo.search("prime_set") == []
+
+
+def test_canonical_rank_defaults_to_zero_for_unknown_items(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many([CONTINUITY])
+    assert repo.canonical_rank("primed_continuity") == 10
+    assert repo.canonical_rank("unknown_slug") == 0
