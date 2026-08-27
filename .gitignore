@@ -1,3 +1,14 @@
-/wfm
 HANDOFF.md
 docs/superpowers/
+_prototype_archive/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+
+*.db
+*.db-wal
+*.db-shm
+wfm.toml
