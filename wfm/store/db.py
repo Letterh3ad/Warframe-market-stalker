@@ -24,6 +24,10 @@ def transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     try:
         yield conn
     except BaseException:
-        conn.execute("ROLLBACK")
+        # executescript() issues its own implicit COMMIT before running, so a
+        # migration that calls it may already have closed this transaction.
+        if conn.in_transaction:
+            conn.execute("ROLLBACK")
         raise
-    conn.execute("COMMIT")
+    if conn.in_transaction:
+        conn.execute("COMMIT")
