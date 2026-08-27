@@ -24,10 +24,9 @@ def transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     try:
         yield conn
     except BaseException:
-        # executescript() issues its own implicit COMMIT before running, so a
-        # migration that calls it may already have closed this transaction.
-        if conn.in_transaction:
-            conn.execute("ROLLBACK")
+        conn.execute("ROLLBACK")
         raise
-    if conn.in_transaction:
-        conn.execute("COMMIT")
+    # Unconditional: a migration that reaches for executescript() (which issues its
+    # own implicit COMMIT) must fail loudly here rather than silently losing
+    # atomicity against the user_version bump.
+    conn.execute("COMMIT")

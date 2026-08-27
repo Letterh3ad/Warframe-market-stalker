@@ -177,4 +177,10 @@ HAVING quantity > 0;
 
 
 def up(conn: sqlite3.Connection) -> None:
-    conn.executescript(DDL)
+    # executescript() issues its own implicit COMMIT before running, which would break
+    # atomicity against the user_version bump in migrate(). Execute each statement
+    # individually inside the caller's transaction instead.
+    for statement in DDL.split(";"):
+        statement = statement.strip()
+        if statement:
+            conn.execute(statement)

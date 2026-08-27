@@ -1,3 +1,5 @@
+import pytest
+
 from wfm.store.db import connect
 from wfm.store.migrate import SCHEMA_VERSION, current_version, migrate
 
@@ -27,6 +29,23 @@ def test_rows_are_mappings(tmp_path):
     conn = connect(tmp_path / "t.db")
     migrate(conn)
     assert conn.execute("SELECT 1 AS n").fetchone()["n"] == 1
+
+
+def test_a_failing_migration_leaves_no_partial_schema(tmp_path, monkeypatch):
+    class _BrokenMigration:
+        @staticmethod
+        def up(conn):
+            conn.execute("CREATE TABLE partial (id INTEGER PRIMARY KEY)")
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr("wfm.store.migrate.MIGRATIONS", [_BrokenMigration])
+    conn = connect(tmp_path / "t.db")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        migrate(conn)
+
+    assert current_version(conn) == 0
+    assert "partial" not in _tables(conn)
 
 
 def _tables(conn) -> set[str]:
