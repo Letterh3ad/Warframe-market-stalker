@@ -161,18 +161,24 @@ CREATE TABLE http_cache (
 ) WITHOUT ROWID;
 
 CREATE VIEW holdings AS
-SELECT
-    slug,
-    "rank",
-    SUM(CASE side WHEN 'buy' THEN quantity ELSE -quantity END) AS quantity,
-    CASE
-        WHEN SUM(CASE side WHEN 'buy' THEN quantity ELSE 0 END) > 0
-        THEN CAST(SUM(CASE side WHEN 'buy' THEN quantity * platinum ELSE 0 END) AS REAL)
-             / SUM(CASE side WHEN 'buy' THEN quantity ELSE 0 END)
-    END AS avg_cost
-FROM trades
-GROUP BY slug, "rank"
-HAVING quantity > 0;
+-- The quantity/avg_cost aggregation lives in a subquery so the outer WHERE filters
+-- on the computed alias unambiguously. A HAVING clause here would instead bind
+-- "quantity" to the raw trades.quantity column of an arbitrary group row (same name
+-- as the alias), silently letting fully-sold positions (net quantity 0) through.
+SELECT slug, "rank", quantity, avg_cost FROM (
+    SELECT
+        slug,
+        "rank",
+        SUM(CASE side WHEN 'buy' THEN quantity ELSE -quantity END) AS quantity,
+        CASE
+            WHEN SUM(CASE side WHEN 'buy' THEN quantity ELSE 0 END) > 0
+            THEN CAST(SUM(CASE side WHEN 'buy' THEN quantity * platinum ELSE 0 END) AS REAL)
+                 / SUM(CASE side WHEN 'buy' THEN quantity ELSE 0 END)
+        END AS avg_cost
+    FROM trades
+    GROUP BY slug, "rank"
+)
+WHERE quantity > 0;
 """
 
 
