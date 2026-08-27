@@ -280,3 +280,15 @@ tracked alongside.
 alternative was rejected). Tracking the spec but ignoring `DECISIONS.md` (a spec goes
 stale once built, while the rejected-alternatives record stays true, and git cannot
 reconstruct it).
+
+## 2026-08-27 - Migrations execute statements individually, not via executescript
+
+**Context:** `executescript()` implicit-commits, which broke the transaction wrapper.
+
+**Decision:** Execute statements individually inside the transaction so a migration is
+atomic against its `PRAGMA user_version` bump, and keep the wrapper's COMMIT
+unconditional so a future migration reaching for `executescript` fails loudly.
+
+**Alternatives:** Relaxing the wrapper to tolerate an absent transaction, which fixes the
+symptom and silently abandons atomicity, leaving a crash mid-migration with tables
+created and the version un-bumped.

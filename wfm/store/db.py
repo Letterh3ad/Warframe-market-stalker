@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -30,3 +31,14 @@ def transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     # own implicit COMMIT) must fail loudly here rather than silently losing
     # atomicity against the user_version bump.
     conn.execute("COMMIT")
+
+
+def to_utc_iso(ts: datetime) -> str:
+    """Normalize to a UTC ISO 8601 string so stored order matches chronological order.
+
+    Raises on a naive datetime instead of assuming a timezone: guessing is how the
+    wrong instant gets stored silently.
+    """
+    if ts.tzinfo is None or ts.tzinfo.utcoffset(ts) is None:
+        raise ValueError(f"to_utc_iso requires an aware datetime, got naive: {ts!r}")
+    return ts.astimezone(timezone.utc).isoformat()

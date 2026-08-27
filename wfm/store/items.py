@@ -17,6 +17,9 @@ class ItemsRepo:
         self._conn = conn
 
     def upsert_many(self, items: Iterable[Item]) -> int:
+        """Whole-row replace: pass complete items, since an omitted column nulls the
+        stored value. Only catalog sync and backfill call this, from a full API payload.
+        """
         rows = [
             (
                 item.slug,
@@ -60,6 +63,9 @@ class ItemsRepo:
         return [_to_item(r) for r in rows]
 
     def canonical_rank(self, slug: str) -> int:
+        """Returns 0 for a slug not yet in the catalog. Callers that may be handed an
+        unsynced slug must check existence separately rather than trusting this value.
+        """
         row = self._conn.execute(
             "SELECT canonical_rank FROM items WHERE slug=?", (slug,)
         ).fetchone()

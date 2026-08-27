@@ -179,8 +179,15 @@ HAVING quantity > 0;
 def up(conn: sqlite3.Connection) -> None:
     # executescript() issues its own implicit COMMIT before running, which would break
     # atomicity against the user_version bump in migrate(). Execute each statement
-    # individually inside the caller's transaction instead.
-    for statement in DDL.split(";"):
-        statement = statement.strip()
-        if statement:
-            conn.execute(statement)
+    # individually inside the caller's transaction instead. Statements are accumulated
+    # line by line and flushed with sqlite3.complete_statement rather than split on
+    # ";", since a trigger body or a semicolon inside a string literal would break a
+    # naive split.
+    buf = ""
+    for line in DDL.splitlines(keepends=True):
+        buf += line
+        if sqlite3.complete_statement(buf):
+            statement = buf.strip()
+            if statement:
+                conn.execute(statement)
+            buf = ""

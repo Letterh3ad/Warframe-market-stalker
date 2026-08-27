@@ -60,3 +60,9 @@ def test_load_env_overrides_file(tmp_path: Path, monkeypatch):
 
 def test_load_without_a_file_returns_defaults(tmp_path: Path):
     assert Config.load(tmp_path / "absent.toml").requests_per_second == 2.8
+
+
+def test_env_rate_is_clamped_to_the_published_ceiling(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("WFM_REQUESTS_PER_SECOND", "99")
+    cfg = Config.load(tmp_path / "absent.toml")
+    assert cfg.requests_per_second == MAX_REQUESTS_PER_SECOND

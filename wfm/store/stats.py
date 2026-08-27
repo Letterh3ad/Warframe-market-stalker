@@ -6,7 +6,7 @@ from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 
 from wfm.models import DailyCandle, HourlyCandle
-from wfm.store.db import transaction
+from wfm.store.db import to_utc_iso, transaction
 
 _DAILY_COLS = (
     'slug, "rank", date, volume, open, high, low, close, median, avg_price, '
@@ -20,6 +20,9 @@ class DailyStatsRepo:
         self._conn = conn
 
     def upsert_many(self, candles: Iterable[DailyCandle]) -> int:
+        """Whole-row replace: pass complete candles, since an omitted column nulls the
+        stored value. Only catalog sync and backfill call this, from a full API payload.
+        """
         rows = [
             (
                 c.slug, c.rank, c.date, c.volume, c.open, c.high, c.low, c.close,
@@ -71,9 +74,12 @@ class HourlyStatsRepo:
         self._conn = conn
 
     def upsert_many(self, candles: Iterable[HourlyCandle]) -> int:
+        """Whole-row replace: pass complete candles, since an omitted column nulls the
+        stored value. Only catalog sync and backfill call this, from a full API payload.
+        """
         rows = [
             (
-                c.slug, c.rank, c.ts.isoformat(), c.volume, c.open, c.high, c.low,
+                c.slug, c.rank, to_utc_iso(c.ts), c.volume, c.open, c.high, c.low,
                 c.close, c.median, c.avg_price, c.wa_price,
             )
             for c in candles
@@ -96,7 +102,7 @@ class HourlyStatsRepo:
 
     def prune(self, before: datetime) -> int:
         with transaction(self._conn):
-            cur = self._conn.execute("DELETE FROM hourly_stats WHERE ts < ?", (before.isoformat(),))
+            cur = self._conn.execute("DELETE FROM hourly_stats WHERE ts < ?", (to_utc_iso(before),))
         return cur.rowcount
 
 
