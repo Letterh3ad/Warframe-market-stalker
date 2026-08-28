@@ -38,6 +38,9 @@ class WFMClient:
         self._breaker = breaker
         self._clock = clock
         self._cache = cache
+        # Shared by every caller: a 429 is about this client's IP, not one request, so
+        # backing off per request would let a concurrent caller fire into the block.
+        self._hold_until = 0.0
         self._http = httpx.AsyncClient(
             timeout=config.request_timeout_s,
             transport=transport,
@@ -76,13 +79,14 @@ class WFMClient:
 
         for attempt in range(1, MAX_ATTEMPTS + 1):
             self._breaker.check()
+            await self._await_hold()
             await self.budget.acquire(priority)
             try:
                 response = await self._http.get(url, params=query, headers=headers)
             except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError):
                 if attempt == MAX_ATTEMPTS:
                     raise
-                await self._clock.sleep(delay_for(attempt))
+                await self._back_off(delay_for(attempt))
                 continue
 
             if response.status_code == 304 and cached is not None:
@@ -95,13 +99,13 @@ class WFMClient:
                 # than serving one more backoff nobody will use.
                 self._breaker.check()
                 retry_after = parse_retry_after(response.headers.get("Retry-After"), self._clock)
-                await self._clock.sleep(delay_for(attempt, retry_after))
+                await self._back_off(delay_for(attempt, retry_after))
                 continue
 
             if response.status_code >= 500:
                 self._breaker.record_5xx()
                 self._breaker.check()
-                await self._clock.sleep(delay_for(attempt))
+                await self._back_off(delay_for(attempt))
                 continue
 
             if response.status_code >= 400:
@@ -120,6 +124,20 @@ class WFMClient:
             return _unwrap(response.json())
 
         raise ApiError(f"gave up after {MAX_ATTEMPTS} attempts: {url}")
+
+    @property
+    def holding_until(self) -> float:
+        """Monotonic instant before which no caller may issue a request."""
+        return self._hold_until
+
+    async def _await_hold(self) -> None:
+        remaining = self._hold_until - self._clock.now()
+        if remaining > 0:
+            await self._clock.sleep(remaining)
+
+    async def _back_off(self, delay: float) -> None:
+        self._hold_until = max(self._hold_until, self._clock.now() + delay)
+        await self._clock.sleep(delay)
 
 
 def _unwrap(payload: Any) -> Any:

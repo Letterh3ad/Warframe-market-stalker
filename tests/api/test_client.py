@@ -167,3 +167,22 @@ async def test_interactive_priority_is_passed_through_to_the_budget():
     await client.get_json(URL, priority=Priority.INTERACTIVE)
     assert client.budget.spent(Priority.INTERACTIVE) == 1
     await client.aclose()
+
+
+async def test_a_429_backoff_gates_every_caller_not_just_the_one_that_got_it():
+    """A 429 is about the client's whole IP, so the hold is shared.
+
+    Concurrency itself is not observable here: the fake clock is global, so the
+    backing-off task advances time for every other task before it yields. This
+    asserts the gate directly. Phase 7 needs a fake that schedules wakeups per task,
+    and that is where the ordering becomes testable.
+    """
+    client, clock, _ = _client(lambda r: httpx.Response(429, headers={"Retry-After": "30"}))
+    with pytest.raises(CircuitOpen):
+        await client.get_json(URL)
+    assert client.holding_until == pytest.approx(60.0)
+
+    clock.advance(-30)  # a fresh caller arriving mid-hold
+    await client._await_hold()
+    assert clock.now() == pytest.approx(60.0)
+    await client.aclose()
