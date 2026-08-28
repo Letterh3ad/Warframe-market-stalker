@@ -54,10 +54,10 @@ def parse_items(payload: Any) -> list[Item]:
         slug = _pick(entry, "slug", "urlName", "url_name")
         if not slug:
             continue
-        name = (
-            entry.get("i18n", {}).get("en", {}).get("name")
-            or _pick(entry, "name", "item_name", default=slug)
-        )
+        # `or {}` rather than a get() default: the default only covers a missing key,
+        # and a present-but-null i18n block is exactly what tolerance is for.
+        english = (entry.get("i18n") or {}).get("en") or {}
+        name = english.get("name") or _pick(entry, "name", "item_name", default=slug)
         max_rank = int(_pick(entry, "maxRank", "max_rank", default=0) or 0)
         items.append(
             Item(
@@ -96,13 +96,15 @@ def parse_orders(payload: Any, slug: str) -> list[Order]:
 
 def parse_statistics(payload: Any, slug: str) -> tuple[list[DailyCandle], list[HourlyCandle]]:
     closed = payload.get("payload", payload).get("statistics_closed", {})
-    daily = [_to_daily(entry, slug) for entry in closed.get("90days", [])]
-    hourly = [_to_hourly(entry, slug) for entry in closed.get("48hours", [])]
+    daily = [c for c in map(lambda e: _to_daily(e, slug), closed.get("90days", [])) if c]
+    hourly = [c for c in map(lambda e: _to_hourly(e, slug), closed.get("48hours", [])) if c]
     return daily, hourly
 
 
-def _to_daily(entry: dict, slug: str) -> DailyCandle:
-    ts = _parse_ts(entry["datetime"])
+def _to_daily(entry: dict, slug: str) -> DailyCandle | None:
+    ts = _parse_ts(_pick(entry, "datetime"))
+    if ts is None:
+        return None
     return DailyCandle(
         slug=slug,
         rank=int(_pick(entry, "mod_rank", default=0) or 0),
@@ -121,11 +123,14 @@ def _to_daily(entry: dict, slug: str) -> DailyCandle:
     )
 
 
-def _to_hourly(entry: dict, slug: str) -> HourlyCandle:
+def _to_hourly(entry: dict, slug: str) -> HourlyCandle | None:
+    ts = _parse_ts(_pick(entry, "datetime"))
+    if ts is None:
+        return None
     return HourlyCandle(
         slug=slug,
         rank=int(_pick(entry, "mod_rank", default=0) or 0),
-        ts=_parse_ts(entry["datetime"]),
+        ts=ts,
         volume=_pick(entry, "volume"),
         open=_pick(entry, "open_price"),
         high=_pick(entry, "max_price"),

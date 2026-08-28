@@ -68,3 +68,33 @@ def test_the_reason_is_readable_for_sweep_state():
     for _ in range(3):
         breaker.record_429()
     assert "consecutive" in breaker.reason
+
+
+def test_alternating_429_and_5xx_still_trips():
+    """Zeroing the other counter on each response meant a server alternating between
+    rate limiting and failing was never treated as a run of anything."""
+    breaker, _ = _breaker()
+    breaker.record_429()
+    breaker.record_5xx()
+    breaker.record_429()
+    breaker.record_5xx()
+    breaker.record_429()
+    assert breaker.is_open is True
+
+
+def test_repeated_403_trips_it():
+    breaker, _ = _breaker()
+    for _ in range(3):
+        breaker.record_forbidden()
+    assert breaker.is_open is True
+    assert "403" in breaker.reason
+
+
+def test_a_late_response_does_not_extend_an_open_cooldown():
+    breaker, clock = _breaker()
+    for _ in range(3):
+        breaker.record_429()
+    clock.advance(880)
+    breaker.record_429()  # an in-flight response landing after the trip
+    clock.advance(30)
+    assert breaker.is_open is False

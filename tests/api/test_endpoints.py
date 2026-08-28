@@ -166,3 +166,24 @@ def test_parse_statistics_of_an_item_with_no_trades_is_empty():
     daily, hourly = parse_statistics({"payload": {"statistics_closed": {}}}, slug="x")
     assert daily == []
     assert hourly == []
+
+
+def test_a_candle_without_a_timestamp_is_skipped_not_fatal():
+    payload = {
+        "payload": {
+            "statistics_closed": {
+                "90days": [
+                    {"volume": 1, "closed_price": 10, "mod_rank": 0},
+                    {"datetime": None, "volume": 1, "mod_rank": 0},
+                    {"datetime": "2026-08-26T00:00:00.000+00:00", "volume": 2, "mod_rank": 0},
+                ]
+            }
+        }
+    }
+    daily, _ = parse_statistics(payload, slug="x")
+    assert [c.date for c in daily] == ["2026-08-26"]
+
+
+def test_a_null_i18n_block_falls_back_to_the_slug():
+    items = parse_items([{"slug": "x", "i18n": None}, {"slug": "y", "i18n": {"en": None}}])
+    assert [i.name for i in items] == ["x", "y"]

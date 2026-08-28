@@ -40,3 +40,24 @@ def test_a_retry_after_in_the_past_is_clamped_to_zero():
     clock = FakeClock(start_utc=START)
     when = (START - timedelta(seconds=30)).strftime("%a, %d %b %Y %H:%M:%S GMT")
     assert parse_retry_after(when, clock) == 0.0
+
+
+def test_a_naive_retry_after_date_is_read_as_utc():
+    """parsedate_to_datetime returns a naive datetime for the legal -0000 zone, and
+    subtracting it from an aware now() raised TypeError out of the retry loop."""
+    clock = FakeClock(start_utc=START)
+    when = (START + timedelta(seconds=45)).strftime("%a, %d %b %Y %H:%M:%S -0000")
+    assert parse_retry_after(when, clock) == pytest.approx(45.0, abs=1.0)
+
+
+def test_a_zero_retry_after_still_leaves_a_pause():
+    assert delay_for(1, retry_after=0.0) >= 1.0
+
+
+def test_a_non_finite_retry_after_falls_back_to_the_curve():
+    assert delay_for(3, retry_after=float("inf")) == 8.0
+    assert delay_for(3, retry_after=float("nan")) == 8.0
+
+
+def test_an_absurd_retry_after_falls_back_to_the_curve():
+    assert delay_for(1, retry_after=60 * 60 * 48) == 2.0

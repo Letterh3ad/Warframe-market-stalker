@@ -78,18 +78,22 @@ class WFMClient:
         headers = {"If-None-Match": cached[0]} if cached and cached[0] else {}
 
         for attempt in range(1, MAX_ATTEMPTS + 1):
-            self._breaker.check()
-            await self._await_hold()
-            await self.budget.acquire(priority)
+            await self._wait_for_clearance(priority)
             try:
                 response = await self._http.get(url, params=query, headers=headers)
-            except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError):
+            except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError) as exc:
+                # Counted as a server failure: a transport that keeps failing is a
+                # reason to stop, and leaving the breaker untouched meant it never was.
+                self._breaker.record_5xx()
+                self._breaker.check()
                 if attempt == MAX_ATTEMPTS:
-                    raise
+                    raise ApiError(f"connection failed after {attempt} attempts: {url}") from exc
                 await self._back_off(delay_for(attempt))
                 continue
 
-            if response.status_code == 304 and cached is not None:
+            if response.status_code == 304:
+                if cached is None:
+                    raise ApiError(f"304 with no cached body for {response.url}")
                 self._breaker.record_success()
                 return _unwrap(json.loads(cached[2]))
 
@@ -98,6 +102,8 @@ class WFMClient:
                 # Checked before sleeping, so the trip raises out of the loop rather
                 # than serving one more backoff nobody will use.
                 self._breaker.check()
+                if attempt == MAX_ATTEMPTS:
+                    break
                 retry_after = parse_retry_after(response.headers.get("Retry-After"), self._clock)
                 await self._back_off(delay_for(attempt, retry_after))
                 continue
@@ -105,12 +111,30 @@ class WFMClient:
             if response.status_code >= 500:
                 self._breaker.record_5xx()
                 self._breaker.check()
+                if attempt == MAX_ATTEMPTS:
+                    break
                 await self._back_off(delay_for(attempt))
                 continue
 
+            if response.status_code == 403:
+                # A run of these is what an IP restriction looks like from here, which
+                # is the reason the breaker exists.
+                self._breaker.record_forbidden()
+                self._breaker.check()
+                raise ApiError(f"403 from {response.url}")
+
+            # No record_success on a 4xx: a bad slug says nothing about our standing,
+            # and treating it as proof of health cleared runs that should have tripped.
             if response.status_code >= 400:
-                self._breaker.record_success()
                 raise ApiError(f"{response.status_code} from {response.url}")
+
+            # Redirects are not followed, so a 3xx here would otherwise fall through to
+            # the success path and be cached and parsed as an empty body.
+            if response.status_code >= 300:
+                raise ApiError(
+                    f"unexpected {response.status_code} redirect to "
+                    f"{response.headers.get('Location')} from {response.url}"
+                )
 
             self._breaker.record_success()
             if use_cache and self._cache is not None:
@@ -125,14 +149,29 @@ class WFMClient:
 
         raise ApiError(f"gave up after {MAX_ATTEMPTS} attempts: {url}")
 
+    async def _wait_for_clearance(self, priority: Priority) -> None:
+        """Both guards, both sides of the wait.
+
+        Acquiring the budget can suspend for minutes behind a sweep. Checking only
+        before that wait releases a caller that was cleared at t=0 into a block that
+        opened while it was queued, which is the failure the shared hold exists to
+        prevent.
+        """
+        self._breaker.check()
+        await self._await_hold()
+        await self.budget.acquire(priority)
+        self._breaker.check()
+        await self._await_hold()
+
     @property
     def holding_until(self) -> float:
         """Monotonic instant before which no caller may issue a request."""
         return self._hold_until
 
     async def _await_hold(self) -> None:
-        remaining = self._hold_until - self._clock.now()
-        if remaining > 0:
+        # Looped, not a single sleep: a hold extended by another caller while this one
+        # slept must be waited out too.
+        while (remaining := self._hold_until - self._clock.now()) > 0:
             await self._clock.sleep(remaining)
 
     async def _back_off(self, delay: float) -> None:
@@ -141,9 +180,13 @@ class WFMClient:
 
 
 def _unwrap(payload: Any) -> Any:
-    if isinstance(payload, dict) and "data" in payload:
+    # The error field is checked whether or not a data key is present: a v1 style error
+    # envelope has no data, and returning it as a payload turned a failure into an
+    # empty result the sweep would record as "nothing traded".
+    if isinstance(payload, dict):
         error = payload.get("error")
         if error not in (None, {}, [], ""):
             raise ApiError(f"api error: {error}")
-        return payload["data"]
+        if "data" in payload:
+            return payload["data"]
     return payload

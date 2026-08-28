@@ -186,3 +186,106 @@ async def test_a_429_backoff_gates_every_caller_not_just_the_one_that_got_it():
     await client._await_hold()
     assert clock.now() == pytest.approx(60.0)
     await client.aclose()
+
+
+async def test_the_breaker_is_rechecked_after_the_budget_wait():
+    """The guards are cheap; the wait between them is not. A request that passed the
+    breaker before queueing must not be released into a block that opened meanwhile."""
+    client, _, seen = _client(lambda r: httpx.Response(200, json={"data": {}}))
+    client._breaker.record_429()
+    client._breaker.record_429()
+
+    original = client.budget.acquire
+
+    async def trip_while_waiting(priority=Priority.BACKGROUND):
+        await original(priority)
+        client._breaker.record_429()  # the block opens while this caller was queued
+
+    client.budget.acquire = trip_while_waiting
+    with pytest.raises(CircuitOpen):
+        await client.get_json(URL)
+    assert seen == []
+    await client.aclose()
+
+
+async def test_a_hold_extended_during_the_wait_is_honoured():
+    client, clock, seen = _client(lambda r: httpx.Response(200, json={"data": {}}))
+    original = client.budget.acquire
+
+    async def extend_while_waiting(priority=Priority.BACKGROUND):
+        await original(priority)
+        client._hold_until = clock.now() + 50
+
+    client.budget.acquire = extend_while_waiting
+    await client.get_json(URL)
+    assert clock.now() >= 50
+    await client.aclose()
+
+
+async def test_repeated_403_trips_the_breaker():
+    client, _, seen = _client(lambda r: httpx.Response(403, json={"error": "forbidden"}))
+    for _ in range(3):
+        with pytest.raises(ApiError):
+            await client.get_json(URL)
+    assert len(seen) == 3
+    with pytest.raises(CircuitOpen):
+        await client.get_json(URL)
+    assert len(seen) == 3
+    await client.aclose()
+
+
+async def test_a_redirect_is_an_error_not_an_empty_payload():
+    client, _, _ = _client(
+        lambda r: httpx.Response(302, headers={"Location": "https://example.invalid/"})
+    )
+    with pytest.raises(ApiError):
+        await client.get_json(URL)
+    await client.aclose()
+
+
+async def test_a_redirect_does_not_poison_the_cache(conn):
+    cache = HttpCacheRepo(conn)
+    client, _, _ = _client(
+        lambda r: httpx.Response(301, headers={"Location": "https://example.invalid/"}),
+        cache=cache,
+    )
+    with pytest.raises(ApiError):
+        await client.get_json(URL, use_cache=True)
+    assert cache.get(str(httpx.URL(URL).copy_merge_params({
+        "platform": "pc", "language": "en", "crossplay": "true"}))) is None
+    await client.aclose()
+
+
+async def test_a_304_without_a_cached_body_is_an_error():
+    client, _, _ = _client(lambda r: httpx.Response(304))
+    with pytest.raises(ApiError):
+        await client.get_json(URL)
+    await client.aclose()
+
+
+async def test_persistent_connection_errors_raise_apierror_and_feed_the_breaker():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("boom", request=request)
+
+    client, _, seen = _client(handler)
+    with pytest.raises(ApiError):
+        await client.get_json(URL)
+    assert len(seen) == 5
+    assert client._breaker.is_open is True
+    await client.aclose()
+
+
+async def test_a_bare_error_envelope_is_raised_not_returned():
+    client, _, _ = _client(lambda r: httpx.Response(200, json={"error": "item not found"}))
+    with pytest.raises(ApiError):
+        await client.get_json(URL)
+    await client.aclose()
+
+
+async def test_no_sleep_is_served_after_the_final_attempt():
+    client, clock, seen = _client(lambda r: httpx.Response(503))
+    with pytest.raises(ApiError):
+        await client.get_json(URL)
+    assert len(seen) == 5
+    assert len(clock.sleeps) == 4
+    await client.aclose()

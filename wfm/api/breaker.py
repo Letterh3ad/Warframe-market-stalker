@@ -18,8 +18,10 @@ class CircuitBreaker:
         self._cooldown_s = cooldown_s
         self._max_429 = max_429
         self._max_5xx = max_5xx
+        self._max_403 = max_429
         self._run_429 = 0
         self._run_5xx = 0
+        self._run_403 = 0
         self._tripped_at: float | None = None
         self._reason = ""
 
@@ -39,24 +41,35 @@ class CircuitBreaker:
     def record_success(self) -> None:
         self._run_429 = 0
         self._run_5xx = 0
+        self._run_403 = 0
 
+    # Each run is counted independently. Zeroing the others meant a server alternating
+    # between rate limiting and failing was never a run of anything, and got hammered.
     def record_429(self) -> None:
-        self._run_5xx = 0
         self._run_429 += 1
         if self._run_429 >= self._max_429:
             self._trip(f"{self._run_429} consecutive 429 responses")
 
     def record_5xx(self) -> None:
-        self._run_429 = 0
         self._run_5xx += 1
         if self._run_5xx >= self._max_5xx:
             self._trip(f"{self._run_5xx} consecutive 5xx responses")
+
+    def record_forbidden(self) -> None:
+        """A run of 403s is what an IP restriction looks like from here."""
+        self._run_403 += 1
+        if self._run_403 >= self._max_403:
+            self._trip(f"{self._run_403} consecutive 403 responses")
 
     def check(self) -> None:
         if self.is_open:
             raise CircuitOpen(self._reason)
 
     def _trip(self, reason: str) -> None:
+        # Responses already in flight when the breaker opened must not keep pushing
+        # the cooldown back, or it never ends.
+        if self.is_open:
+            return
         self._tripped_at = self._clock.now()
         self._reason = reason
 
@@ -64,4 +77,5 @@ class CircuitBreaker:
         self._tripped_at = None
         self._run_429 = 0
         self._run_5xx = 0
+        self._run_403 = 0
         self._reason = ""
