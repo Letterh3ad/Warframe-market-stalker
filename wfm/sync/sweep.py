@@ -15,6 +15,11 @@ from wfm.sync.budget import Priority
 
 SWEEP_NAME = "backfill"
 
+# A halted sweep keeps its cursor, so the next run continues from it rather than
+# re-fetching thousands of items the breaker just protected. Only a finished sweep
+# ("done") starts over.
+_RESUMABLE = frozenset({SweepStatus.RUNNING.value, SweepStatus.HALTED.value})
+
 log = logging.getLogger(__name__)
 
 
@@ -37,15 +42,16 @@ async def run_sweep(
     on_progress: Callable[[str, int], None] | None = None,
 ) -> SweepResult:
     previous = sweep_state_repo.get(SWEEP_NAME) or {}
-    resume_after = (
-        previous.get("cursor") if previous.get("status") == SweepStatus.RUNNING.value else None
-    )
+    resume_after = previous.get("cursor") if previous.get("status") in _RESUMABLE else None
     done_count = int(previous.get("done_count") or 0) if resume_after else 0
 
     slugs = [s for s in items_repo.all_slugs() if resume_after is None or s > resume_after]
     sweep_state_repo.start(SWEEP_NAME, clock.utcnow())
     if resume_after:
+        log.info("resuming backfill sweep after %s, %d items to go", resume_after, len(slugs))
         sweep_state_repo.checkpoint(SWEEP_NAME, resume_after, clock.utcnow(), done_count)
+    else:
+        log.info("starting backfill sweep, %d items", len(slugs))
 
     processed = 0
     for slug in slugs:
@@ -56,6 +62,7 @@ async def run_sweep(
                 client, slug, daily_repo, hourly_repo, clock, priority=Priority.BULK
             )
         except CircuitOpen as exc:
+            log.error("backfill sweep halted after %d items: %s", processed, exc.reason)
             sweep_state_repo.halt(SWEEP_NAME, reason=exc.reason, when=clock.utcnow())
             return SweepResult(processed, halted=True, reason=exc.reason, resumed_from=resume_after)
         except ApiError as exc:
@@ -68,6 +75,7 @@ async def run_sweep(
             on_progress(slug, processed)
 
     sweep_state_repo.finish(SWEEP_NAME, clock.utcnow())
+    log.info("backfill sweep finished, %d items processed", processed)
     return SweepResult(processed, resumed_from=resume_after)
 
 

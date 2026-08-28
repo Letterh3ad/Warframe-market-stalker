@@ -1,4 +1,7 @@
+import logging
 from datetime import datetime, timezone
+
+import pytest
 
 from tests.fakes.api import StubClient
 from tests.fakes.clock import FakeClock
@@ -67,3 +70,28 @@ async def test_a_moved_version_triggers_a_refetch(conn):
     result = await sync_catalog(client, items, sweeps, clock)
     assert result.changed is True
     assert items.get("primed_continuity").last_seen_version == "v43"
+
+
+async def test_the_item_write_and_the_cursor_move_together_or_not_at_all(conn, monkeypatch):
+    items, sweeps, clock = _deps(conn)
+    client = StubClient({"/versions": VERSIONS, "/items": ITEMS})
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("disk full mid-commit")
+
+    monkeypatch.setattr(sweeps, "checkpoint", boom)
+    with pytest.raises(RuntimeError):
+        await sync_catalog(client, items, sweeps, clock)
+    # The cursor write failed, so the item rows written in the same block roll back.
+    assert items.count() == 0
+    assert sweeps.get("catalog")["cursor"] is None
+
+
+async def test_an_unparseable_version_token_is_logged_and_forces_a_refetch(conn, caplog):
+    items, sweeps, clock = _deps(conn)
+    client = StubClient({"/versions": {"unexpected": "shape"}, "/items": ITEMS})
+    with caplog.at_level(logging.WARNING, logger="wfm.sync.catalog"):
+        result = await sync_catalog(client, items, sweeps, clock)
+    assert result.changed is True
+    assert result.version is None
+    assert "version token" in caplog.text

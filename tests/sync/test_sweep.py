@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 import pytest
@@ -79,6 +80,20 @@ async def test_a_halted_sweep_resumes_after_its_cursor(conn):
     assert [url.split("/")[-2] for url, _ in client.calls] == ["c", "d"]
 
 
+async def test_a_halted_sweep_resumes_from_its_cursor_on_the_next_run(conn):
+    items, daily, hourly, sweeps = _seed(conn, ["a", "b", "c", "d"])
+    tripped = StubClient({"/statistics": STATS}, errors={"/c/": CircuitOpen("3 consecutive 429s")})
+    first = await run_sweep(tripped, items, daily, hourly, sweeps, FakeClock(start_utc=START))
+    assert first.halted is True
+    assert sweeps.get(SWEEP_NAME)["status"] == "halted"
+    assert sweeps.get(SWEEP_NAME)["cursor"] == "b"
+
+    clean = StubClient({"/statistics": STATS})
+    result = await run_sweep(clean, items, daily, hourly, sweeps, FakeClock(start_utc=START))
+    assert result.resumed_from == "b"
+    assert [url.split("/")[-2] for url, _ in clean.calls] == ["c", "d"]
+
+
 async def test_a_completed_sweep_starts_over_from_the_beginning(conn):
     items, daily, hourly, sweeps = _seed(conn, ["a", "b"])
     client = StubClient({"/statistics": STATS})
@@ -98,6 +113,15 @@ async def test_a_tripped_breaker_halts_and_records_the_reason(conn):
     state = sweeps.get(SWEEP_NAME)
     assert state["status"] == "halted"
     assert state["cursor"] == "a"
+
+
+async def test_a_halt_is_logged_at_error_level(conn, caplog):
+    items, daily, hourly, sweeps = _seed(conn, ["a", "b", "c"])
+    client = StubClient({"/statistics": STATS}, errors={"/b/": CircuitOpen("3 consecutive 429s")})
+    with caplog.at_level(logging.ERROR, logger="wfm.sync.sweep"):
+        await run_sweep(client, items, daily, hourly, sweeps, FakeClock(start_utc=START))
+    assert "halted" in caplog.text
+    assert "429" in caplog.text
 
 
 async def test_a_single_item_error_is_skipped_not_fatal(conn):
