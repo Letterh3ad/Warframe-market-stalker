@@ -1,5 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
+from wfm.models import SweepStatus
 from wfm.store.sweep import SweepStateRepo
 
 NOW = datetime(2026, 8, 27, 4, 0, tzinfo=timezone.utc)
@@ -33,3 +36,21 @@ def test_restart_preserves_the_cursor_for_resumption(conn):
     repo.checkpoint("backfill", cursor="k", when=NOW, done_count=5)
     repo.start("backfill", NOW + timedelta(days=1))
     assert repo.get("backfill")["cursor"] == "k"
+
+
+def test_checkpoint_on_an_unknown_sweep_raises(conn):
+    with pytest.raises(KeyError):
+        SweepStateRepo(conn).checkpoint("typo", "cursor", NOW, 1)
+
+
+def test_finish_on_an_unknown_sweep_raises(conn):
+    with pytest.raises(KeyError):
+        SweepStateRepo(conn).finish("typo", NOW)
+
+
+def test_halt_records_a_sweep_that_never_started(conn):
+    repo = SweepStateRepo(conn)
+    repo.halt("catalog", "rate limited", NOW)
+    state = repo.get("catalog")
+    assert state["status"] == SweepStatus.HALTED.value
+    assert state["reason"] == "rate limited"

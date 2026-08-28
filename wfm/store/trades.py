@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
-from wfm.models import Direction, Trade
+from wfm.models import Side, Trade
 from wfm.store.db import to_utc_iso, transaction
 
 _COLS = 'id, slug, "rank", ts, side, quantity, platinum, note'
@@ -45,6 +45,6 @@ class TradesRepo:
 def _to_trade(row: sqlite3.Row) -> Trade:
     return Trade(
         id=row["id"], slug=row["slug"], rank=row["rank"],
-        ts=datetime.fromisoformat(row["ts"]), side=Direction(row["side"]),
+        ts=datetime.fromisoformat(row["ts"]), side=Side(row["side"]),
         quantity=row["quantity"], platinum=row["platinum"], note=row["note"],
     )

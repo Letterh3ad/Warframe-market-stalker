@@ -34,6 +34,12 @@ class Config:
     persist_features: bool = False
 
     def __post_init__(self) -> None:
+        # Clamped at the top, rejected at the bottom: a rate of 0 never grants a token
+        # and a negative one makes a 1/rate sleep negative, i.e. no limit at all.
+        if self.requests_per_second <= 0:
+            raise ValueError(
+                f"requests_per_second must be positive, got {self.requests_per_second}"
+            )
         if self.requests_per_second > MAX_REQUESTS_PER_SECOND:
             object.__setattr__(self, "requests_per_second", MAX_REQUESTS_PER_SECOND)
         if self.concurrency != 1:

@@ -1,6 +1,7 @@
 import pytest
 
 from wfm.store.db import connect
+from wfm.store.migrations import m0001_initial as m0001
 from wfm.store.migrate import SCHEMA_VERSION, current_version, migrate
 
 
@@ -51,3 +52,15 @@ def test_a_failing_migration_leaves_no_partial_schema(tmp_path, monkeypatch):
 def _tables(conn) -> set[str]:
     rows = conn.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view')")
     return {r[0] for r in rows}
+
+
+def test_a_database_from_a_newer_build_is_refused(conn):
+    conn.execute(f"PRAGMA user_version={SCHEMA_VERSION + 1}")
+    with pytest.raises(RuntimeError):
+        migrate(conn)
+
+
+def test_ddl_ending_mid_statement_is_rejected(conn, monkeypatch):
+    monkeypatch.setattr(m0001, "DDL", "CREATE TABLE ok(a);\nCREATE TABLE broken(a)\n")
+    with pytest.raises(ValueError):
+        m0001.up(conn)

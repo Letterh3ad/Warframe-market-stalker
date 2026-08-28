@@ -43,3 +43,13 @@ def test_delete_removes_members(conn):
 def test_add_member_to_a_missing_group_raises(conn):
     with pytest.raises(KeyError):
         GroupsRepo(conn).add_member("nope", "x", 0)
+
+
+def test_create_reports_a_unique_violation_as_valueerror(conn, monkeypatch):
+    """A blind get() stands in for the TOCTOU race: a concurrent create wins between
+    the existence check and the insert, so the UNIQUE violation is the only signal."""
+    repo = GroupsRepo(conn)
+    repo.create("dupe", NOW)
+    monkeypatch.setattr(GroupsRepo, "get", lambda self, name: None)
+    with pytest.raises(ValueError):
+        repo.create("dupe", NOW)

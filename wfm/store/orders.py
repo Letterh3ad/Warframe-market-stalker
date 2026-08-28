@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import zlib
 from datetime import datetime
 
 from wfm.models import BookSnapshot
@@ -61,16 +62,17 @@ class RawSnapshotsRepo:
 
     def __init__(self, conn: sqlite3.Connection) -> None:
         self._conn = conn
-        self._seen = 0
 
     def maybe_store(
         self, slug: str, rank: int, ts: datetime, payload: str, sample_rate: int
     ) -> bool:
+        # Sampled off a hash of the row key, not a counter: every other repo here is a
+        # stateless wrapper over conn, so one instance per call is the natural pattern
+        # and an instance counter would silently store 100% of payloads.
         if sample_rate <= 0:
             return False
-        stored = self._seen % sample_rate == 0
-        self._seen += 1
-        if not stored:
+        key = f"{slug}|{rank}|{to_utc_iso(ts)}".encode()
+        if zlib.crc32(key) % sample_rate != 0:
             return False
         with transaction(self._conn):
             self._conn.execute(

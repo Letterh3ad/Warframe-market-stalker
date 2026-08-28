@@ -21,6 +21,13 @@ class Direction(str, Enum):
     HOLD = "hold"
 
 
+class Side(str, Enum):
+    """The subset of Direction a ledger row can hold; HOLD is not a trade."""
+
+    BUY = "buy"
+    SELL = "sell"
+
+
 class SweepStatus(str, Enum):
     RUNNING = "running"
     DONE = "done"
@@ -133,7 +140,7 @@ class Trade:
     slug: str
     rank: int
     ts: datetime
-    side: Direction
+    side: Side
     quantity: int
     platinum: int
     note: str | None = None

@@ -197,3 +197,5 @@ def up(conn: sqlite3.Connection) -> None:
             if statement:
                 conn.execute(statement)
             buf = ""
+    if buf.strip():
+        raise ValueError(f"migration DDL ends mid-statement: {buf.strip()[:80]!r}")

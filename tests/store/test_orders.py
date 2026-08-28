@@ -60,3 +60,12 @@ def test_raw_sampling_disabled_when_rate_is_zero(conn):
     repo = RawSnapshotsRepo(conn)
     assert repo.maybe_store("x", 0, TS, "{}", sample_rate=0) is False
     assert repo.count() == 0
+
+
+def test_sampling_holds_across_fresh_repo_instances(conn):
+    stored = sum(
+        RawSnapshotsRepo(conn).maybe_store("x", 0, TS + timedelta(minutes=i), "{}", sample_rate=10)
+        for i in range(200)
+    )
+    assert 0 < stored < 60
+    assert RawSnapshotsRepo(conn).count() == stored

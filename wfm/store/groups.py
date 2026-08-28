@@ -12,13 +12,14 @@ class GroupsRepo:
         self._conn = conn
 
     def create(self, name: str, created_at: datetime) -> Group:
-        if self.get(name) is not None:
-            raise ValueError(f"group already exists: {name}")
-        with transaction(self._conn):
-            cur = self._conn.execute(
-                "INSERT INTO groups (name, created_at) VALUES (?,?)",
-                (name, to_utc_iso(created_at)),
-            )
+        try:
+            with transaction(self._conn):
+                cur = self._conn.execute(
+                    "INSERT INTO groups (name, created_at) VALUES (?,?)",
+                    (name, to_utc_iso(created_at)),
+                )
+        except sqlite3.IntegrityError as exc:
+            raise ValueError(f"group already exists: {name}") from exc
         return Group(name=name, created_at=created_at, id=int(cur.lastrowid))
 
     def delete(self, name: str) -> bool:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -19,9 +20,32 @@ def connect(path: Path | str) -> sqlite3.Connection:
     return conn
 
 
+_savepoints = itertools.count()
+
+
 @contextmanager
 def transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
-    conn.execute("BEGIN")
+    """Atomic block, reentrant so a caller can span several repository writes.
+
+    Nested blocks become savepoints, since every repository write method opens its
+    own transaction and SQLite has no nested BEGIN.
+    """
+    if conn.in_transaction:
+        name = f"wfm_sp_{next(_savepoints)}"
+        conn.execute(f"SAVEPOINT {name}")
+        try:
+            yield conn
+        except BaseException:
+            conn.execute(f"ROLLBACK TO {name}")
+            conn.execute(f"RELEASE {name}")
+            raise
+        conn.execute(f"RELEASE {name}")
+        return
+
+    # IMMEDIATE, not DEFERRED: the daemon and the CLI share one WAL database, and a
+    # deferred transaction that reads before writing fails its write upgrade with
+    # SQLITE_BUSY_SNAPSHOT, which the busy timeout cannot resolve.
+    conn.execute("BEGIN IMMEDIATE")
     try:
         yield conn
     except BaseException:

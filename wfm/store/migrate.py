@@ -14,6 +14,11 @@ def current_version(conn: sqlite3.Connection) -> int:
 
 def migrate(conn: sqlite3.Connection) -> int:
     version = current_version(conn)
+    if version > SCHEMA_VERSION:
+        raise RuntimeError(
+            f"database schema version {version} is newer than this build "
+            f"supports ({SCHEMA_VERSION}); upgrade wfm instead of downgrading the data"
+        )
     for index, module in enumerate(MIGRATIONS, start=1):
         if index <= version:
             continue
