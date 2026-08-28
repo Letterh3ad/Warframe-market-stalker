@@ -335,3 +335,78 @@ land even when `start()` is what failed.
 **Alternatives:** Raising uniformly, which loses the halt record in the one case that
 matters most; upserting uniformly, which turns a typo into a sweep that silently never
 advances.
+
+## 2026-08-28 - FakeClock.sleep yields to the event loop
+
+**Context:** The phase 2 plan's fake clock advanced time without awaiting anything, so
+`await clock.sleep(x)` was not a suspension point. Concurrent tasks then ran to
+completion one at a time in creation order, and no test of contention could observe a
+queue forming.
+
+**Decision:** `FakeClock.sleep` advances time and then `await asyncio.sleep(0)`, so it
+suspends like the real thing while still taking no wall clock time.
+
+**Alternatives:** Driving the tests with real `asyncio.sleep`, which makes the phase 7
+scheduling tests take a simulated day; asserting on internal state instead of observed
+ordering, which tests the implementation rather than the behaviour.
+
+## 2026-08-28 - Budget waiters are a priority heap, and a cancelled waiter is dropped
+
+**Context:** The budget hands the single bucket slot to the highest priority waiter. A
+waiter cancelled while queued (Ctrl+C, a cancelled daemon task) stayed in the heap.
+
+**Decision:** `_enter` removes its own entry on cancellation and `_leave` skips
+cancelled futures. Without this, handing the slot to a cancelled future raises
+`InvalidStateError` and strands every waiter behind it, which stops all pacing.
+
+**Alternatives:** `asyncio.PriorityQueue` of tickets, which has the same cancellation
+hole one layer down; a plain lock, which loses priority ordering entirely.
+
+## 2026-08-28 - httpx with async throughout, and one client owns the only transport
+
+**Context:** The design named an asyncio daemon but no HTTP library, and the read-only
+guarantee needs to be structural rather than a convention.
+
+**Decision:** `httpx.AsyncClient`, constructed only inside `WFMClient`, which exposes
+`get_json` and no write verb. Two compliance tests enforce it: one fails if any module
+under `wfm/` outside `client.py` constructs a transport, another if a write verb ever
+reaches a transport anywhere in `wfm/`.
+
+**Alternatives:** `requests` with threads, which makes the phase 7 scheduler a thread
+pool and the timing tests wall clock bound; aiohttp, whose test story has no equivalent
+of `httpx.MockTransport`.
+
+## 2026-08-28 - Backoff is held on the client, not on the request
+
+**Context:** The phase 2 constraints require a global backoff, but the planned client
+slept inside the retry loop of whichever call got the 429, so a concurrent caller could
+issue a request into the same block.
+
+**Decision:** `WFMClient` holds a `_hold_until` instant that every caller waits out
+before acquiring the budget. A 429 is a statement about the client's IP, not about one
+request.
+
+**Alternatives:** Relying on concurrency 1, which is a config value rather than a
+guarantee, and would silently stop protecting anything the day concurrency changes.
+
+## 2026-08-28 - Exceeding the interactive per-minute cap demotes rather than blocks
+
+**Context:** INTERACTIVE requests need a cap so a frontend cannot starve the poll loop.
+
+**Decision:** Over the cap, the request is served at BACKGROUND priority. The cap orders
+work; it is not a second rate limit, and rejecting would make a GUI feel broken.
+
+**Alternatives:** Rejecting with an error, or blocking until the sliding window frees a
+slot, which turns a busy minute into an unexplained freeze.
+
+## 2026-08-28 - Parsers read fields tolerantly
+
+**Context:** v2 has been observed using camelCase where v1 uses snake_case, and the
+project depends on payload shapes it does not control.
+
+**Decision:** Every field read goes through `_pick`, which takes several candidate names
+and a default, so an upstream rename degrades to a missing field rather than a crash.
+The live contract test is what proves the real shapes still parse.
+
+**Alternatives:** Pydantic models with strict validation, which turns any upstream
+rename into a total outage of the sweep.
