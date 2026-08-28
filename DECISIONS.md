@@ -280,3 +280,58 @@ tracked alongside.
 alternative was rejected). Tracking the spec but ignoring `DECISIONS.md` (a spec goes
 stale once built, while the rejected-alternatives record stays true, and git cannot
 reconstruct it).
+
+## 2026-08-27 - Migrations execute statements individually, not via executescript
+
+**Context:** `executescript()` implicit-commits, which broke the transaction wrapper.
+
+**Decision:** Execute statements individually inside the transaction so a migration is
+atomic against its `PRAGMA user_version` bump, and keep the wrapper's COMMIT
+unconditional so a future migration reaching for `executescript` fails loudly.
+
+**Alternatives:** Relaxing the wrapper to tolerate an absent transaction, which fixes the
+symptom and silently abandons atomicity, leaving a crash mid-migration with tables
+created and the version un-bumped.
+
+## 2026-08-28 - transaction() is reentrant via savepoints, and IMMEDIATE at the top level
+
+**Context:** Every repository write method opens its own transaction, so no operation
+spanning two repositories (create a group and add its members) could be made atomic.
+Separately, `BEGIN` is DEFERRED, and the daemon and CLI share one WAL database.
+
+**Decision:** A nested `transaction()` becomes a `SAVEPOINT`; the outermost one issues
+`BEGIN IMMEDIATE`. The unconditional COMMIT stays, so an `executescript()` that
+implicit-commits still fails loudly in both branches.
+
+**Alternatives:** Repository methods taking an optional connection-or-transaction
+argument, which pushes atomicity bookkeeping onto every call site; leaving DEFERRED and
+relying on the busy timeout, which cannot resolve `SQLITE_BUSY_SNAPSHOT` on a write
+upgrade.
+
+## 2026-08-28 - Raw payload sampling is hashed, not counted
+
+**Context:** `RawSnapshotsRepo` sampled off an instance counter, but every other
+repository here is a stateless wrapper over a connection, so one instance per call is
+the natural pattern and stored 100% of payloads: exactly the raw-JSON bloat the storage
+design exists to avoid.
+
+**Decision:** Sample off `crc32("slug|rank|utc_iso") % sample_rate`, so the decision is
+stateless and reproducible. Measured 2.1% at a configured 2% and 10.3% at 10% over
+realistic key streams.
+
+**Alternatives:** Persisting the counter (a write per skipped snapshot), or making the
+repository a process-lifetime singleton (a lifecycle rule the rest of the package does
+not have and nothing would enforce).
+
+## 2026-08-28 - Missing-row writes raise, except sweep halt which upserts
+
+**Context:** `SweepStateRepo.checkpoint`/`finish`/`halt` were bare `UPDATE`s that
+silently no-op on an unknown sweep name.
+
+**Decision:** `checkpoint` and `finish` raise `KeyError`. `halt` upserts, because it is
+the circuit breaker's record of why the next run must not charge back in, and it has to
+land even when `start()` is what failed.
+
+**Alternatives:** Raising uniformly, which loses the halt record in the one case that
+matters most; upserting uniformly, which turns a typo into a sweep that silently never
+advances.

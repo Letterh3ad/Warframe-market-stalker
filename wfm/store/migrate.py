@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+import sqlite3
+
+from wfm.store.db import transaction
+from wfm.store.migrations import MIGRATIONS
+
+SCHEMA_VERSION = len(MIGRATIONS)
+
+
+def current_version(conn: sqlite3.Connection) -> int:
+    return int(conn.execute("PRAGMA user_version").fetchone()[0])
+
+
+def migrate(conn: sqlite3.Connection) -> int:
+    version = current_version(conn)
+    if version > SCHEMA_VERSION:
+        raise RuntimeError(
+            f"database schema version {version} is newer than this build "
+            f"supports ({SCHEMA_VERSION}); upgrade wfm instead of downgrading the data"
+        )
+    for index, module in enumerate(MIGRATIONS, start=1):
+        if index <= version:
+            continue
+        with transaction(conn):
+            module.up(conn)
+            conn.execute(f"PRAGMA user_version={index}")
+    return SCHEMA_VERSION
