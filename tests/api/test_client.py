@@ -277,6 +277,17 @@ async def test_persistent_connection_errors_raise_apierror_and_feed_the_breaker(
     await client.aclose()
 
 
+async def test_a_falsy_error_field_is_not_an_error():
+    """A membership test against (None, {}, [], "") missed 0 and False, so a payload
+    reporting no error as a zero would have been raised as one."""
+    for falsy in (0, False, None, "", [], {}):
+        client, _, _ = _client(
+            lambda r, e=falsy: httpx.Response(200, json={"error": e, "data": {"x": 1}})
+        )
+        assert await client.get_json(URL) == {"x": 1}
+        await client.aclose()
+
+
 async def test_a_bare_error_envelope_is_raised_not_returned():
     client, _, _ = _client(lambda r: httpx.Response(200, json={"error": "item not found"}))
     with pytest.raises(ApiError):
