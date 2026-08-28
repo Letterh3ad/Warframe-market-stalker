@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta
 
 
@@ -22,3 +23,6 @@ class FakeClock:
     async def sleep(self, seconds: float) -> None:
         self.sleeps.append(seconds)
         self.advance(seconds)
+        # A real suspension point, so contention between tasks is modelled rather
+        # than serialised into whatever order the tasks happened to be created in.
+        await asyncio.sleep(0)

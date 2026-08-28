@@ -335,3 +335,29 @@ land even when `start()` is what failed.
 **Alternatives:** Raising uniformly, which loses the halt record in the one case that
 matters most; upserting uniformly, which turns a typo into a sweep that silently never
 advances.
+
+## 2026-08-28 - FakeClock.sleep yields to the event loop
+
+**Context:** The phase 2 plan's fake clock advanced time without awaiting anything, so
+`await clock.sleep(x)` was not a suspension point. Concurrent tasks then ran to
+completion one at a time in creation order, and no test of contention could observe a
+queue forming.
+
+**Decision:** `FakeClock.sleep` advances time and then `await asyncio.sleep(0)`, so it
+suspends like the real thing while still taking no wall clock time.
+
+**Alternatives:** Driving the tests with real `asyncio.sleep`, which makes the phase 7
+scheduling tests take a simulated day; asserting on internal state instead of observed
+ordering, which tests the implementation rather than the behaviour.
+
+## 2026-08-28 - Budget waiters are a priority heap, and a cancelled waiter is dropped
+
+**Context:** The budget hands the single bucket slot to the highest priority waiter. A
+waiter cancelled while queued (Ctrl+C, a cancelled daemon task) stayed in the heap.
+
+**Decision:** `_enter` removes its own entry on cancellation and `_leave` skips
+cancelled futures. Without this, handing the slot to a cancelled future raises
+`InvalidStateError` and strands every waiter behind it, which stops all pacing.
+
+**Alternatives:** `asyncio.PriorityQueue` of tickets, which has the same cancellation
+hole one layer down; a plain lock, which loses priority ordering entirely.
