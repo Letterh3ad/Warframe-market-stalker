@@ -81,6 +81,21 @@ class HourlyCandle:
 
 
 @dataclass(frozen=True)
+class Order:
+    platinum: int
+    quantity: int
+    rank: int
+    side: Side
+    visible: bool = True
+    user_status: str = "offline"
+    updated_at: datetime | None = None
+
+    @property
+    def is_online(self) -> bool:
+        return self.user_status in ("online", "ingame")
+
+
+@dataclass(frozen=True)
 class BookSnapshot:
     slug: str
     rank: int
