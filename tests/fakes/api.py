@@ -4,6 +4,16 @@ from typing import Any
 
 from wfm.sync.budget import Priority
 
+_MISSING = object()
+
+
+def _longest_match(mapping: dict, url: str) -> Any:
+    best_key = None
+    for key in mapping:
+        if key in url and (best_key is None or len(key) > len(best_key)):
+            best_key = key
+    return mapping[best_key] if best_key is not None else _MISSING
+
 
 class StubClient:
     """Stands in for WFMClient. Matches URLs by substring key."""
@@ -23,16 +33,18 @@ class StubClient:
         use_cache: bool = False,
     ) -> Any:
         self.calls.append((url, priority))
-        for key, error in self._errors.items():
-            if key in url:
-                raise error
+        error = _longest_match(self._errors, url)
+        if error is not _MISSING:
+            raise error
         return self.payload_for(url)
 
     def payload_for(self, url: str) -> Any:
-        for key, payload in self._payloads.items():
-            if key in url:
-                return payload
-        raise AssertionError(f"StubClient has no payload for {url}")
+        # Longest key wins: the statistics URL contains "/items" too, so a first-match
+        # scan would hand a stats request the items payload.
+        payload = _longest_match(self._payloads, url)
+        if payload is _MISSING:
+            raise AssertionError(f"StubClient has no payload for {url}")
+        return payload
 
     async def aclose(self) -> None:
         return None
