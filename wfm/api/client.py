@@ -160,8 +160,11 @@ class WFMClient:
         self._breaker.check()
         await self._await_hold()
         await self.budget.acquire(priority)
-        self._breaker.check()
+        # The breaker check goes last, after the hold sleep rather than before it:
+        # anything that can suspend leaves a window for the block to open, so nothing
+        # may await between this check and the request.
         await self._await_hold()
+        self._breaker.check()
 
     @property
     def holding_until(self) -> float:
@@ -184,8 +187,7 @@ def _unwrap(payload: Any) -> Any:
     # envelope has no data, and returning it as a payload turned a failure into an
     # empty result the sweep would record as "nothing traded".
     if isinstance(payload, dict):
-        error = payload.get("error")
-        if error not in (None, {}, [], ""):
+        if error := payload.get("error"):
             raise ApiError(f"api error: {error}")
         if "data" in payload:
             return payload["data"]

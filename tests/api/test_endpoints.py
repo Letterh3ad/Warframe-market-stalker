@@ -187,3 +187,23 @@ def test_a_candle_without_a_timestamp_is_skipped_not_fatal():
 def test_a_null_i18n_block_falls_back_to_the_slug():
     items = parse_items([{"slug": "x", "i18n": None}, {"slug": "y", "i18n": {"en": None}}])
     assert [i.name for i in items] == ["x", "y"]
+
+
+def test_a_malformed_timestamp_does_not_fail_the_whole_batch():
+    payload = {
+        "payload": {
+            "statistics_closed": {
+                "90days": [
+                    {"datetime": "not-a-real-timestamp", "volume": 1, "mod_rank": 0},
+                    {"datetime": "2026-08-26T00:00:00.000+00:00", "volume": 2, "mod_rank": 0},
+                ],
+                "48hours": [
+                    {"datetime": "garbage", "volume": 1, "mod_rank": 0},
+                    {"datetime": "2026-08-27T09:00:00.000+00:00", "volume": 2, "mod_rank": 0},
+                ],
+            }
+        }
+    }
+    daily, hourly = parse_statistics(payload, slug="x")
+    assert [c.date for c in daily] == ["2026-08-26"]
+    assert [c.volume for c in hourly] == [2]

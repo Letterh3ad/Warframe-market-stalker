@@ -39,9 +39,14 @@ def _pick(source: dict, *names: str, default: Any = None) -> Any:
 
 
 def _parse_ts(value: str | None) -> datetime | None:
+    """None on anything unparseable, so one malformed candle cannot fail a whole
+    batch of good ones."""
     if not value:
         return None
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
 
 
 def parse_items(payload: Any) -> list[Item]:

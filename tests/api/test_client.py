@@ -16,7 +16,9 @@ START = datetime(2026, 8, 27, tzinfo=timezone.utc)
 URL = "https://api.warframe.market/v2/items"
 
 
-def _client(handler, cache: HttpCacheRepo | None = None) -> tuple[WFMClient, FakeClock, list]:
+def _client(
+    handler, cache: HttpCacheRepo | None = None, **breaker_kwargs
+) -> tuple[WFMClient, FakeClock, list]:
     clock = FakeClock(start_utc=START)
     seen: list[httpx.Request] = []
 
@@ -28,7 +30,7 @@ def _client(handler, cache: HttpCacheRepo | None = None) -> tuple[WFMClient, Fak
     client = WFMClient(
         config=Config(),
         budget=budget,
-        breaker=CircuitBreaker(clock=clock),
+        breaker=CircuitBreaker(clock=clock, **breaker_kwargs),
         clock=clock,
         cache=cache,
         transport=httpx.MockTransport(recording),
@@ -282,10 +284,52 @@ async def test_a_bare_error_envelope_is_raised_not_returned():
     await client.aclose()
 
 
-async def test_no_sleep_is_served_after_the_final_attempt():
-    client, clock, seen = _client(lambda r: httpx.Response(503))
+async def test_no_sleep_is_served_after_the_final_5xx_attempt():
+    """The breaker is held off deliberately: at its default it trips on the fifth 5xx
+    and would raise before the loop guard, which is what let the old code pass."""
+    client, clock, seen = _client(lambda r: httpx.Response(503), max_5xx=100)
     with pytest.raises(ApiError):
         await client.get_json(URL)
     assert len(seen) == 5
-    assert len(clock.sleeps) == 4
+    assert clock.sleeps == [2.0, 4.0, 8.0, 16.0]
+    await client.aclose()
+
+
+async def test_no_sleep_is_served_after_the_final_429_attempt():
+    client, clock, seen = _client(
+        lambda r: httpx.Response(429, headers={"Retry-After": "9"}), max_429=100
+    )
+    with pytest.raises(ApiError):
+        await client.get_json(URL)
+    assert len(seen) == 5
+    assert clock.sleeps == [9.0, 9.0, 9.0, 9.0]
+    await client.aclose()
+
+
+async def test_a_trip_during_the_final_hold_sleep_is_caught_before_the_request():
+    """Nothing may suspend between the last breaker check and the request. The hold
+    is extended while this caller is in the budget queue, so the sleep that honours
+    it runs after the post-acquire check would have happened."""
+    client, clock, seen = _client(lambda r: httpx.Response(200, json={"data": {}}))
+    acquired = False
+    original_acquire = client.budget.acquire
+    original_sleep = clock.sleep
+
+    async def extend_then_flag(priority=Priority.BACKGROUND):
+        nonlocal acquired
+        await original_acquire(priority)
+        client._hold_until = clock.now() + 40
+        acquired = True
+
+    async def trip_if_after_acquire(seconds):
+        await original_sleep(seconds)
+        if acquired:
+            for _ in range(3):
+                client._breaker.record_429()
+
+    client.budget.acquire = extend_then_flag
+    clock.sleep = trip_if_after_acquire
+    with pytest.raises(CircuitOpen):
+        await client.get_json(URL)
+    assert seen == []
     await client.aclose()
