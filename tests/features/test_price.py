@@ -133,6 +133,28 @@ def test_build_on_a_thin_series_leaves_long_windows_none():
     assert samples["price_90d"] == 3
 
 
+def test_a_window_is_computed_at_the_coverage_threshold_not_only_when_perfectly_full():
+    # The API publishes complete days only, so a "90 day" series is 89 candles in
+    # practice and a strict 90-of-90 rule would null every long window forever.
+    features, _ = build(_series([40 + (i % 7) for i in range(89)]))
+    assert features.median_90d is not None
+    assert features.robust_z is not None
+    assert features.percentile_90d is not None
+
+
+def test_a_window_below_the_coverage_threshold_is_still_refused():
+    features, _ = build(_series([40 + (i % 7) for i in range(80)]))
+    assert features.median_90d is None
+    assert features.robust_z is None
+    # the 30 day window is comfortably covered by the same series
+    assert features.median_30d is not None
+
+
+def test_coverage_lets_a_gappy_month_through_but_not_a_thin_one():
+    assert build(_series([40 + (i % 3) for i in range(27)]))[0].median_30d is not None
+    assert build(_series([40 + (i % 3) for i in range(26)]))[0].median_30d is None
+
+
 def test_build_on_an_empty_series_returns_an_empty_block():
     features, samples = build([])
     assert features == type(features)()

@@ -16,14 +16,37 @@ PRICE_WINDOW_DAYS = 90
 HOURLY_WINDOW_HOURS = 24 * 14
 
 
+def _anchor_date(ctx: AppContext, now: datetime) -> str:
+    """Windows end at the newest complete day of data, not at today.
+
+    warframe.market publishes closed days only, so today never has a candle. Anchoring on
+    today silently costs every window one day, which is enough to starve a 7 day return
+    (it needs 8 points to span 7 intervals) and empty the market block for every item.
+    Capped at now so a clock moved backwards in a test cannot read future candles.
+    """
+    today = now.date().isoformat()
+    newest = ctx.daily.market_dates(limit=1)
+    return min(newest[0], today) if newest else today
+
+
+def _spread(slugs: list[str], limit: int) -> list[str]:
+    if limit <= 0 or len(slugs) <= limit:
+        return slugs
+    return slugs[:: len(slugs) // limit][:limit]
+
+
 def market_context(
     ctx: AppContext, days: int = 7, sample_limit: int = 500, now: datetime | None = None
 ) -> MarketContext:
     """Sampled rather than exhaustive: a full catalog pass on every tick would dominate
     the tick cost for a figure that moves slowly.
+
+    Strided rather than the first N: all_slugs() is alphabetical, so a head slice reads
+    only the "a" items and reports their tag mix as the market's. The stride costs the
+    same, stays deterministic, and tracks the real distribution.
     """
-    end = (now or ctx.clock.utcnow()).date().isoformat()
-    slugs = ctx.items.all_slugs()[:sample_limit]
+    end = _anchor_date(ctx, now or ctx.clock.utcnow())
+    slugs = _spread(ctx.items.all_slugs(), sample_limit)
     series = {}
     tags: dict[str, tuple[str, ...]] = {}
     for slug in slugs:
@@ -49,7 +72,7 @@ def build_for(
     samples: dict[str, int] = {}
     available: set[str] = set()
 
-    candles = ctx.daily.window(slug, rank, days=PRICE_WINDOW_DAYS, end=now.date().isoformat())
+    candles = ctx.daily.window(slug, rank, days=PRICE_WINDOW_DAYS, end=_anchor_date(ctx, now))
     price_block, price_samples = price_features.build(candles)
     samples.update(price_samples)
     if candles:

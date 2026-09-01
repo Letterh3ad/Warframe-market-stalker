@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import statistics
 
 from wfm.features.types import PriceFeatures
@@ -7,6 +8,18 @@ from wfm.models import DailyCandle
 
 MAD_TO_SD = 0.6745
 """Scale factor making MAD comparable to a standard deviation for normal data."""
+
+MIN_COVERAGE = 0.9
+"""Share of a window's days that must carry a close before its statistics are computed.
+
+Not 1.0: warframe.market publishes complete days only, so a 90 day series arrives as 89
+candles and a strict rule would null every long window permanently. 0.9 still refuses the
+thin history that produces plausible wrong signals, which is the point of the guard.
+"""
+
+
+def _window(values: list[float], days: int) -> list[float] | None:
+    return values[-days:] if len(values) >= math.ceil(days * MIN_COVERAGE) else None
 
 
 def median(values: list[float]) -> float | None:
@@ -57,13 +70,14 @@ def atr(candles: list[DailyCandle], window: int = 14) -> float | None:
 
 def volume_trend(candles: list[DailyCandle], short: int = 7, long: int = 30) -> float | None:
     volumes = [c.volume for c in candles if c.volume is not None]
-    if len(volumes) < long:
+    long_window = _window(volumes, long)
+    short_window = _window(volumes, short)
+    if long_window is None or short_window is None:
         return None
-    long_median = median(volumes[-long:])
-    short_median = median(volumes[-short:])
+    long_median = median(long_window)
     if not long_median:
         return None
-    return short_median / long_median
+    return median(short_window) / long_median
 
 
 def donchian_position(candles: list[DailyCandle]) -> float | None:
@@ -83,7 +97,7 @@ def donchian_position(candles: list[DailyCandle]) -> float | None:
 
 
 def build(candles: list[DailyCandle]) -> tuple[PriceFeatures, dict[str, int]]:
-    """A window statistic stays None unless its window is fully populated. A "30 day
+    """A window statistic stays None unless the window clears MIN_COVERAGE. A "30 day
     median" taken from four points is exactly the plausible-looking wrong number this
     layer exists to avoid.
     """
@@ -99,9 +113,10 @@ def build(candles: list[DailyCandle]) -> tuple[PriceFeatures, dict[str, int]]:
         return PriceFeatures(), samples
 
     last_close = closes[-1]
-    window_90 = closes[-90:] if len(closes) >= 90 else None
-    window_30 = closes[-30:] if len(closes) >= 30 else None
-    window_7 = closes[-7:] if len(closes) >= 7 else None
+    window_90 = _window(closes, 90)
+    window_30 = _window(closes, 30)
+    window_7 = _window(closes, 7)
+    volume_30 = _window(volumes, 30)
     atr_value = atr(candles)
 
     return (
@@ -115,7 +130,7 @@ def build(candles: list[DailyCandle]) -> tuple[PriceFeatures, dict[str, int]]:
             atr_14d=atr_value,
             atr_pct=(atr_value / last_close) if atr_value and last_close else None,
             volume_trend=volume_trend(candles),
-            median_volume_30d=median(volumes[-30:]) if len(volumes) >= 30 else None,
+            median_volume_30d=median(volume_30) if volume_30 else None,
             donchian_position=donchian_position(candles),
             last_close=last_close,
         ),

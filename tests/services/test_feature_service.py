@@ -75,14 +75,50 @@ def test_market_context_is_built_from_stored_series(ctx):
     assert "mod" in context.tag_returns
 
 
-def test_market_context_reads_the_clock_not_the_wall_clock(ctx):
-    """The window must end at the injected now. Reading real wall-clock time here makes
-    the market block quietly empty whenever the fixtures age past the window.
+def test_market_context_reads_the_injected_clock_not_the_wall_clock(ctx):
+    """The anchor is capped at now, so a clock set before the data cannot read candles
+    that had not happened yet. This is what keeps the block deterministic in tests.
     """
-    stale = feature_service.market_context(ctx, days=7, now=datetime(2027, 1, 1,
-                                                                    tzinfo=timezone.utc))
-    assert stale.median_return is None
+    before_the_data = feature_service.market_context(
+        ctx, days=7, now=datetime(2026, 8, 5, 12, 0, tzinfo=timezone.utc)
+    )
+    assert before_the_data.median_return is None
     assert feature_service.market_context(ctx, days=7, now=NOW).median_return is not None
+
+
+def test_market_context_anchors_on_the_newest_candle_not_on_today(ctx):
+    """Daily statistics cover complete days only, so the newest candle is yesterday.
+    Anchoring the window on today costs it a day, and a 7 day return needs 8 points,
+    so every item returns None and the whole market block goes quietly empty.
+    """
+    a_day_after_the_data_ends = datetime(2026, 8, 28, 12, 0, tzinfo=timezone.utc)
+    context = feature_service.market_context(ctx, days=7, now=a_day_after_the_data_ends)
+    assert context.median_return is not None
+
+
+def test_the_market_sample_spreads_across_the_catalog_instead_of_taking_the_head(conn):
+    """all_slugs() is alphabetical, so taking the first N samples only the "a" items.
+    That misreports the market median and hands cohort_size 0 to every tag that happens
+    to sort late, which silently disables the cohort comparison.
+    """
+    context = AppContext(Config(), conn=conn, clock=FakeClock(start_utc=NOW))
+    context.items.upsert_many(
+        [
+            Item(slug=f"item_{i:02d}", name=f"I{i}", url_name=f"item_{i:02d}",
+                 tags=("early",) if i < 5 else ("late",))
+            for i in range(10)
+        ]
+    )
+    context.daily.upsert_many(
+        [
+            DailyCandle(slug=f"item_{i:02d}", rank=0, date=f"2026-08-{d:02d}",
+                        close=40 + d, median=40 + d, volume=5)
+            for i in range(10)
+            for d in range(20, 28)
+        ]
+    )
+    sampled = feature_service.market_context(context, days=7, sample_limit=5, now=NOW)
+    assert sampled.cohort_sizes.get("late", 0) > 0
 
 
 def test_build_for_carries_the_market_block_when_a_context_is_supplied(ctx):
