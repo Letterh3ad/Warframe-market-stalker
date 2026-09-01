@@ -30,7 +30,10 @@ def window(candles: list[DailyCandle], days: int) -> list[DailyCandle] | None:
     entirely, so an illiquid item can hold 27 closes spread over three months. Counting
     points would happily label that a 30 day median.
     """
-    dated = [c for c in candles if c.close is not None]
+    # Sorted here rather than trusting the caller: the anchor is the newest date, and
+    # taking it from the last list element made the result depend on an unguarded
+    # ordering contract that one out-of-order candle would silently break.
+    dated = sorted((c for c in candles if c.close is not None), key=_day)
     if not dated:
         return None
     end = _day(dated[-1])

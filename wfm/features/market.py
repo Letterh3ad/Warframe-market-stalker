@@ -27,7 +27,9 @@ def returns_over(candles: list[DailyCandle], days: int) -> float | None:
     illiquid item's 8 newest closes can span months, and reporting that as a 7 day return
     invents a move that never happened.
     """
-    dated = [c for c in candles if c.close is not None]
+    dated = sorted(
+        (c for c in candles if c.close is not None), key=lambda c: date.fromisoformat(c.date)
+    )
     if not dated:
         return None
     end = date.fromisoformat(dated[-1].date)

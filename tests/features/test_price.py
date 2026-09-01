@@ -4,6 +4,7 @@ import pytest
 
 from wfm.features.price import (
     atr,
+    window,
     build,
     donchian_position,
     mad,
@@ -205,6 +206,22 @@ def test_a_flat_item_reports_zero_volatility_not_unmeasurable_volatility():
     features, _ = build(flat)
     assert features.atr_14d == 0.0
     assert features.atr_pct == 0.0, "0.0 is a real volatility reading, None means unknown"
+
+
+def test_a_window_does_not_depend_on_the_caller_having_sorted_the_candles():
+    """The anchor was the last list element, not the newest date. The repo happens to
+    ORDER BY date today, so this was an unguarded contract rather than a live bug.
+    """
+    dense = _series([40] * 30)
+    assert window(list(reversed(dense)), 30) is not None
+    assert len(window(list(reversed(dense)), 30)) == 30
+
+
+def test_an_out_of_order_candle_does_not_drag_the_anchor_backwards():
+    dense = _series([40] * 30)
+    out_of_order = dense + [dense[0]]
+    # the anchor is the newest date, not whatever happens to sit last in the list
+    assert window(out_of_order, 30)[-1].date == dense[-1].date
 
 
 def test_the_sample_count_matches_the_values_the_gate_actually_counts():
