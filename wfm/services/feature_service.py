@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import date, datetime
 
 from wfm.features import book as book_features
 from wfm.features import market as market_features
@@ -63,7 +63,9 @@ def market_context(
         if candles:
             series[slug] = candles
             tags[slug] = item.tags
-    return market_features.build_context(series, tags, days=days)
+    return market_features.build_context(
+        series, tags, days=days, end=date.fromisoformat(end)
+    )
 
 
 def build_for(
@@ -78,8 +80,11 @@ def build_for(
     samples: dict[str, int] = {}
     available: set[str] = set()
 
-    candles = ctx.daily.window(slug, rank, days=PRICE_WINDOW_DAYS, end=_anchor_date(ctx, now))
-    price_block, price_samples = price_features.build(candles)
+    anchor = _anchor_date(ctx, now)
+    candles = ctx.daily.window(slug, rank, days=PRICE_WINDOW_DAYS, end=anchor)
+    # The anchor is passed down, never re-derived from this item's own candles: a
+    # dead item's last dense run would otherwise report as current data.
+    price_block, price_samples = price_features.build(candles, end=date.fromisoformat(anchor))
     samples.update(price_samples)
     if candles:
         available.add("price")
@@ -100,7 +105,11 @@ def build_for(
     if market is not None:
         item = ctx.items.get(slug)
         market_block, market_samples = market_features.build(
-            candles, tags=item.tags if item else (), context=market, slug=slug
+            candles,
+            tags=item.tags if item else (),
+            context=market,
+            slug=slug,
+            end=date.fromisoformat(anchor),
         )
         samples.update(market_samples)
         available.add("market")

@@ -42,13 +42,19 @@ def build(
     # The newest closed hour is the observation; everything older is the expectation it
     # is measured against. Nothing is ever stamped at now, because these candles come
     # from statistics_closed and land on hour boundaries strictly in the past.
+    #
+    # Every field here describes the CURRENT hour of week, so the observation only counts
+    # when it belongs to that bucket. A candle from three days ago would otherwise fill
+    # bucket, confidence and the deviations with a confident claim about right now, which
+    # is what a lagging backfill produces.
+    current_bucket = bucket_of(now)
     observed = sorted([c for c in candles if c.ts <= now], key=lambda c: c.ts)
-    latest = observed[-1] if observed else None
-    history = observed[:-1] if observed else []
+    newest = observed[-1] if observed else None
+    latest = newest if newest and bucket_of(newest.ts) == current_bucket else None
+    history = [c for c in observed if c is not latest]
 
-    current_bucket = bucket_of(latest.ts) if latest else bucket_of(now)
     grouped = profile(history)
-    stats = grouped.get(current_bucket, {"n": 0, "volume": None, "price": None})
+    stats = grouped.get(current_bucket, {"n": 0, "n_volume": 0, "volume": None, "price": None})
     samples = {"seasonality_bucket": stats["n"], "seasonality_total": len(history)}
 
     expected_volume = stats["volume"]

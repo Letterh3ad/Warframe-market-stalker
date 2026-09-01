@@ -224,6 +224,64 @@ def test_an_out_of_order_candle_does_not_drag_the_anchor_backwards():
     assert window(out_of_order, 30)[-1].date == dense[-1].date
 
 
+def test_volume_statistics_gate_on_volume_coverage_not_on_close_coverage():
+    """Coverage must be counted over the values the statistic actually uses. Gating the
+    volume figures on close coverage lets 2 volumes masquerade as a 30 day median.
+    """
+    mostly_missing = [
+        _c((date(2026, 8, 1) + timedelta(days=i)).isoformat(),
+           close=40, high=41, low=39, volume=100 if i > 27 else None)
+        for i in range(30)
+    ]
+    features, _ = build(mostly_missing)
+    assert features.median_30d is not None, "closes are fully covered"
+    assert features.median_volume_30d is None, "only 2 of 30 days carry a volume"
+    assert features.volume_trend is None
+
+
+def test_a_window_ends_at_the_supplied_anchor_not_at_the_items_own_last_candle():
+    """Anchoring on the item's own data lets a dead item's old run read as current."""
+    june = [_c((date(2026, 6, 1) + timedelta(days=i)).isoformat(),
+               close=40 + i, high=45, low=35, volume=5) for i in range(7)]
+    assert build(june, end=date(2026, 8, 31))[0].median_7d is None
+    assert build(june, end=date(2026, 6, 7))[0].median_7d is not None
+
+
+def test_one_missing_day_is_tolerated_at_every_window_size():
+    def covered(days: int, present: int):
+        cs = [_c((date(2026, 8, 31) - timedelta(days=i)).isoformat(),
+                 close=40, high=41, low=39, volume=5) for i in range(present)]
+        return window(cs, days, end=date(2026, 8, 31)) is not None
+
+    assert covered(7, 6) is True, "6 of 7 days must clear a 7 day window"
+    assert covered(7, 5) is False
+    assert covered(30, 27) is True
+    assert covered(30, 26) is False
+
+
+def test_provenance_counts_the_samples_inside_each_window():
+    """Every counter must describe its own window, otherwise it cannot explain its null."""
+    spread = _sparse(
+        [f"2026-06-{d:02d}" for d in range(1, 10)]
+        + [f"2026-07-{d:02d}" for d in range(1, 10)]
+        + [f"2026-08-{d:02d}" for d in range(1, 10)]
+    )
+    features, samples = build(spread, end=date(2026, 8, 9))
+    assert features.median_30d is None
+    assert samples["price_30d"] == 9, "9 of the 27 closes fall in the 30 day window"
+    assert samples["price_90d"] == 27
+
+
+def test_atr_needs_highs_and_lows_covered_not_merely_closes():
+    closes_only = [
+        _c((date(2026, 8, 1) + timedelta(days=i)).isoformat(), close=40, volume=5)
+        for i in range(30)
+    ]
+    features, _ = build(closes_only)
+    assert features.median_30d is not None
+    assert features.atr_14d is None, "no candle carries a high or a low"
+
+
 def test_the_sample_count_matches_the_values_the_gate_actually_counts():
     candles = _series([40, 41]) + [_c("2026-06-05"), _c("2026-06-06")]
     _, samples = build(candles)

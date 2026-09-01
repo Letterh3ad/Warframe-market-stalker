@@ -94,6 +94,28 @@ def test_the_newest_candle_is_not_folded_into_the_expectation_it_is_measured_aga
     assert samples["seasonality_bucket"] == 4
 
 
+def test_a_stale_observation_does_not_report_a_confident_current_deviation():
+    """bucket, confidence and best_bucket_next_48h all describe the current hour. An
+    observation from three days ago must not fill them, or a lagging backfill reads as a
+    confident statement about now.
+    """
+    now = datetime(2026, 8, 27, 12, 37, tzinfo=timezone.utc)
+    three_days_stale = now.replace(minute=0) - timedelta(days=3)
+    history = [_h(three_days_stale - timedelta(weeks=w), volume=10, close=40)
+               for w in range(1, 6)]
+    features, _ = build(history + [_h(three_days_stale, volume=10, close=48)], now=now)
+    assert features.bucket == bucket_of(now), "bucket is the current hour of week"
+    assert features.price_deviation is None
+    assert features.volume_deviation is None
+
+
+def test_an_unseen_bucket_does_not_raise_on_its_default_entry():
+    now = datetime(2026, 8, 27, 12, 37, tzinfo=timezone.utc)
+    features, samples = build([], now=now)
+    assert features.bucket == bucket_of(now)
+    assert samples["seasonality_bucket"] == 0
+
+
 def test_a_bucket_only_counts_samples_that_carried_a_price():
     """n counted every entry, so a bucket of four rows with one close reported n=4 and a
     confidence of 1.0 for what is really a single observation.

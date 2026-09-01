@@ -1,3 +1,5 @@
+import statistics
+
 import pytest
 
 from wfm.features.market import build, build_context, returns_over
@@ -59,9 +61,7 @@ def test_an_item_whose_tag_has_no_cohort_still_gets_an_excess_against_the_market
     context = build_context(SERIES, TAGS, days=7)
     features, _ = build(UP, tags=("unknown_tag",), context=context, slug="up")
     assert features.cohort_size == 0
-    assert features.excess_return_7d == pytest.approx(
-        returns_over(UP, 7) - context.median_return
-    )
+    assert features.excess_return_7d is not None
 
 
 def test_a_thin_item_has_no_excess_return_but_still_carries_the_market_read():
@@ -99,14 +99,22 @@ def test_a_seven_day_return_spans_seven_days_not_eight_data_points():
 
 
 def test_an_item_is_not_compared_against_itself():
-    """A tag whose only sampled member is the item itself yields a benchmark equal to the
-    item's own return, so excess_return is structurally 0.0: a confident looking reading
-    that is pure self comparison.
+    """A market of one is still the item itself. Removing it from the tag cohort but
+    leaving it in the market median gives a benchmark equal to its own return, so
+    excess_return comes back a confident 0.0 that means nothing.
     """
     context = build_context({"up": UP}, {"up": ("solo",)}, days=7)
     features, _ = build(UP, tags=("solo",), context=context, slug="up")
     assert features.cohort_size == 0
     assert features.tag_median_return_7d is None
+    assert features.excess_return_7d is None, "there is nothing to compare against"
+
+
+def test_the_market_fallback_also_excludes_the_item():
+    context = build_context(SERIES, TAGS, days=7)
+    features, _ = build(UP, tags=("unknown_tag",), context=context, slug="up")
+    peers_only = statistics.median([returns_over(FLAT, 7), returns_over(DOWN, 7)])
+    assert features.excess_return_7d == pytest.approx(returns_over(UP, 7) - peers_only)
 
 
 def test_a_cohort_excludes_the_item_being_measured():
