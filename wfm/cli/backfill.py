@@ -8,7 +8,7 @@ from wfm.services import catalog_service, sync_service
 
 
 def register(parser) -> None:
-    group = parser.add_mutually_exclusive_group()
+    group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--all", action="store_true", help="sweep the whole catalog")
     group.add_argument("--slug", help="backfill one item")
     parser.add_argument("--limit", type=int, default=None, help="stop after N items")
@@ -18,15 +18,18 @@ def register(parser) -> None:
 
 async def run(args) -> int:
     ctx = context_factory.build(args)
-    slug = None
-    if args.slug:
-        try:
-            slug, _ = catalog_service.resolve(ctx, args.slug)
-        except LookupError as exc:
-            print(exc, file=sys.stderr)
-            return 1
-    emit(
-        await sync_service.backfill(ctx, slug=slug, limit=args.limit, dry_run=args.dry_run),
-        args.json,
-    )
-    return 0
+    try:
+        slug = None
+        if args.slug:
+            try:
+                slug, _ = catalog_service.resolve(ctx, args.slug)
+            except LookupError as exc:
+                print(exc, file=sys.stderr)
+                return 1
+        emit(
+            await sync_service.backfill(ctx, slug=slug, limit=args.limit, dry_run=args.dry_run),
+            args.json,
+        )
+        return 0
+    finally:
+        await ctx.aclose()

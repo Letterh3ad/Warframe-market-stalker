@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Any
 
 from wfm.models import DailyCandle, HourlyCandle, Item, Order, Side
 from wfm.sync.budget import Priority
+
+log = logging.getLogger(__name__)
 
 V1_BASE = "https://api.warframe.market/v1"
 V2_BASE = "https://api.warframe.market/v2"
@@ -101,8 +104,20 @@ def parse_orders(payload: Any, slug: str) -> list[Order]:
 
 def parse_statistics(payload: Any, slug: str) -> tuple[list[DailyCandle], list[HourlyCandle]]:
     closed = payload.get("payload", payload).get("statistics_closed", {})
-    daily = [c for c in map(lambda e: _to_daily(e, slug), closed.get("90days", [])) if c]
-    hourly = [c for c in map(lambda e: _to_hourly(e, slug), closed.get("48hours", [])) if c]
+    raw_daily = closed.get("90days") or []
+    raw_hourly = closed.get("48hours") or []
+    daily = [c for c in map(lambda e: _to_daily(e, slug), raw_daily) if c]
+    hourly = [c for c in map(lambda e: _to_hourly(e, slug), raw_hourly) if c]
+    if len(daily) != len(raw_daily):
+        log.warning(
+            "%s: dropped %d/%d daily candles with an unparseable timestamp",
+            slug, len(raw_daily) - len(daily), len(raw_daily),
+        )
+    if len(hourly) != len(raw_hourly):
+        log.warning(
+            "%s: dropped %d/%d hourly candles with an unparseable timestamp",
+            slug, len(raw_hourly) - len(hourly), len(raw_hourly),
+        )
     return daily, hourly
 
 

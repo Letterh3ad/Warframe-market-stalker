@@ -28,7 +28,7 @@ def register(parser) -> None:
     parser.set_defaults(handler=run)
 
 
-def run(args) -> int:
+async def run(args) -> int:
     ctx = context_factory.build(args)
     try:
         if args.watch_command == "add":
@@ -44,8 +44,11 @@ def run(args) -> int:
         else:
             emit(watch_service.suggest(ctx, top=args.top), args.json,
                  columns=["slug", "rank", "name", "median_volume", "volatility", "score"])
-            print("\nNothing was added. Use wfm watch add <slug> to confirm.")
+            if not args.json:
+                print("\nNothing was added. Use wfm watch add <slug> to confirm.")
     except LookupError as exc:
         print(exc, file=sys.stderr)
         return 1
+    finally:
+        await ctx.aclose()
     return 0

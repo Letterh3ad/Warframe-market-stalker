@@ -14,8 +14,11 @@ def register(parser) -> None:
 
 async def run(args) -> int:
     ctx = context_factory.build(args)
-    if args.status:
-        emit(sync_service.status(ctx), args.json)
+    try:
+        if args.status:
+            emit(sync_service.status(ctx), args.json)
+            return 0
+        emit(await sync_service.sync(ctx, force=args.force, dry_run=args.dry_run), args.json)
         return 0
-    emit(await sync_service.sync(ctx, force=args.force, dry_run=args.dry_run), args.json)
-    return 0
+    finally:
+        await ctx.aclose()

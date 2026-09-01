@@ -37,6 +37,7 @@ class AppContext:
     ) -> None:
         self.config = config
         self.clock = clock or SystemClock()
+        self._owns_conn = conn is None
         self.conn = conn if conn is not None else connect(config.db_path)
         migrate(self.conn)
         self.breaker = CircuitBreaker(clock=self.clock)
@@ -73,4 +74,5 @@ class AppContext:
     async def aclose(self) -> None:
         if self._client is not None:
             await self._client.aclose()
-        self.conn.close()
+        if self._owns_conn:
+            self.conn.close()

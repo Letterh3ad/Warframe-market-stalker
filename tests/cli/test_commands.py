@@ -64,3 +64,47 @@ def test_sync_dry_run_spends_nothing(wired, capsys):
 def test_unknown_item_exits_nonzero_with_a_readable_message(wired, capsys):
     assert main(["watch", "add", "nonsense"]) == 1
     assert "nonsense" in capsys.readouterr().err
+
+
+def test_backfill_with_no_args_refuses_the_implicit_full_sweep(wired, capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        main(["backfill"])
+    assert exc_info.value.code == 2
+    assert "--all" in capsys.readouterr().err
+
+
+def test_watch_suggest_json_output_is_parseable(wired, capsys):
+    assert main(["--json", "watch", "suggest"]) == 0
+    json.loads(capsys.readouterr().out)
+
+
+def test_sync_closes_the_context_when_done(wired, capsys, monkeypatch):
+    closed = []
+    monkeypatch.setattr(wired, "aclose", lambda: closed.append(True) or _noop())
+    assert main(["--json", "sync", "--dry-run"]) == 0
+    assert closed == [True]
+
+
+def test_search_closes_the_context_when_done(wired, capsys, monkeypatch):
+    closed = []
+    monkeypatch.setattr(wired, "aclose", lambda: closed.append(True) or _noop())
+    assert main(["--json", "search", "Alpha"]) == 0
+    assert closed == [True]
+
+
+def test_watch_ls_closes_the_context_when_done(wired, capsys, monkeypatch):
+    closed = []
+    monkeypatch.setattr(wired, "aclose", lambda: closed.append(True) or _noop())
+    assert main(["--json", "watch", "ls"]) == 0
+    assert closed == [True]
+
+
+def test_group_ls_closes_the_context_when_done(wired, capsys, monkeypatch):
+    closed = []
+    monkeypatch.setattr(wired, "aclose", lambda: closed.append(True) or _noop())
+    assert main(["--json", "group", "ls"]) == 0
+    assert closed == [True]
+
+
+async def _noop() -> None:
+    return None

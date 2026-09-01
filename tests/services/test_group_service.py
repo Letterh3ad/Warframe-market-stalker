@@ -47,3 +47,10 @@ def test_remove_member_and_delete_group(ctx):
     group_service.add(ctx, "primes", "a")
     assert group_service.remove(ctx, "primes", "a")["removed"] is True
     assert group_service.rm(ctx, "primes")["removed"] is True
+
+
+def test_remove_all_ranks_removes_every_rank_not_just_the_first(ctx):
+    group_service.new(ctx, "primes")
+    group_service.add(ctx, "primes", "b", rank="all")
+    group_service.remove(ctx, "primes", "b", rank="all")
+    assert group_service.show(ctx, "primes")["members"] == []

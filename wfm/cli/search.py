@@ -11,8 +11,11 @@ def register(parser) -> None:
     parser.set_defaults(handler=run)
 
 
-def run(args) -> int:
+async def run(args) -> int:
     ctx = context_factory.build(args)
-    results = catalog_service.search(ctx, args.query, limit=args.limit)
-    emit(results, args.json, columns=["slug", "name", "tags", "canonical_rank"])
-    return 0
+    try:
+        results = catalog_service.search(ctx, args.query, limit=args.limit)
+        emit(results, args.json, columns=["slug", "name", "tags", "canonical_rank"])
+        return 0
+    finally:
+        await ctx.aclose()

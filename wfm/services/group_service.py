@@ -28,7 +28,7 @@ def add(ctx: AppContext, name: str, query: str, rank: str | int | None = None) -
 
 def remove(ctx: AppContext, name: str, query: str, rank: str | int | None = None) -> dict:
     slug, ranks = catalog_service.resolve(ctx, query, rank)
-    removed = any(ctx.groups.remove_member(name, slug, r) for r in ranks)
+    removed = sum(1 for r in ranks if ctx.groups.remove_member(name, slug, r)) > 0
     return {"group": name, "slug": slug, "removed": removed}
 
 

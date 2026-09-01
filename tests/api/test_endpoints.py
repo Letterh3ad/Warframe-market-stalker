@@ -207,3 +207,26 @@ def test_a_malformed_timestamp_does_not_fail_the_whole_batch():
     daily, hourly = parse_statistics(payload, slug="x")
     assert [c.date for c in daily] == ["2026-08-26"]
     assert [c.volume for c in hourly] == [2]
+
+
+def test_a_malformed_timestamp_is_logged_as_a_dropped_candle(caplog):
+    payload = {
+        "payload": {
+            "statistics_closed": {
+                "90days": [
+                    {"datetime": "garbage", "volume": 1, "mod_rank": 0},
+                    {"datetime": "2026-08-26T00:00:00.000+00:00", "volume": 2, "mod_rank": 0},
+                ]
+            }
+        }
+    }
+    with caplog.at_level("WARNING"):
+        parse_statistics(payload, slug="x")
+    assert "1/2" in caplog.text
+
+
+def test_statistics_with_a_null_daily_window_does_not_crash():
+    payload = {"payload": {"statistics_closed": {"90days": None, "48hours": None}}}
+    daily, hourly = parse_statistics(payload, slug="x")
+    assert daily == []
+    assert hourly == []

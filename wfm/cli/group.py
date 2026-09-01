@@ -21,7 +21,7 @@ def register(parser) -> None:
     parser.set_defaults(handler=run)
 
 
-def run(args) -> int:
+async def run(args) -> int:
     ctx = context_factory.build(args)
     try:
         if args.group_command == "new":
@@ -39,4 +39,6 @@ def run(args) -> int:
     except (LookupError, KeyError, ValueError) as exc:
         print(exc, file=sys.stderr)
         return 1
+    finally:
+        await ctx.aclose()
     return 0
