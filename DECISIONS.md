@@ -410,3 +410,48 @@ The live contract test is what proves the real shapes still parse.
 
 **Alternatives:** Pydantic models with strict validation, which turns any upstream
 rename into a total outage of the sweep.
+
+## 2026-08-28 - Catalog version token lives in sweep_state.cursor
+
+**Context:** The v2 `/versions` token gates the catalog sync so an unchanged catalog
+costs one request instead of ~3745. It needs somewhere to persist between runs.
+
+**Decision:** Store it in `sweep_state.cursor` for the `catalog` sweep. It is exactly a
+sweep cursor: the marker for what the last completed pass covered. No new table.
+
+**Alternatives:** A dedicated `catalog_version` table or a row in a generic kv table,
+both of which add a migration for a single string.
+
+## 2026-08-28 - Sweep skips a per-item ApiError, halts on CircuitOpen
+
+**Context:** During a full catalog sweep an individual item can 404 (delisted slug),
+which is unrelated to the client's standing. A run of 429s is not.
+
+**Decision:** `run_sweep` logs and skips a per-item `ApiError` (one bad slug must not
+cost a 21-minute sweep) and halts immediately on `CircuitOpen`, recording the reason in
+`sweep_state`. Continuing past a tripped breaker is what turns a rate limit into a block.
+
+**Alternatives:** Halting on any error (a single delisting stops the sweep) or retrying
+per item (hammers the API the breaker just protected).
+
+## 2026-08-28 - A halted sweep resumes from its cursor, only a finished one restarts
+
+**Context:** The task 5 plan resumed only when `sweep_state.status == "running"`, so a
+breaker trip at item 3700/3745 meant the next run re-fetched all 3745.
+
+**Decision:** `run_sweep` resumes when status is `running` or `halted` (the cursor is
+preserved in both). Only `done` starts over, which is the intended daily behaviour.
+
+**Alternatives:** Requiring a manual reset after a halt, which the phase 7 daemon would
+have to special-case anyway.
+
+## 2026-08-28 - CLI entrypoint via `python -m wfm` and a console script
+
+**Context:** The phase 3 plan wrote `wfm ...` invocations but produced no runnable
+entrypoint (no `__main__.py`, no `[project.scripts]`).
+
+**Decision:** Added `wfm/__main__.py` and a `wfm = "wfm.cli.main:main"` console script.
+`python -m wfm` works immediately; the `wfm` script needs `pip install -e .` to appear.
+
+**Alternatives:** Only the console script (needs a reinstall to exist) or only
+`__main__.py` (leaves `wfm` unbound).

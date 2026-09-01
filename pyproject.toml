@@ -9,6 +9,9 @@ description = "Warframe Market Stalker: price tracking and buy/sell timing signa
 requires-python = ">=3.12"
 dependencies = ["httpx>=0.27"]
 
+[project.scripts]
+wfm = "wfm.cli.main:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
 
