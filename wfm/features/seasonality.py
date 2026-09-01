@@ -21,8 +21,11 @@ def profile(candles: list[HourlyCandle]) -> dict[int, dict]:
     for bucket, entries in grouped.items():
         volumes = [c.volume for c in entries if c.volume is not None]
         prices = [c.close for c in entries if c.close is not None]
+        # n counts the rows that actually carried a price, not every row in the bucket.
+        # Counting all of them reports a confident expectation built from one observation.
         out[bucket] = {
-            "n": len(entries),
+            "n": len(prices),
+            "n_volume": len(volumes),
             "volume": statistics.median(volumes) if volumes else None,
             "price": statistics.median(prices) if prices else None,
         }
@@ -36,13 +39,18 @@ def build(
     a weekly rhythm that does not exist, so analyzers gate on it rather than reading the
     deviation directly.
     """
-    current_bucket = bucket_of(now)
-    history = [c for c in candles if c.ts < now]
+    # The newest closed hour is the observation; everything older is the expectation it
+    # is measured against. Nothing is ever stamped at now, because these candles come
+    # from statistics_closed and land on hour boundaries strictly in the past.
+    observed = sorted([c for c in candles if c.ts <= now], key=lambda c: c.ts)
+    latest = observed[-1] if observed else None
+    history = observed[:-1] if observed else []
+
+    current_bucket = bucket_of(latest.ts) if latest else bucket_of(now)
     grouped = profile(history)
     stats = grouped.get(current_bucket, {"n": 0, "volume": None, "price": None})
     samples = {"seasonality_bucket": stats["n"], "seasonality_total": len(history)}
 
-    latest = max((c for c in candles if c.ts >= now), key=lambda c: c.ts, default=None)
     expected_volume = stats["volume"]
     expected_price = stats["price"]
 

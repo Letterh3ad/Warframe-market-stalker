@@ -121,6 +121,26 @@ def test_the_market_sample_spreads_across_the_catalog_instead_of_taking_the_head
     assert sampled.cohort_sizes.get("late", 0) > 0
 
 
+@pytest.mark.parametrize("size", [501, 900, 999, 1000, 3839])
+def test_the_market_sample_never_degenerates_into_the_head_slice(size):
+    """A stride of len // limit is 1 for any catalog between limit+1 and 2*limit-1, which
+    silently reduces the sample to the alphabetical head it exists to avoid. 900 items is
+    the shape of a partly synced catalog.
+    """
+    slugs = [f"s{i:05d}" for i in range(size)]
+    sample = feature_service._spread(slugs, 500)
+    assert len(sample) == 500
+    assert len(set(sample)) == 500, "picks must be distinct"
+    # spanning the list is the property that matters: the head slice fails this for every
+    # catalog larger than the limit, which is what made the market read the "a" items.
+    assert sample[-1] >= slugs[int(len(slugs) * 0.9)]
+
+
+def test_the_market_sample_handles_catalogs_at_or_below_the_limit():
+    assert feature_service._spread(["a", "b"], 500) == ["a", "b"]
+    assert feature_service._spread([], 500) == []
+
+
 def test_build_for_carries_the_market_block_when_a_context_is_supplied(ctx):
     context = feature_service.market_context(ctx, days=7)
     fs = feature_service.build_for(ctx, "x", 0, market=context, now=NOW)

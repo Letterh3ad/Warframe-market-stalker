@@ -13,7 +13,7 @@ from wfm.models import BookSnapshot
 from wfm.services.context import AppContext
 
 PRICE_WINDOW_DAYS = 90
-HOURLY_WINDOW_HOURS = 24 * 14
+HOURLY_WINDOW_HOURS = 24 * 42
 
 
 def _anchor_date(ctx: AppContext, now: datetime) -> str:
@@ -30,9 +30,15 @@ def _anchor_date(ctx: AppContext, now: datetime) -> str:
 
 
 def _spread(slugs: list[str], limit: int) -> list[str]:
+    """Evenly spaced picks across the ordered list.
+
+    Index math rather than a slice stride: `len // limit` is 1 for any catalog between
+    limit+1 and 2*limit-1 items, which collapses the sample back to the alphabetical head
+    it exists to avoid. That is the shape of a partly synced catalog.
+    """
     if limit <= 0 or len(slugs) <= limit:
         return slugs
-    return slugs[:: len(slugs) // limit][:limit]
+    return [slugs[i * len(slugs) // limit] for i in range(limit)]
 
 
 def market_context(
@@ -94,7 +100,7 @@ def build_for(
     if market is not None:
         item = ctx.items.get(slug)
         market_block, market_samples = market_features.build(
-            candles, tags=item.tags if item else (), context=market
+            candles, tags=item.tags if item else (), context=market, slug=slug
         )
         samples.update(market_samples)
         available.add("market")

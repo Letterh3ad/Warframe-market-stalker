@@ -90,3 +90,40 @@ async def test_report_reports_the_age_of_a_stale_stored_book(ctx):
     ctx.clock.advance(3600)
     result = await report_service.report(ctx, "x")
     assert result["book_age_seconds"] == 3600
+
+
+async def test_report_group_builds_the_market_context_once_for_the_whole_group(ctx):
+    """Rebuilding it per member costs a full sampled catalog pass each time, so a 20
+    member group runs thousands of queries for a figure the module says moves slowly.
+    """
+    ctx.items.upsert_many(
+        [Item(slug=f"m{i}", name=f"M{i}", url_name=f"m{i}", tags=("mod",)) for i in range(3)]
+    )
+    ctx.groups.create("mods", NOW)
+    for i in range(3):
+        ctx.groups.add_member("mods", f"m{i}", 0)
+
+    calls = []
+    original = report_service.feature_service.market_context
+    ctx_module = report_service.feature_service
+
+    def counting(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+
+    ctx_module.market_context = counting
+    try:
+        result = await report_service.report_group(ctx, "mods")
+    finally:
+        ctx_module.market_context = original
+
+    assert len(result["items"]) == 3
+    assert len(calls) == 1, f"built the market context {len(calls)} times for 3 members"
+
+
+async def test_report_refuses_rank_all_rather_than_silently_reporting_one_rank(ctx):
+    ctx.items.upsert_many(
+        [Item(slug="modded", name="Modded", url_name="modded", max_rank=10, canonical_rank=10)]
+    )
+    with pytest.raises(ValueError, match="rank"):
+        await report_service.report(ctx, "modded", rank="all")

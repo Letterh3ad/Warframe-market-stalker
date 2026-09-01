@@ -68,3 +68,39 @@ def test_a_bucket_with_a_zero_expected_volume_does_not_divide_by_zero():
     candles = [_h(NOW - timedelta(weeks=w), volume=0, close=40) for w in range(1, 5)]
     features, _ = build(candles + [_h(NOW, volume=3, close=40)], now=NOW)
     assert features.volume_deviation is None
+
+
+def test_deviation_reads_the_newest_closed_hour_not_a_candle_stamped_exactly_now():
+    """Hourly candles come from statistics_closed, so they land on hour boundaries
+    strictly in the past and nothing is ever stamped at now. Requiring ts >= now leaves
+    both deviation fields permanently dead in production.
+    """
+    now = datetime(2026, 8, 27, 12, 37, tzinfo=timezone.utc)
+    history = [_h(now.replace(minute=0) - timedelta(weeks=w), volume=10, close=40)
+               for w in range(1, 6)]
+    newest_closed = _h(now.replace(minute=0), volume=25, close=48)
+    features, _ = build(history + [newest_closed], now=now)
+    assert features.volume_deviation == pytest.approx(1.5)
+    assert features.price_deviation == pytest.approx(0.2)
+
+
+def test_the_newest_candle_is_not_folded_into_the_expectation_it_is_measured_against():
+    now = datetime(2026, 8, 27, 12, 37, tzinfo=timezone.utc)
+    history = [_h(now.replace(minute=0) - timedelta(weeks=w), volume=10, close=40)
+               for w in range(1, 5)]
+    features, samples = build(history + [_h(now.replace(minute=0), volume=100, close=40)],
+                              now=now)
+    assert features.expected_volume == 10, "the 100 must not drag the expectation up"
+    assert samples["seasonality_bucket"] == 4
+
+
+def test_a_bucket_only_counts_samples_that_carried_a_price():
+    """n counted every entry, so a bucket of four rows with one close reported n=4 and a
+    confidence of 1.0 for what is really a single observation.
+    """
+    now = datetime(2026, 8, 27, 12, 37, tzinfo=timezone.utc)
+    at_bucket = now.replace(minute=0)
+    candles = [_h(at_bucket - timedelta(weeks=w), volume=10, close=None) for w in range(1, 4)]
+    candles.append(_h(at_bucket - timedelta(weeks=4), volume=10, close=40))
+    grouped = profile(candles)
+    assert grouped[bucket_of(at_bucket)]["n"] == 1

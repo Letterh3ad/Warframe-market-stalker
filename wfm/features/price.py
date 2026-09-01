@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import statistics
+from datetime import date, timedelta
 
 from wfm.features.types import PriceFeatures
 from wfm.models import DailyCandle
@@ -18,8 +19,24 @@ thin history that produces plausible wrong signals, which is the point of the gu
 """
 
 
-def _window(values: list[float], days: int) -> list[float] | None:
-    return values[-days:] if len(values) >= math.ceil(days * MIN_COVERAGE) else None
+def _day(candle: DailyCandle) -> date:
+    return date.fromisoformat(candle.date)
+
+
+def window(candles: list[DailyCandle], days: int) -> list[DailyCandle] | None:
+    """The candles inside the last `days` calendar days, or None if too few are covered.
+
+    Measured in calendar days rather than in data points: the API omits untraded days
+    entirely, so an illiquid item can hold 27 closes spread over three months. Counting
+    points would happily label that a 30 day median.
+    """
+    dated = [c for c in candles if c.close is not None]
+    if not dated:
+        return None
+    end = _day(dated[-1])
+    start = end - timedelta(days=days - 1)
+    inside = [c for c in dated if start <= _day(c) <= end]
+    return inside if len(inside) >= math.ceil(days * MIN_COVERAGE) else None
 
 
 def median(values: list[float]) -> float | None:
@@ -69,15 +86,18 @@ def atr(candles: list[DailyCandle], window: int = 14) -> float | None:
 
 
 def volume_trend(candles: list[DailyCandle], short: int = 7, long: int = 30) -> float | None:
-    volumes = [c.volume for c in candles if c.volume is not None]
-    long_window = _window(volumes, long)
-    short_window = _window(volumes, short)
+    long_window = window(candles, long)
+    short_window = window(candles, short)
     if long_window is None or short_window is None:
         return None
-    long_median = median(long_window)
+    long_volumes = [c.volume for c in long_window if c.volume is not None]
+    short_volumes = [c.volume for c in short_window if c.volume is not None]
+    if not long_volumes or not short_volumes:
+        return None
+    long_median = median(long_volumes)
     if not long_median:
         return None
-    return median(short_window) / long_median
+    return median(short_volumes) / long_median
 
 
 def donchian_position(candles: list[DailyCandle]) -> float | None:
@@ -103,8 +123,10 @@ def build(candles: list[DailyCandle]) -> tuple[PriceFeatures, dict[str, int]]:
     """
     closes = [c.close for c in candles if c.close is not None]
     volumes = [c.volume for c in candles if c.volume is not None]
+    # Counted over closes, the same values the coverage gate reads, so a null statistic
+    # can always be explained by the sample count sitting next to it.
     samples = {
-        "price_90d": len(candles),
+        "price_90d": len(closes),
         "price_30d": min(len(closes), 30),
         "price_7d": min(len(closes), 7),
         "volume_30d": min(len(volumes), 30),
@@ -113,11 +135,17 @@ def build(candles: list[DailyCandle]) -> tuple[PriceFeatures, dict[str, int]]:
         return PriceFeatures(), samples
 
     last_close = closes[-1]
-    window_90 = _window(closes, 90)
-    window_30 = _window(closes, 30)
-    window_7 = _window(closes, 7)
-    volume_30 = _window(volumes, 30)
-    atr_value = atr(candles)
+    candles_90 = window(candles, 90)
+    candles_30 = window(candles, 30)
+    candles_7 = window(candles, 7)
+    window_90 = [c.close for c in candles_90] if candles_90 else None
+    window_30 = [c.close for c in candles_30] if candles_30 else None
+    window_7 = [c.close for c in candles_7] if candles_7 else None
+    volume_30 = [c.volume for c in candles_30 if c.volume is not None] if candles_30 else None
+    # atr and donchian describe a 14 and 90 day shape, so they need their window covered
+    # too. Without this a 2 candle item reports a confident 14 day ATR.
+    atr_value = atr(window(candles, 14) or [])
+    donchian = donchian_position(candles_90) if candles_90 else None
 
     return (
         PriceFeatures(
@@ -128,10 +156,12 @@ def build(candles: list[DailyCandle]) -> tuple[PriceFeatures, dict[str, int]]:
             robust_z=robust_z(last_close, window_90) if window_90 else None,
             percentile_90d=percentile_rank(last_close, window_90) if window_90 else None,
             atr_14d=atr_value,
-            atr_pct=(atr_value / last_close) if atr_value and last_close else None,
+            # `is not None` on the numerator: a genuinely flat item has atr 0.0, which is
+            # a real reading of zero volatility, not an unmeasurable one.
+            atr_pct=(atr_value / last_close) if atr_value is not None and last_close else None,
             volume_trend=volume_trend(candles),
             median_volume_30d=median(volume_30) if volume_30 else None,
-            donchian_position=donchian_position(candles),
+            donchian_position=donchian,
             last_close=last_close,
         ),
         samples,

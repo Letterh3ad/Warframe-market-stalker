@@ -5,6 +5,7 @@ from dataclasses import asdict
 
 from wfm.api.endpoints import fetch_orders
 from wfm.features import book as book_features
+from wfm.features.market import MarketContext
 from wfm.models import BookSnapshot
 from wfm.services import catalog_service, feature_service
 from wfm.services.context import AppContext
@@ -30,9 +31,18 @@ async def poll_book(
 
 
 async def report(
-    ctx: AppContext, slug_query: str, rank: str | int | None = None, refresh: bool = False
+    ctx: AppContext,
+    slug_query: str,
+    rank: str | int | None = None,
+    refresh: bool = False,
+    market: MarketContext | None = None,
 ) -> dict:
     slug, ranks = catalog_service.resolve(ctx, slug_query, rank)
+    if len(ranks) > 1:
+        raise ValueError(
+            f"{slug_query!r} resolves to {len(ranks)} ranks. report covers one rank at a "
+            "time, so give --rank <n>."
+        )
     target_rank = ranks[0]
     now = ctx.clock.utcnow()
 
@@ -41,7 +51,8 @@ async def report(
     else:
         snapshot = ctx.orders.latest(slug, target_rank)
 
-    market = feature_service.market_context(ctx, now=now)
+    if market is None:
+        market = feature_service.market_context(ctx, now=now)
     fs = feature_service.build_for(
         ctx, slug, target_rank, snapshot=snapshot, market=market, now=now
     )
@@ -58,8 +69,14 @@ async def report(
 
 
 async def report_group(ctx: AppContext, name: str, refresh: bool = False) -> dict:
+    # Built once for the whole group: it is a market-wide figure that moves slowly, and
+    # rebuilding it per member costs a full sampled catalog pass each time.
+    market = feature_service.market_context(ctx, now=ctx.clock.utcnow())
     members = ctx.groups.members(name)
     return {
         "name": name,
-        "items": [await report(ctx, slug, rank=rank, refresh=refresh) for slug, rank in members],
+        "items": [
+            await report(ctx, slug, rank=rank, refresh=refresh, market=market)
+            for slug, rank in members
+        ],
     }

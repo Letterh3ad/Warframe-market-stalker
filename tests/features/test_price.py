@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import pytest
 
 from wfm.features.price import (
@@ -21,8 +23,9 @@ def _c(date: str, close=None, high=None, low=None, volume=None, donch_top=None, 
 
 
 def _series(closes: list[float], start_day: int = 1) -> list[DailyCandle]:
+    start = date(2026, 6, start_day)
     return [
-        _c(f"2026-06-{start_day + i:02d}", close=c, high=c + 2, low=c - 2, volume=10)
+        _c((start + timedelta(days=i)).isoformat(), close=c, high=c + 2, low=c - 2, volume=10)
         for i, c in enumerate(closes)
     ]
 
@@ -153,6 +156,61 @@ def test_a_window_below_the_coverage_threshold_is_still_refused():
 def test_coverage_lets_a_gappy_month_through_but_not_a_thin_one():
     assert build(_series([40 + (i % 3) for i in range(27)]))[0].median_30d is not None
     assert build(_series([40 + (i % 3) for i in range(26)]))[0].median_30d is None
+
+
+def _sparse(dates: list[str], close: float = 40) -> list[DailyCandle]:
+    return [_c(d, close=close, high=close + 1, low=close - 1, volume=5) for d in dates]
+
+
+def test_coverage_is_measured_in_calendar_days_not_in_data_points():
+    """warframe.market omits untraded days entirely, so an illiquid item can carry 27
+    closes spread over three months. Counting points would label that a 30 day median.
+    """
+    spread_over_three_months = _sparse(
+        [f"2026-06-{d:02d}" for d in range(1, 10)]
+        + [f"2026-07-{d:02d}" for d in range(1, 10)]
+        + [f"2026-08-{d:02d}" for d in range(1, 10)]
+    )
+    assert len(spread_over_three_months) == 27
+    features, _ = build(spread_over_three_months)
+    assert features.median_30d is None
+
+
+def test_a_dense_run_of_days_still_clears_the_window():
+    dense = _sparse([f"2026-08-{d:02d}" for d in range(1, 31)])
+    assert build(dense)[0].median_30d is not None
+
+
+def test_atr_is_none_until_its_window_is_covered():
+    two_days = [
+        _c("2026-08-30", close=40, high=48, low=32),
+        _c("2026-08-31", close=41, high=49, low=33),
+    ]
+    features, _ = build(two_days)
+    assert features.median_30d is None
+    assert features.atr_14d is None, "a 14 day ATR must not be reported from 2 candles"
+    assert features.atr_pct is None
+
+
+def test_donchian_position_is_none_until_its_window_is_covered():
+    two_days = [
+        _c("2026-08-30", close=40, high=48, low=32),
+        _c("2026-08-31", close=41, high=49, low=33),
+    ]
+    assert build(two_days)[0].donchian_position is None
+
+
+def test_a_flat_item_reports_zero_volatility_not_unmeasurable_volatility():
+    flat = [_c(f"2026-08-{d:02d}", close=40, high=40, low=40, volume=5) for d in range(1, 31)]
+    features, _ = build(flat)
+    assert features.atr_14d == 0.0
+    assert features.atr_pct == 0.0, "0.0 is a real volatility reading, None means unknown"
+
+
+def test_the_sample_count_matches_the_values_the_gate_actually_counts():
+    candles = _series([40, 41]) + [_c("2026-06-05"), _c("2026-06-06")]
+    _, samples = build(candles)
+    assert samples["price_90d"] == 2, "provenance must not advertise closes that do not exist"
 
 
 def test_build_on_an_empty_series_returns_an_empty_block():
