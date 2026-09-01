@@ -129,3 +129,16 @@ def test_a_missing_cohort_does_not_disguise_the_market_number_as_a_tag_number():
     features, _ = build(UP, tags=("unknown_tag",), context=context, slug="up")
     assert features.tag_median_return_7d is None
     assert features.market_median_return_7d == context.median_return
+
+
+def test_a_seven_day_return_uses_the_windows_own_edges():
+    """required_days tolerates a missing day, and if the tolerated day sits on an edge
+    the move is measured over a shorter span than the label claims.
+    """
+    from datetime import date as _date
+
+    from tests.fakes.candles import daily_history
+
+    full = daily_history(_date(2026, 8, 31), 8, close=60)
+    missing_first = [c for c in full if c.date != "2026-08-24"]
+    assert returns_over(missing_first, days=7, end=_date(2026, 8, 31)) is None

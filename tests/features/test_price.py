@@ -298,3 +298,37 @@ def test_build_skips_candles_with_no_close():
     candles = _series([40, 41]) + [_c("2026-06-10")]
     features, _ = build(candles)
     assert features.last_close == 41
+
+
+def test_last_close_is_none_when_the_item_did_not_trade_inside_the_window():
+    """last_close is the one field that ignored the anchor, so a dead item's months-old
+    price printed as its current one while every window statistic was correctly null.
+    """
+    # entirely outside the 90 day window ending 2026-08-31, which opens on 2026-06-03
+    march = _sparse([f"2026-03-{d:02d}" for d in range(1, 8)])
+    features, samples = build(march, end=date(2026, 8, 31))
+    assert features.median_7d is None
+    assert features.last_close is None
+    assert samples["price_90d"] == 0
+
+    # a trade inside the window is still reported, with the thin counts explaining it
+    recent = _sparse([f"2026-08-{d:02d}" for d in range(1, 8)])
+    inside, inside_samples = build(recent, end=date(2026, 8, 31))
+    assert inside.last_close == 40
+    assert inside.median_7d is None, "nothing in the last 7 days"
+    assert inside_samples["price_7d"] == 0
+
+
+def test_min_coverage_actually_drives_the_gate():
+    """The constant is documented as the knob. If required_days ignores it, editing it
+    silently does nothing.
+    """
+    import wfm.features.price as price_module
+
+    original = price_module.MIN_COVERAGE
+    try:
+        price_module.MIN_COVERAGE = 0.5
+        assert price_module.required_days(30) == 15
+    finally:
+        price_module.MIN_COVERAGE = original
+    assert price_module.required_days(30) == 27

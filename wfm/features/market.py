@@ -33,6 +33,14 @@ def returns_over(
     inside = price.window(candles, days + 1, end)
     if inside is None:
         return None
+    # The coverage gate tolerates a missing day, and if the tolerated day sits on an
+    # edge the move spans fewer days than the label claims, which would make the two
+    # sides of an excess return non-comparable.
+    span = (
+        date.fromisoformat(inside[-1].date) - date.fromisoformat(inside[0].date)
+    ).days
+    if span != days:
+        return None
     opening = inside[0].close
     if not opening:
         return None

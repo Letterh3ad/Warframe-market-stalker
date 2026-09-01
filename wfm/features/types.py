@@ -63,6 +63,8 @@ class BookFeatures:
 @dataclass(frozen=True)
 class SeasonalityFeatures:
     bucket: int | None = None
+    observed_bucket: int | None = None
+    observed_age_hours: float | None = None
     expected_volume: float | None = None
     expected_price: float | None = None
     volume_deviation: float | None = None

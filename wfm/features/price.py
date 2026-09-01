@@ -28,7 +28,11 @@ MIN_COVERAGE = 0.9
 
 
 def required_days(days: int) -> int:
-    return days - max(1, days // 10)
+    # Read from MIN_COVERAGE so the constant is the knob it is documented to be, but
+    # never stricter than "one day may be missing": ceil(days * 0.9) == days for every
+    # window of nine days or fewer, which would silently remove the tolerance exactly
+    # where gaps are most common.
+    return min(math.ceil(days * MIN_COVERAGE), days - 1) if days > 1 else days
 
 
 def _day(candle: DailyCandle) -> date:
@@ -177,11 +181,14 @@ def build(
             [c for c in in_window(candles, 30, end) if c.volume is not None]
         ),
     }
-    closes = [c.close for c in sorted(candles, key=_day) if c.close is not None]
-    if not closes:
+    # Taken from inside the longest window, not from the item's whole history: a dead
+    # item's months-old price would otherwise print as its current one while every
+    # window statistic around it was correctly null.
+    in_longest = [c.close for c in in_window(candles, 90, end) if c.close is not None]
+    if not in_longest:
         return PriceFeatures(), samples
 
-    last_close = closes[-1]
+    last_close = in_longest[-1]
     candles_90 = window(candles, 90, end)
     candles_30 = window(candles, 30, end)
     candles_7 = window(candles, 7, end)
