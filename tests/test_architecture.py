@@ -6,6 +6,7 @@ import pytest
 SOURCE_ROOT = Path(__file__).resolve().parents[1] / "wfm"
 FORBIDDEN_FOR_FRONTENDS = ("wfm.store", "wfm.api", "wfm.analyzers")
 FORBIDDEN_FOR_ANALYZERS = ("wfm.api", "wfm.store")
+FORBIDDEN_FOR_FEATURES = ("wfm.api", "wfm.store", "wfm.services")
 
 
 def _imports(path: Path) -> set[str]:
@@ -38,6 +39,23 @@ def test_frontend_modules_only_reach_services(path):
 
 def test_there_is_at_least_one_cli_module_to_check():
     assert len(_modules("cli")) >= 2
+
+
+@pytest.mark.parametrize(
+    "path", _modules("features") or [SOURCE_ROOT / "cli" / "main.py"], ids=lambda p: p.name
+)
+def test_feature_modules_are_pure(path):
+    if "features" not in str(path):
+        pytest.skip("features package does not exist yet")
+    offenders = {
+        name
+        for name in _imports(path)
+        if any(name == f or name.startswith(f + ".") for f in FORBIDDEN_FOR_FEATURES)
+    }
+    assert offenders == set(), (
+        f"{path.name} imports {offenders}. Features are pure functions over plain values, "
+        "which is what keeps their tests free of a database."
+    )
 
 
 @pytest.mark.parametrize(
