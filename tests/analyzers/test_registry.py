@@ -1,5 +1,8 @@
+from pathlib import Path
+
 import pytest
 
+import wfm.analyzers
 from wfm.analyzers import registry
 from wfm.config import Config
 from wfm.models import Horizon, Scope
@@ -7,6 +10,30 @@ from wfm.models import Horizon, Scope
 
 def test_the_three_shipped_analyzers_are_registered():
     assert {a.name for a in registry.all()} == {"flip", "revert", "selltime"}
+
+
+def test_a_new_analyzer_module_is_discovered_without_editing_the_registry():
+    # The contract behind drop-in modules: a file in wfm/analyzers/ that exposes
+    # ANALYZER is picked up by discover(), no import list to maintain.
+    probe = Path(wfm.analyzers.__file__).parent / "probe_analyzer.py"
+    probe.write_text(
+        "from wfm.models import Horizon, Scope\n"
+        "class _Probe:\n"
+        "    name = 'probe'\n"
+        "    scope = Scope.ITEM\n"
+        "    horizon = Horizon.DAILY\n"
+        "    DEFAULTS = {}\n"
+        "    def evaluate(self, fs, ctx):\n"
+        "        return []\n"
+        "ANALYZER = _Probe()\n",
+        encoding="utf-8",
+    )
+    try:
+        registry.discover()
+        assert "probe" in {a.name for a in registry.all()}
+    finally:
+        probe.unlink()
+        registry._REGISTERED.pop("probe", None)
 
 
 def test_lookup_by_name():

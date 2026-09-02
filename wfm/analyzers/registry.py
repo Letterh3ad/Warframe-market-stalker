@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-from wfm.analyzers import flip, revert, selltime
+import importlib
+import pkgutil
+
+import wfm.analyzers
 from wfm.config import Config
+
+# Modules that make up the registry machinery itself, not analyzers.
+_INFRASTRUCTURE = {"registry", "runner", "base"}
 
 _REGISTERED: dict[str, object] = {}
 
@@ -10,8 +16,22 @@ def register(analyzer) -> None:
     _REGISTERED[analyzer.name] = analyzer
 
 
-for _module in (flip, revert, selltime):
-    register(_module.ANALYZER)
+def discover() -> None:
+    """Import every wfm/analyzers/*.py that exposes ANALYZER and register it.
+
+    Drop-in: a new analyzer file needs no edit here. Names are visited in sorted
+    order so registration is deterministic.
+    """
+    for info in sorted(pkgutil.iter_modules(wfm.analyzers.__path__), key=lambda i: i.name):
+        if info.name in _INFRASTRUCTURE or info.name.startswith("_"):
+            continue
+        module = importlib.import_module(f"wfm.analyzers.{info.name}")
+        analyzer = getattr(module, "ANALYZER", None)
+        if analyzer is not None:
+            register(analyzer)
+
+
+discover()
 
 
 def get(name: str):
