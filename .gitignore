@@ -11,4 +11,6 @@ __pycache__/
 *.db
 *.db-wal
 *.db-shm
+*.db.*.bak
+*.bak
 wfm.toml

@@ -33,6 +33,10 @@ from wfm.services.feature_service import spread
 PRICE_WINDOW_DAYS = 90
 MARKET_SAMPLE_LIMIT = 500
 _LOAD_DAYS = 400
+# How far past the horizon date a candle may sit and still count as the forward
+# return. Beyond this the series is too sparse to attribute an N-day move, so the
+# signal is left unscored rather than credited a much longer swing.
+_FORWARD_SLACK_DAYS = 3
 
 
 @dataclass(frozen=True)
@@ -50,9 +54,13 @@ def _forward_return(candles: list, as_of: str, horizon_days: int) -> float | Non
     start = by_date.get(as_of)
     if not start:
         return None
-    target = (date.fromisoformat(as_of) + timedelta(days=horizon_days)).isoformat()
-    later = [d for d in sorted(by_date) if d >= target]
-    if not later:
+    target = date.fromisoformat(as_of) + timedelta(days=horizon_days)
+    # Never let the slack exceed the horizon itself: a 3-day-late candle is not a
+    # "1-day forward return".
+    slack = min(_FORWARD_SLACK_DAYS, horizon_days)
+    cutoff = (target + timedelta(days=slack)).isoformat()
+    later = [d for d in sorted(by_date) if d >= target.isoformat()]
+    if not later or later[0] > cutoff:
         return None
     return (by_date[later[0]] - start) / start
 
@@ -112,12 +120,13 @@ def replay(
         return out
 
     # The target series feeds both per-day feature slicing and forward-return scoring.
-    # Load horizon_days past `end` so a signal emitted near `end` still has a candle to
-    # score against; the extra future candles are reachable only via _forward_return,
-    # never through the c.date <= as_of window slice below. The replay loop still stops
-    # at `end`.
-    target_end = (date.fromisoformat(end) + timedelta(days=horizon_days)).isoformat()
-    target_series = _load(targets, load_end=target_end, load_days=_LOAD_DAYS + horizon_days)
+    # Load horizon_days (plus the _forward_return slack) past `end` so a signal emitted
+    # near `end` still has a candle to score against; the extra future candles are
+    # reachable only via _forward_return, never through the c.date <= as_of window slice
+    # below. The replay loop still stops at `end`.
+    forward_days = horizon_days + _FORWARD_SLACK_DAYS
+    target_end = (date.fromisoformat(end) + timedelta(days=forward_days)).isoformat()
+    target_series = _load(targets, load_end=target_end, load_days=_LOAD_DAYS + forward_days)
     sample_series = _load(sample_slugs)
     tags = {slug: (item.tags if (item := ctx.items.get(slug)) else ()) for slug in all_slugs}
 

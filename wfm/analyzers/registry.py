@@ -1,7 +1,20 @@
 from __future__ import annotations
 
-from wfm.analyzers import flip, revert, selltime
+import importlib
+import logging
+import pkgutil
+
+import wfm.analyzers
 from wfm.config import Config
+
+log = logging.getLogger(__name__)
+
+# Modules that make up the registry machinery itself, not analyzers.
+_INFRASTRUCTURE = {"registry", "runner", "base"}
+
+# Analyzers that ship with the tool. A broken one is a bug, not a skippable scratch
+# file, so discovery failing to load any of these is fatal.
+_CORE = {"flip", "revert", "selltime"}
 
 _REGISTERED: dict[str, object] = {}
 
@@ -10,8 +23,34 @@ def register(analyzer) -> None:
     _REGISTERED[analyzer.name] = analyzer
 
 
-for _module in (flip, revert, selltime):
-    register(_module.ANALYZER)
+def discover() -> None:
+    """Import every wfm/analyzers/*.py that exposes ANALYZER and register it.
+
+    Drop-in: a new analyzer file needs no edit here. Names are visited in sorted
+    order so registration is deterministic. A non-core module that fails to import is
+    logged and skipped, so a broken scratch file does not take down every command that
+    pulls in the registry; a broken core analyzer still raises.
+    """
+    for info in sorted(pkgutil.iter_modules(wfm.analyzers.__path__), key=lambda i: i.name):
+        if info.name in _INFRASTRUCTURE or info.name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(f"wfm.analyzers.{info.name}")
+        except Exception:
+            if info.name in _CORE:
+                raise
+            log.warning("skipping analyzer module %r: import failed", info.name, exc_info=True)
+            continue
+        analyzer = getattr(module, "ANALYZER", None)
+        if analyzer is not None:
+            register(analyzer)
+
+    missing = _CORE - _REGISTERED.keys()
+    if missing:
+        raise RuntimeError(f"core analyzers failed to register: {sorted(missing)}")
+
+
+discover()
 
 
 def get(name: str):
