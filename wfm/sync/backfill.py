@@ -8,7 +8,13 @@ from wfm.clock import Clock
 from wfm.store.stats import DailyStatsRepo, HourlyStatsRepo
 from wfm.sync.budget import Priority
 
-HOURLY_RETENTION_DAYS = 14
+HOURLY_RETENTION_DAYS = 42
+"""Six weeks, so an hour-of-week bucket can accumulate enough samples to be trusted.
+
+The seasonality profile has 168 buckets and a bucket recurs once a week, so a 14 day
+window gave every bucket at most 2 samples. Against a min_samples of 4 that left
+confidence capped at 0.5 and best_bucket_next_48h permanently None.
+"""
 
 
 @dataclass(frozen=True)
