@@ -33,7 +33,6 @@ def test_analyzers_are_enabled_by_default():
     assert len(registry.enabled(Config())) == 3
 
 
-@pytest.mark.xfail(reason="real DEFAULTS arrive in tasks 3-4", strict=True)
 def test_thresholds_merge_config_over_defaults():
     cfg = Config(analyzers={"flip": {"min_margin_plat": 25}})
     merged = registry.thresholds(cfg)
