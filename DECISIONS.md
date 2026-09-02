@@ -455,3 +455,156 @@ entrypoint (no `__main__.py`, no `[project.scripts]`).
 
 **Alternatives:** Only the console script (needs a reinstall to exist) or only
 `__main__.py` (leaves `wfm` unbound).
+
+## 2026-09-01 - A window statistic needs 90% coverage, not a perfectly full window
+
+**Context:** Phase 4 planned that a window statistic is `None` unless its window is fully
+populated, so a "30 day median" can never come from four points. On real data this nulled
+every long window in the catalog: warframe.market publishes closed days only and never
+returns more than 89 daily candles, so a 90-of-90 rule left `median_90d`, `mad_90d`,
+`robust_z` and `percentile_90d` permanently unavailable for all 3839 items. Those are
+exactly the inputs phase 5's mean-reversion analyzer needs.
+
+**Decision:** `wfm/features/price.py` gates each window on `MIN_COVERAGE = 0.9`
+(`ceil(days * 0.9)` samples: 81 of 90, 27 of 30, 7 of 7). The guard still refuses thin
+history, which is its purpose, but tolerates the API's shape and genuine gaps.
+
+**Alternatives:** Requiring >=85 samples for the 90 day window only (arbitrary, patches
+one window). Redefining the long window as 89 days (exact today, breaks if the API ever
+returns 88 or 90). Leaving it strict and having phase 5 use the 30 day window instead.
+
+## 2026-09-01 - Feature windows anchor on the newest complete day, not on today
+
+**Context:** Windows ended at `now.date()`, but the newest candle is always yesterday
+because the API publishes complete days only. Every window was therefore a day short. For
+the 7 day market return that was fatal: it needs 8 closes to span 7 intervals, got 7, and
+returned `None` for every item, leaving the entire market block silently empty.
+
+**Decision:** `feature_service._anchor_date` ends windows at the newest date in
+`daily_stats`, capped at the injected `now` so a clock set before the data cannot read
+candles that had not happened yet. `market_context` takes `now` explicitly rather than
+reading wall-clock time, which also makes the block deterministic under `FakeClock`.
+
+**Alternatives:** Asking for one extra day at each call site (a magic +1 encoding the
+API's lag everywhere). Anchoring per item (an item with stale data would look current).
+
+## 2026-09-01 - The market sample strides across the catalog
+
+**Context:** `market_context` sampled `all_slugs()[:500]` to avoid a full catalog pass per
+tick. `all_slugs()` is alphabetical, so the "sample" was just the "a" items
+(`abating_link` to `ayatan_hemakara_sculpture`). Its tag mix inverted the real catalog
+(relic 155 > mod 68, against mod 1045 > relic 575), so the market median misreported the
+market and every tag sorting late got `cohort_size: 0` and lost its cohort comparison.
+
+**Decision:** Sample with a stride across the ordered slug list. Same cost, still
+deterministic, and it tracks the true tag distribution.
+
+**Alternatives:** A random sample (not reproducible run to run). A full catalog pass
+(dominates the tick cost for a figure that moves slowly).
+
+## 2026-09-01 - Order sides compare against `Side`, not `Direction`
+
+**Context:** The phase 4 plan wrote `wfm/features/book.py` comparing `order.side` against
+`Direction.SELL`/`Direction.BUY`. `Order.side` is typed `Side` and `parse_orders` produces
+`Side`. The two are distinct enum classes, so the identity check is `False` for every real
+order and every live book would have aggregated to empty. The plan's own tests built
+orders with `Direction` too, so they passed and hid it.
+
+**Decision:** `book.py` compares against `Side` throughout, with a regression test that
+feeds `summarize` the output of `parse_orders` rather than hand-built orders, so the
+enum the API actually produces is the one under test.
+
+**Alternatives:** Collapsing `Side` into `Direction` (loses the "HOLD is not a trade"
+distinction that `Side` exists to enforce).
+
+## 2026-09-01 - Window coverage is measured in calendar days, not data points
+
+**Context:** The 90% coverage gate counted entries in a pre-filtered close list, so an
+illiquid item with 27 closes spread over three months cleared the "30 day" gate and got a
+median labelled 30d that was computed over 86 days. warframe.market omits untraded days
+entirely, so that is the normal shape for an illiquid item, and it is exactly the
+plausible-looking wrong number the guard exists to prevent.
+
+**Decision:** `price.window()` selects candles by date range from the newest candle back
+`days` calendar days, then requires `MIN_COVERAGE` of those days to carry a close.
+`market.returns_over` anchors the same way. `atr` and `donchian_position`, which had no
+guard at all, now take a covered window.
+
+**Alternatives:** Requiring strictly consecutive days (rejects any real series, since
+untraded days are normal).
+
+## 2026-09-01 - An item is excluded from its own tag cohort
+
+**Context:** `build_context` included every sampled item in its own tag's median, so an
+item that was the only sampled member of its tag was benchmarked against itself and
+reported `excess_return_7d` of exactly 0.0 with `cohort_size: 1`: a confident-looking
+reading that is pure self-comparison. Separately, `tag_median_return_7d` fell back to the
+market-wide median whenever the tag had no cohort, so a market number travelled under a
+tag-specific name.
+
+**Decision:** `market.build` takes the item's `slug` and drops it from its cohort before
+taking the median. `cohort_size` counts peers, so a solo member reports 0.
+`tag_median_return_7d` is `None` when there is no cohort; `excess_return_7d` then falls
+back to the item-exclusive market median, which is the number reported as
+`market_median_return_7d` (see the 2026-09-02 entry: the reported field is the benchmark
+actually used, not the item-inclusive median).
+
+**Alternatives:** Requiring `cohort_size >= 2` while leaving the item in (the item still
+skews a small cohort's median).
+
+## 2026-09-01 - Hourly retention raised to 42 days for seasonality
+
+**Context:** The hour-of-week profile has 168 buckets, so a bucket recurs once a week and
+needs at least 4 weeks to reach `min_samples = 4`. Phase 3 pruned hourly rows at 14 days,
+which capped every bucket at 2 samples, held `confidence` at 0.5 and left
+`best_bucket_next_48h` permanently `None`, disabling any analyzer that gates on it.
+
+**Decision:** `HOURLY_RETENTION_DAYS` 14 -> 42, and the feature window follows. Note the
+API returns only 48 hours of hourly statistics per fetch, so this history accrues by
+repeated polling rather than arriving in a backfill: seasonality stays unavailable until
+the phase 7 daemon has been running for several weeks. That is reported honestly through
+`confidence` and the provenance sample counts.
+
+**Alternatives:** Lowering `min_samples` to 2 (a weekly rhythm inferred from two
+observations is what the confidence gate exists to distrust). Deferring seasonality to
+phase 7 entirely.
+
+## 2026-09-02 - Delta review of the windowing rewrite: four fixes before merge
+
+**Context:** A `/code-review high` pass over the two post-review commits on
+`phase-4-features` (`852d0c0..b79b7b0`) returned ten findings. Four were real and cheap;
+the rest were latent paths unreachable on warframe.market's real payload shape
+(`donch_top`/`donch_bot` and `closed_price` are always present) or an efficiency
+regression better handled in the phase 7 hot-path pass.
+
+**Decision:** Applied four fixes with regression tests.
+
+1. **Provenance completeness.** `price.build`'s `samples` gained `range_14d` and
+   `volume_7d`. `atr_14d` gates on high/low coverage and `volume_trend` on the 7 day
+   volume window, but neither had a counter, so a null could not explain itself, which
+   the block's stated contract forbids.
+2. **`MarketContext` carries its anchor.** `report_group` builds the context once and
+   reuses it per member; re-deriving the anchor inside each `build_for` let a mid-run
+   sync (or a midnight-UTC roll) measure the item's own 7 day return over a different
+   window than its peers. `market_context` now records `anchor` on the context and
+   `build_for` measures the item against that same date.
+3. **`market_median_return_7d` is the benchmark actually used.** It now reports the
+   item-exclusive market median, which is what `excess_return_7d` falls back to when the
+   item has no cohort. Previously it reported the item-inclusive median, so a consumer
+   recomputing `own - market_median_return_7d` got a different number than the reported
+   excess. Every other field in the block is already item-relative.
+4. **Seasonality staleness is visible, not erased.** `observed_age_hours` and
+   `observed_bucket` now carry the newest observation even when it is too old to describe
+   the present, so a dead feed with history is distinguishable from an item with none.
+   The newest observation is also excluded from its own bucket's expectation profile
+   whether or not it is fresh, so a feed that died a multiple of 168h ago cannot pad the
+   `min_samples` gate.
+
+**Alternatives:** Fixing the `market_median_return_7d` inconsistency by correcting the
+DECISIONS.md wording instead of the code (leaves the reported field and the used
+benchmark different). Threading the anchor through `report_group`'s call chain by hand
+rather than on the context object (the context is the thing reused, so it is the thing
+that should pin the window). Deferred, with a HANDOFF note: `market.build`'s `slug`
+default of `None` (latent, `feature_service` always passes it), the `donchian_position`
+fallback coverage gate and `in_window(end=None)` close anchoring (both unreachable on
+real payloads), and `in_window` re-sorting/re-parsing dates per call (efficiency, phase 7).

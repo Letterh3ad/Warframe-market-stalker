@@ -67,7 +67,10 @@ def build(
     newest = observed[-1] if observed else None
     age_hours = (now - newest.ts).total_seconds() / 3600 if newest else None
     latest = newest if age_hours is not None and age_hours <= max_observation_age_hours else None
-    history = [c for c in observed if c is not latest]
+    # Exclude the newest observation from the profile whether or not it is fresh: a stale
+    # newest that happens to land in the reference bucket would otherwise be counted as
+    # part of the expectation it is measured against.
+    history = [c for c in observed if c is not newest]
 
     grouped = profile(history)
     reference_bucket = bucket_of(latest.ts) if latest else bucket_of(now)
@@ -101,8 +104,10 @@ def build(
     return (
         SeasonalityFeatures(
             bucket=bucket_of(now),
-            observed_bucket=reference_bucket if latest else None,
-            observed_age_hours=age_hours if latest else None,
+            # Reported even when the newest observation is too old to describe the
+            # present: a stale reading must be distinguishable from no data at all.
+            observed_bucket=bucket_of(newest.ts) if newest else None,
+            observed_age_hours=age_hours,
             expected_volume=expected_volume,
             expected_price=expected_price,
             volume_deviation=volume_deviation,

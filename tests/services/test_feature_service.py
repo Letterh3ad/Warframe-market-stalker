@@ -1,5 +1,5 @@
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -146,6 +146,28 @@ def test_build_for_carries_the_market_block_when_a_context_is_supplied(ctx):
     fs = feature_service.build_for(ctx, "x", 0, market=context, now=NOW)
     assert fs.has("market") is True
     assert fs.market.tag == "mod"
+
+
+def test_the_item_return_uses_the_contexts_anchor_not_a_freshly_derived_one(ctx):
+    """report_group builds the market context once and reuses it per member. If a sync
+    lands a newer candle mid-run, re-deriving the anchor per call would measure the
+    item's own return over a different window than its peers and misattribute a
+    market-wide move to the item.
+    """
+    context = feature_service.market_context(ctx, days=7, now=NOW)
+    assert context.anchor == date(2026, 8, 27)
+    before = feature_service.build_for(ctx, "x", 0, market=context, now=NOW)
+
+    # a mid-run sync writes tomorrow's candle for x only
+    ctx.daily.upsert_many(
+        [DailyCandle(slug="x", rank=0, date="2026-08-28", close=999,
+                     high=1000, low=998, median=999, volume=20)]
+    )
+    after = feature_service.build_for(
+        ctx, "x", 0, market=context,
+        now=datetime(2026, 8, 28, 0, 1, tzinfo=timezone.utc),
+    )
+    assert after.market.excess_return_7d == before.market.excess_return_7d
 
 
 def test_an_item_with_no_history_produces_an_advertised_empty_set(ctx):

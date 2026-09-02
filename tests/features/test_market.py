@@ -128,7 +128,11 @@ def test_a_missing_cohort_does_not_disguise_the_market_number_as_a_tag_number():
     context = build_context(SERIES, TAGS, days=7)
     features, _ = build(UP, tags=("unknown_tag",), context=context, slug="up")
     assert features.tag_median_return_7d is None
-    assert features.market_median_return_7d == context.median_return
+    # market_median_return_7d is the item-exclusive market median, which is the benchmark
+    # excess_return_7d actually falls back to, not the tag number.
+    peers_only = statistics.median([returns_over(FLAT, 7), returns_over(DOWN, 7)])
+    assert features.market_median_return_7d == pytest.approx(peers_only)
+    assert features.excess_return_7d == pytest.approx(returns_over(UP, 7) - peers_only)
 
 
 def test_a_seven_day_return_uses_the_windows_own_edges():

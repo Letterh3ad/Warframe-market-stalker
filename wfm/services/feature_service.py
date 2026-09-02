@@ -104,12 +104,15 @@ def build_for(
     market_block = None
     if market is not None:
         item = ctx.items.get(slug)
+        # The context's own anchor, not this call's: the peer returns in `market` were
+        # measured against it, and the item's own return has to span the same days.
+        market_end = market.anchor or date.fromisoformat(anchor)
         market_block, market_samples = market_features.build(
             candles,
             tags=item.tags if item else (),
             context=market,
             slug=slug,
-            end=date.fromisoformat(anchor),
+            end=market_end,
         )
         samples.update(market_samples)
         available.add("market")

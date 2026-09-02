@@ -173,13 +173,25 @@ def build(
     def _closes_in(days: int) -> int:
         return len([c for c in in_window(candles, days, end) if c.close is not None])
 
+    def _volumes_in(days: int) -> int:
+        return len([c for c in in_window(candles, days, end) if c.volume is not None])
+
+    def _ranges_in(days: int) -> int:
+        return len(
+            [
+                c
+                for c in in_window(candles, days, end)
+                if c.high is not None and c.low is not None and c.close is not None
+            ]
+        )
+
     samples = {
         "price_90d": _closes_in(90),
         "price_30d": _closes_in(30),
         "price_7d": _closes_in(7),
-        "volume_30d": len(
-            [c for c in in_window(candles, 30, end) if c.volume is not None]
-        ),
+        "volume_30d": _volumes_in(30),
+        "volume_7d": _volumes_in(7),
+        "range_14d": _ranges_in(14),
     }
     # Taken from inside the longest window, not from the item's whole history: a dead
     # item's months-old price would otherwise print as its current one while every

@@ -282,6 +282,23 @@ def test_atr_needs_highs_and_lows_covered_not_merely_closes():
     assert features.atr_14d is None, "no candle carries a high or a low"
 
 
+def test_provenance_carries_the_range_and_short_volume_counters_that_gate_atr_and_trend():
+    """atr_14d gates on high/low coverage and volume_trend on the 7 day volume window.
+    Without a counter for each, a null next to a healthy price_90d cannot explain itself.
+    """
+    closes_only = [
+        _c((date(2026, 8, 1) + timedelta(days=i)).isoformat(), close=40, volume=5)
+        for i in range(30)
+    ]
+    # highs and lows only on the two oldest candles, none in the last 7 days
+    closes_only[0] = _c("2026-08-01", close=40, high=42, low=38, volume=5)
+    closes_only[1] = _c("2026-08-02", close=40, high=42, low=38, volume=5)
+    features, samples = build(closes_only, end=date(2026, 8, 30))
+    assert features.atr_14d is None
+    assert samples["range_14d"] == 0, "the null atr is explained by the range counter"
+    assert samples["volume_7d"] == 7
+
+
 def test_the_sample_count_matches_the_values_the_gate_actually_counts():
     candles = _series([40, 41]) + [_c("2026-06-05"), _c("2026-06-06")]
     _, samples = build(candles)

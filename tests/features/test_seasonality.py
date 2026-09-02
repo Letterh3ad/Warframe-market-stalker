@@ -85,6 +85,35 @@ def test_the_observed_age_is_reported_so_staleness_is_visible():
     assert nothing.observed_age_hours is None
 
 
+def test_a_stale_reading_is_distinguishable_from_no_data():
+    """observed_age_hours and observed_bucket carry the newest observation even when it
+    is too old to describe the present, so a consumer can tell a dead feed with history
+    apart from an item with no history at all.
+    """
+    history = same_bucket_history(MIDHOUR, weeks=5, age_hours=72, volume=10, close=40)
+    stale = hourly_at(MIDHOUR, age_hours=72, volume=25, close=48)
+    features, _ = build(history + [stale], now=MIDHOUR)
+    assert features.volume_deviation is None
+    assert features.observed_age_hours == pytest.approx(72.0, abs=0.75)
+    assert features.observed_bucket == bucket_of(stale.ts)
+
+    nothing, _ = build([], now=MIDHOUR)
+    assert nothing.observed_age_hours is None
+    assert nothing.observed_bucket is None
+
+
+def test_a_stale_in_bucket_observation_is_not_folded_into_the_expectation():
+    """A feed that died exactly a multiple of 168h ago lands back in now's bucket. It
+    must not be counted among the samples the current-hour expectation is built from, or
+    it can push a thin bucket past the min_samples gate on the strength of a dead feed.
+    """
+    history = same_bucket_history(MIDHOUR, weeks=3, age_hours=168, volume=10, close=40)
+    week_old = hourly_at(MIDHOUR, age_hours=168, volume=25, close=48)
+    features, samples = build(history + [week_old], now=MIDHOUR, min_samples=4)
+    assert samples["seasonality_bucket"] == 3, "the stale candle is not a fourth sample"
+    assert features.confidence == pytest.approx(0.75)
+
+
 def test_confidence_scales_with_sample_count_and_caps_at_one():
     thin, _ = build(
         same_bucket_history(MIDHOUR, weeks=2, age_hours=1) + [hourly_at(MIDHOUR, 1, 10, 40)],

@@ -17,6 +17,10 @@ class MarketContext:
     per_item: dict[str, float] = field(default_factory=dict)
     tag_members: dict[str, tuple[str, ...]] = field(default_factory=dict)
     window_days: int = 7
+    # The anchor the peer returns were measured against. An item's own return must use
+    # the same one, or a clock that rolls past midnight between building the context and
+    # measuring the item makes the two sides of an excess return non-comparable.
+    anchor: date | None = None
 
 
 def returns_over(
@@ -26,8 +30,12 @@ def returns_over(
 
     Anchored on dates rather than on the last n closes: the API omits untraded days, so an
     illiquid item's 8 newest closes can span months, and reporting that as a 7 day return
-    invents a move that never happened. Uses the same window contract as price.window, so
-    both sides of an excess return are measured over the same calendar days.
+    invents a move that never happened. Starts from price.window's covered window, then
+    adds a stricter rule of its own: the covered days must span exactly `days`, closes on
+    both edges. price.window would emit a median for a window covered everywhere but the
+    anchor day; a return measured over that window is not a `days` day return and would
+    not be comparable to a peer's. Stricter here on purpose, so every per_item return in
+    a cohort covers the identical calendar span.
     """
     # days + 1 points span days intervals
     inside = price.window(candles, days + 1, end)
@@ -72,6 +80,7 @@ def build_context(
         per_item=per_item,
         tag_members={tag: tuple(slugs) for tag, slugs in members.items()},
         window_days=days,
+        anchor=end,
     )
 
 
@@ -109,7 +118,9 @@ def build(
 
     return (
         MarketFeatures(
-            market_median_return_7d=context.median_return,
+            # The item-exclusive market median: this is the benchmark excess_return_7d
+            # actually uses when the item has no cohort, so it must be the number reported.
+            market_median_return_7d=market_fallback,
             tag=tag,
             tag_median_return_7d=cohort_return,
             excess_return_7d=(own - benchmark)
