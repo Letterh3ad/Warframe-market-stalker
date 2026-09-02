@@ -31,6 +31,8 @@ class Config:
     interactive_per_minute: int = 30
     raw_sample_rate: int = 50
     discord_webhook_url: str | None = None
+    discord_min_confidence: float = 0.6
+    discord_min_magnitude: float = 0.0
     persist_features: bool = False
     cooldown_minutes: int = 120
     analyzers: dict = field(default_factory=dict)
@@ -71,7 +73,12 @@ class Config:
                 continue
             if name == "db_path":
                 out[name] = Path(raw)
-            elif name in ("requests_per_second", "request_timeout_s"):
+            elif name in (
+                "requests_per_second",
+                "request_timeout_s",
+                "discord_min_confidence",
+                "discord_min_magnitude",
+            ):
                 out[name] = float(raw)
             elif name in ("crossplay", "persist_features"):
                 out[name] = raw.strip().lower() in ("1", "true", "yes")
