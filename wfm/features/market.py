@@ -88,8 +88,8 @@ def build(
     item_candles: list[DailyCandle],
     tags: tuple[str, ...],
     context: MarketContext,
+    slug: str,
     days: int = 7,
-    slug: str | None = None,
     end: date | None = None,
 ) -> tuple[MarketFeatures, dict[str, int]]:
     """Separates an item dropping from everything dropping, which is the guard that stops

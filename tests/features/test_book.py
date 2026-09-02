@@ -104,6 +104,32 @@ def test_build_of_an_empty_book_leaves_everything_none():
     assert samples["book"] == 0
 
 
+def test_summarize_reports_online_only_depth_curves():
+    snap = summarize(BOOK, slug="x", rank=0, ts=TS)
+    # online asks in BOOK: 45@1 (ingame), 48@3 (online). cumulative: (1, 4)
+    assert snap.online_ask_depth == (1, 4)
+    # online bids in BOOK: 40@2 (online), 30@9 (ingame). cumulative: (2, 11)
+    assert snap.online_bid_depth == (2, 11)
+    # the all-visible curves are unchanged
+    assert snap.ask_depth == (2, 3, 6, 11)
+
+
+def test_build_passes_the_online_depth_curves_through():
+    features, _ = build(summarize(BOOK, slug="x", rank=0, ts=TS))
+    assert features.online_ask_depth == (1, 4)
+    assert features.online_bid_depth == (2, 11)
+
+
+def test_online_depth_of_an_all_offline_side_is_empty():
+    offline_only = [
+        _o(44, 2, Side.SELL, status="offline", updated=OLD),
+        _o(40, 2, Side.BUY, status="offline", updated=OLD),
+    ]
+    snap = summarize(offline_only, slug="x", rank=0, ts=TS)
+    assert snap.online_ask_depth == ()
+    assert snap.online_bid_depth == ()
+
+
 def test_summarize_reads_the_side_enum_the_api_parser_actually_produces():
     """parse_orders builds Order.side as Side, and Side.SELL is not Direction.SELL.
     An identity check against the wrong enum would classify nothing and hand back an

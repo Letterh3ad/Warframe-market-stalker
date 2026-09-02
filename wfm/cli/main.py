@@ -6,7 +6,7 @@ import logging
 import sys
 from collections.abc import Callable
 
-from wfm.cli import backfill, group, report, search, sync, watch
+from wfm.cli import backfill, group, report, search, sync, validate, watch
 
 SUBCOMMANDS: list[tuple[str, Callable]] = [
     ("sync", sync.register),
@@ -15,6 +15,7 @@ SUBCOMMANDS: list[tuple[str, Callable]] = [
     ("report", report.register),
     ("watch", watch.register),
     ("group", group.register),
+    ("validate", validate.register),
 ]
 
 

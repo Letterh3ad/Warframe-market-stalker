@@ -52,6 +52,8 @@ class BookFeatures:
     online_spread_pct: float | None = None
     bid_depth: tuple[int, ...] = ()
     ask_depth: tuple[int, ...] = ()
+    online_bid_depth: tuple[int, ...] = ()
+    online_ask_depth: tuple[int, ...] = ()
     imbalance: float | None = None
     stale_share: float | None = None
     bid_count: int = 0

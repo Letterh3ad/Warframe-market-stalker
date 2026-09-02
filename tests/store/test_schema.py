@@ -22,6 +22,13 @@ def test_all_tables_exist(conn):
     assert EXPECTED_TABLES <= names
 
 
+def test_order_snapshots_has_online_depth_columns(conn):
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(order_snapshots)")}
+    for i in range(1, 6):
+        assert f"online_bid_depth_{i}" in cols
+        assert f"online_ask_depth_{i}" in cols
+
+
 def test_holdings_view_exists(conn):
     names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='view'")}
     assert "holdings" in names

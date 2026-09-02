@@ -128,7 +128,7 @@ def test_the_market_sample_never_degenerates_into_the_head_slice(size):
     the shape of a partly synced catalog.
     """
     slugs = [f"s{i:05d}" for i in range(size)]
-    sample = feature_service._spread(slugs, 500)
+    sample = feature_service.spread(slugs, 500)
     assert len(sample) == 500
     assert len(set(sample)) == 500, "picks must be distinct"
     # spanning the list is the property that matters: the head slice fails this for every
@@ -137,8 +137,8 @@ def test_the_market_sample_never_degenerates_into_the_head_slice(size):
 
 
 def test_the_market_sample_handles_catalogs_at_or_below_the_limit():
-    assert feature_service._spread(["a", "b"], 500) == ["a", "b"]
-    assert feature_service._spread([], 500) == []
+    assert feature_service.spread(["a", "b"], 500) == ["a", "b"]
+    assert feature_service.spread([], 500) == []
 
 
 def test_build_for_carries_the_market_block_when_a_context_is_supplied(ctx):

@@ -29,7 +29,7 @@ def _anchor_date(ctx: AppContext, now: datetime) -> str:
     return min(newest[0], today) if newest else today
 
 
-def _spread(slugs: list[str], limit: int) -> list[str]:
+def spread(slugs: list[str], limit: int) -> list[str]:
     """Evenly spaced picks across the ordered list.
 
     Index math rather than a slice stride: `len // limit` is 1 for any catalog between
@@ -52,7 +52,7 @@ def market_context(
     same, stays deterministic, and tracks the real distribution.
     """
     end = _anchor_date(ctx, now or ctx.clock.utcnow())
-    slugs = _spread(ctx.items.all_slugs(), sample_limit)
+    slugs = spread(ctx.items.all_slugs(), sample_limit)
     series = {}
     tags: dict[str, tuple[str, ...]] = {}
     for slug in slugs:

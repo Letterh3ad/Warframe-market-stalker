@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import tomllib
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 
 import wfm
@@ -32,6 +32,8 @@ class Config:
     raw_sample_rate: int = 50
     discord_webhook_url: str | None = None
     persist_features: bool = False
+    cooldown_minutes: int = 120
+    analyzers: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         # Clamped at the top, rejected at the bottom: a rate of 0 never grants a token

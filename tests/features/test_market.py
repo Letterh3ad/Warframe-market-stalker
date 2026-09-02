@@ -66,7 +66,7 @@ def test_an_item_whose_tag_has_no_cohort_still_gets_an_excess_against_the_market
 
 def test_a_thin_item_has_no_excess_return_but_still_carries_the_market_read():
     context = build_context(SERIES, TAGS, days=7)
-    features, _ = build(_series("thin", [40, 41]), tags=("mod",), context=context)
+    features, _ = build(_series("thin", [40, 41]), tags=("mod",), context=context, slug="thin")
     assert features.excess_return_7d is None
     assert features.market_median_return_7d == context.median_return
 
@@ -74,7 +74,7 @@ def test_a_thin_item_has_no_excess_return_but_still_carries_the_market_read():
 def test_an_empty_market_yields_no_context_numbers():
     context = build_context({}, {}, days=7)
     assert context.median_return is None
-    features, _ = build(UP, tags=("mod",), context=context)
+    features, _ = build(UP, tags=("mod",), context=context, slug="up")
     assert features.excess_return_7d is None
 
 
