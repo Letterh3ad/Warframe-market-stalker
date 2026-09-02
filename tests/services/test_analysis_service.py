@@ -67,6 +67,30 @@ def test_a_still_open_signal_is_not_re_emitted(ctx, monkeypatch):
     assert len(ctx.signals.query()) == 1
 
 
+def test_a_reversed_direction_is_not_suppressed_by_an_open_signal(ctx, monkeypatch):
+    def _emit(direction):
+        def fake_run(analyzers, fs, analyzer_ctx):
+            return (
+                [Signal(slug="x", rank=0, analyzer="selltime", ts=analyzer_ctx.now,
+                        direction=direction, magnitude=1.0, confidence=0.7,
+                        horizon=Horizon.DAILY,
+                        expires_at=analyzer_ctx.now + timedelta(hours=24), evidence={})],
+                [],
+            )
+        return fake_run
+
+    monkeypatch.setattr("wfm.services.analysis_service.run_item", _emit(Direction.HOLD))
+    analysis_service.analyze_item(ctx, "x", 0)
+
+    monkeypatch.setattr("wfm.services.analysis_service.run_item", _emit(Direction.SELL))
+    # Past the 120 min cooldown so only the open-signal check is under test; the HOLD's
+    # 24h expiry means it is still open.
+    ctx.clock.advance(60 * 60 * 3)
+    result = analysis_service.analyze_item(ctx, "x", 0)
+    assert [s["direction"] for s in result["signals"]] == ["sell"]
+    assert result["suppressed"] == []
+
+
 def test_the_cooldown_suppresses_a_repeat_after_a_signal_expires(ctx, monkeypatch):
     ctx.config = replace(ctx.config, cooldown_minutes=120)
 

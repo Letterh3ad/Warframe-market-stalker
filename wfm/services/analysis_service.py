@@ -34,10 +34,15 @@ def build_context(ctx: AppContext, now: datetime | None = None) -> Context:
 def _is_duplicate(ctx: AppContext, signal: Signal, now: datetime) -> bool:
     # Both instants are tz-aware: ctx.clock.utcnow() is aware, and last_signal_at parses
     # a stored "+00:00" ISO string back to an aware datetime.
-    if ctx.signals.open_for(signal.slug, signal.rank, signal.analyzer, now):
+    open_signals = ctx.signals.open_for(signal.slug, signal.rank, signal.analyzer, now)
+    # A reversed direction is a new opportunity, not the same one: a still-open HOLD must
+    # not swallow the day's later SELL, nor an open BUY the revert flip back to SELL.
+    if any(s.direction is signal.direction for s in open_signals):
         return True
     last = ctx.signals.last_signal_at(signal.slug, signal.rank, signal.analyzer)
     cooldown = timedelta(minutes=ctx.config.cooldown_minutes)
+    # The cooldown is intentionally direction-blind: it is noise control, not opportunity
+    # tracking, so a rapid flip back the other way is still throttled.
     return last is not None and now - last < cooldown
 
 

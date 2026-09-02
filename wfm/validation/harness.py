@@ -1,3 +1,20 @@
+"""Signal replay harness.
+
+Scope limits, deliberate and not yet lifted:
+
+- ITEM-scoped analyzers only. `replay` raises on a GROUP analyzer.
+- Rank-0 daily series only. The target series, the synthetic holding and the
+  `FeatureSet` are all built at rank 0, whereas production
+  `feature_service.market_context` uses `item.canonical_rank`. For a ranked mod whose
+  canonical rank is non-zero, production evaluates a different price series, so a
+  replayed hit rate for such an item does not transfer directly. Phases 6-7 re-tune
+  against accrued live data.
+- Forward-return scoring loads `horizon_days` of candles past `end` for the target
+  series so a signal emitted near `end` still has a candle to score against. Those
+  extra candles reach an analyzer only through `_forward_return`; the per-day
+  `c.date <= as_of` slice keeps them out of every feature window.
+"""
+
 from __future__ import annotations
 
 import statistics
@@ -9,7 +26,7 @@ from wfm.analyzers.base import Context, Holding
 from wfm.features import market as market_features
 from wfm.features import price as price_features
 from wfm.features.types import FeatureSet, Provenance
-from wfm.models import Direction
+from wfm.models import Direction, Scope
 from wfm.services.context import AppContext
 from wfm.services.feature_service import spread
 
@@ -68,6 +85,10 @@ def replay(
     threshold_overrides: dict | None = None,
 ) -> ReplayResult:
     analyzer = registry.get(analyzer_name)
+    if analyzer.scope is not Scope.ITEM:
+        raise ValueError(
+            f"{analyzer_name!r} is not an ITEM-scoped analyzer; replay only supports ITEM scope"
+        )
     base = registry.thresholds(ctx.config)
     thresholds = {
         **base,
@@ -82,15 +103,21 @@ def replay(
     # Loaded once, sliced per day. The full catalog is far larger than the target set,
     # so the market context is built from a strided sample of it, matching production.
     sample_slugs = spread(all_slugs, MARKET_SAMPLE_LIMIT)
-    def _load(slug_list):
+    def _load(slug_list, load_end=end, load_days=_LOAD_DAYS):
         out = {}
         for slug in slug_list:
-            candles = ctx.daily.window(slug, 0, days=_LOAD_DAYS, end=end)
+            candles = ctx.daily.window(slug, 0, days=load_days, end=load_end)
             if candles:
                 out[slug] = candles
         return out
 
-    target_series = _load(targets)
+    # The target series feeds both per-day feature slicing and forward-return scoring.
+    # Load horizon_days past `end` so a signal emitted near `end` still has a candle to
+    # score against; the extra future candles are reachable only via _forward_return,
+    # never through the c.date <= as_of window slice below. The replay loop still stops
+    # at `end`.
+    target_end = (date.fromisoformat(end) + timedelta(days=horizon_days)).isoformat()
+    target_series = _load(targets, load_end=target_end, load_days=_LOAD_DAYS + horizon_days)
     sample_series = _load(sample_slugs)
     tags = {slug: (item.tags if (item := ctx.items.get(slug)) else ()) for slug in all_slugs}
 

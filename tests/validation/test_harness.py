@@ -58,9 +58,38 @@ def test_replay_of_a_flat_series_emits_nothing(ctx):
 
 
 def test_replay_never_looks_ahead(ctx):
-    early = replay(ctx, "revert", start="2026-06-01", end="2026-06-20", horizon_days=7,
-                   slugs=["dipper"], threshold_overrides={"z_threshold": 1.0, "min_excess_return": 0.0})
-    assert early.signals == 0, "the dip has not happened yet in this window"
+    # The dip candles fall on 2026-07-10..12. Forward-return scoring now loads candles
+    # past `end`, so those candles ARE in the target series during a replay that ends
+    # 2026-07-09; only the per-day `c.date <= as_of` slice keeps the analyzer from seeing
+    # them. Delete that slice and `before` starts firing.
+    overrides = {"z_threshold": 1.0, "min_excess_return": 0.0}
+    before = replay(ctx, "revert", start="2026-06-25", end="2026-07-09", horizon_days=7,
+                    slugs=["dipper"], threshold_overrides=overrides)
+    assert before.signals == 0, "the dip is loaded for scoring but must not be analysed early"
+    through = replay(ctx, "revert", start="2026-06-25", end="2026-07-16", horizon_days=7,
+                     slugs=["dipper"], threshold_overrides=overrides)
+    assert through.signals > 0, "the same window run through the dip does fire"
+
+
+def test_signals_within_the_horizon_of_end_are_still_scored(ctx):
+    # The dip (2026-07-10..12) sits entirely inside horizon_days of `end`. Before the
+    # end-boundary fix every forward return for these days fell off the loaded series and
+    # the signals were dropped from the scored count.
+    result = replay(ctx, "revert", start="2026-07-08", end="2026-07-12", horizon_days=7,
+                    slugs=["dipper"], threshold_overrides={"z_threshold": 1.0, "min_excess_return": 0.0})
+    assert result.signals > 0
+
+
+def test_replay_rejects_a_non_item_analyzer(ctx, monkeypatch):
+    from wfm.models import Scope
+
+    class FakeGroup:
+        name = "fake_group"
+        scope = Scope.GROUP
+
+    monkeypatch.setattr("wfm.validation.harness.registry.get", lambda name: FakeGroup())
+    with pytest.raises(ValueError, match="ITEM scope"):
+        replay(ctx, "fake_group", start="2026-07-08", end="2026-07-25")
 
 
 def test_results_break_down_by_direction(ctx):

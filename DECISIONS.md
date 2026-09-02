@@ -649,11 +649,17 @@ candles 2026-06-04..2026-08-31) before the numbers go live.
    orders are excluded: an offline wall does not stop an online fill and must not read as
    proof a price is real. `flip` reads `[0]`, `selltime` reads `[-1]`.
 
-5. **`selltime` replay uses a synthetic one-unit holding and rank 0 only.** The harness
-   has no ledger, so it injects `Holding(quantity=1, avg_cost=last_close)` for every item
-   to exercise the ledger-gated path, and replays rank 0 only. Its unrealized-P&L and
-   sizing outputs under replay are therefore not meaningful; only the list-now / hold /
-   wait decision and its forward return are.
+5. **`selltime` replay uses a synthetic one-unit holding, and the harness replays the
+   rank-0 daily series only.** The harness has no ledger, so it injects
+   `Holding(quantity=1, avg_cost=last_close)` for every item to exercise the ledger-gated
+   path. Its unrealized-P&L and sizing outputs under replay are therefore not meaningful;
+   only the list-now / hold / wait decision and its forward return are. Rank is hardcoded
+   to 0 for the target series, the synthetic holding and the `FeatureSet`, whereas
+   production `feature_service.market_context` keys on `item.canonical_rank`, so for a
+   ranked mod whose canonical rank is non-zero production evaluates a different price
+   series and a replayed hit rate for that item does not transfer directly.
+   `canonical_rank` is not threaded through the harness; phases 6-7 re-tune against
+   accrued live data.
 
 6. **Harness `_load` end-boundary limitation.** Candles load only up to the replay
    `--end`, so a signal emitted within `--horizon-days` of `--end` has no forward candle
