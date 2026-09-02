@@ -59,10 +59,15 @@ async def test_every_request_carries_the_user_agent():
     assert seen == [config.user_agent]
 
 
-def test_only_the_client_module_constructs_an_http_transport():
+# The Discord sink is the one module allowed its own transport and its own POST. It
+# never touches warframe.market; test_the_discord_sink_* below pins that down.
+DISCORD_SINK = SOURCE_ROOT / "alerts" / "discord.py"
+
+
+def test_only_the_client_and_discord_sink_construct_an_http_transport():
     offenders = []
     for path in SOURCE_ROOT.rglob("*.py"):
-        if path.name == "client.py":
+        if path.name == "client.py" or path == DISCORD_SINK:
             continue
         text = path.read_text(encoding="utf-8")
         if "httpx.AsyncClient(" in text or "requests." in text:
@@ -70,16 +75,25 @@ def test_only_the_client_module_constructs_an_http_transport():
     assert offenders == []
 
 
-def test_the_codebase_issues_no_write_verbs():
+def test_no_write_verb_reaches_the_transport_except_in_the_discord_sink():
     # Matched against the transport rather than the bare verb, so that a cache put or
-    # a dict pop cannot be mistaken for an HTTP write. Narrowing this is what the
-    # plan prescribed over deleting it.
+    # a dict pop cannot be mistaken for an HTTP write. Narrowed, not deleted: the
+    # Discord sink is exempt and pinned down separately.
     pattern = re.compile(r"(?:_http|httpx|requests|session|client)\.(?:post|put|patch|delete)\(")
     offenders = []
     for path in SOURCE_ROOT.rglob("*.py"):
+        if path == DISCORD_SINK:
+            continue
         for match in pattern.finditer(path.read_text(encoding="utf-8")):
             offenders.append(f"{path}: {match.group(0)}")
     assert offenders == [], "read only forever: no write verb may reach the transport"
+
+
+def test_the_discord_sink_posts_only_to_its_configured_webhook():
+    text = DISCORD_SINK.read_text(encoding="utf-8")
+    assert "warframe.market" not in text
+    assert text.count("._http.post(") == 1
+    assert "self._http.post(self._url" in text
 
 
 def test_client_has_no_method_that_issues_a_write():
