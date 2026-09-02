@@ -676,3 +676,61 @@ zero). Deriving flip numbers from the price side (rejected: the analyzer is defi
 the order book; a price-only proxy validates a different thing). Loading forward candles
 past `--end` to fix the end boundary (deferred: it widens the lookahead surface the
 harness exists to control and needs its own review).
+
+## 2026-09-03 - Phase 6: alert delivery, the ledger, and analyzer discovery
+
+**Context:** Phase 6 delivers persisted signals to a terminal that always works and an
+optional Discord webhook that may fail without losing anything, and records trades so
+holdings and P&L derive from one source. The phase-6 plan predates phases 1-5.
+
+**Decision:**
+
+1. **One formatter, two readers.** `wfm/alerts/format.py::render_signal` /
+   `render_digest` render both the live terminal sink and `wfm signals`, so a stored
+   signal reads weeks later exactly as it did when it fired. `EVIDENCE_ORDER` names the
+   leading evidence keys per analyzer; unknown keys still render.
+
+2. **`signals.alerted_at` is the idempotency key.** `alert_service.deliver` marks a
+   signal delivered once the terminal sink (the sink of record) has printed it, even if
+   the optional Discord mirror later fails. `run_digest` marks the whole DAILY batch
+   only after every sink succeeded; the worst case is one repeated digest, never a lost
+   signal. Terminal never fails, so any Discord failure reprints the digest next run.
+
+3. **Routing is a pure function.** `alerts/routing.py::route` maps a signal to sink
+   names with no transport: terminal always; Discord only for URGENT signals past both
+   `discord_min_confidence` and `discord_min_magnitude`, or anything with a per-item
+   `alert_override`. DAILY signals reach Discord through the digest, never live.
+
+4. **Discord sink is the one module allowed a write.** `alerts/discord.py` constructs
+   its own `httpx.AsyncClient` and issues exactly one `.post`, to its configured
+   webhook. The two read-only compliance tests were narrowed to exempt that file
+   (renamed `test_only_the_client_and_discord_sink_construct_an_http_transport` and
+   `test_no_write_verb_reaches_the_transport_except_in_the_discord_sink`) and a new
+   `test_the_discord_sink_posts_only_to_its_configured_webhook` pins the exemption down.
+
+5. **FIFO realized P&L, not average cost.** `ledger/pnl.py::realized` matches sells to
+   buys first-in-first-out per `(slug, rank)`, so a lot report shows which specific buys
+   a sale closed out. `Trade.side` is `Side` (the 2026-09-01 decision), used throughout
+   `pnl.py` and `ledger_service.record` where the phase's draft said `Direction`.
+
+6. **Holdings stay a view read.** `ledger_service.holdings` takes `quantity`/`avg_cost`
+   from the `holdings` SQL view and marks each position to the last stored book
+   (`online_best_bid`, else `best_bid`). The view's `avg_cost` still blends closed-out
+   lots (open since phase 1); that is a display number, and realized P&L already uses the
+   FIFO matcher. Fix when the phase 7 P&L polish lands.
+
+7. **Analyzer discovery.** `registry.discover()` imports every `wfm/analyzers/*.py` that
+   exposes `ANALYZER`, in sorted order, so a new analyzer file needs no edit to the
+   registry. `python -m wfm` already worked (`3df0a7e`).
+
+8. **`_forward_return` lookahead cap.** The replay harness credited a signal with the
+   first candle on or after the horizon date with no upper bound, so a sparse series
+   turned an N-day forward return into a much longer swing. Beyond `_FORWARD_SLACK_DAYS`
+   (3) past the target the signal is left unscored. Carried from the phase 5 re-review.
+
+**Alternatives:** Per-message Discord POSTs rather than one batched post (rejected:
+rate-limit exposure, no benefit). Marking the digest delivered per-sink (rejected:
+reintroduces the double-send the idempotency key exists to prevent). Deriving holdings
+`avg_cost` from the FIFO remainder now (deferred: no behavioural difference for
+single-lot positions, and it belongs with the phase 7 P&L work). An entry-point plugin
+system for analyzers (rejected: package-dir scan is enough for a single-repo tool).
