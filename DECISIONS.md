@@ -690,16 +690,22 @@ holdings and P&L derive from one source. The phase-6 plan predates phases 1-5.
    signal reads weeks later exactly as it did when it fired. `EVIDENCE_ORDER` names the
    leading evidence keys per analyzer; unknown keys still render.
 
-2. **`signals.alerted_at` is the idempotency key.** `alert_service.deliver` marks a
-   signal delivered once the terminal sink (the sink of record) has printed it, even if
-   the optional Discord mirror later fails. `run_digest` marks the whole DAILY batch
-   only after every sink succeeded; the worst case is one repeated digest, never a lost
-   signal. Terminal never fails, so any Discord failure reprints the digest next run.
+2. **`signals.alerted_at` is the idempotency key.** The terminal sink is the sink of
+   record: a signal is marked delivered once it has printed there, whether or not the
+   optional Discord mirror also succeeded. `alert_service.deliver` does this per signal;
+   `run_digest` marks the whole DAILY batch once the terminal sink returns without
+   error, and surfaces any Discord failure in the result rather than withholding the
+   mark (an earlier draft withheld it, which let a permanently broken webhook reprint a
+   growing digest forever). The digest is rendered with no cap so every pending signal
+   is in the text before it is marked; nothing is collapsed away and then lost.
 
 3. **Routing is a pure function.** `alerts/routing.py::route` maps a signal to sink
    names with no transport: terminal always; Discord only for URGENT signals past both
    `discord_min_confidence` and `discord_min_magnitude`, or anything with a per-item
-   `alert_override`. DAILY signals reach Discord through the digest, never live.
+   `alert_override`. `deliver` only acts on URGENT signals and DAILY signals whose item
+   carries an `alert_override`; a plain DAILY signal is left untouched for `run_digest`,
+   the sole path that batches DAILY signals to Discord. DAILY signals never go live
+   otherwise.
 
 4. **Discord sink is the one module allowed a write.** `alerts/discord.py` constructs
    its own `httpx.AsyncClient` and issues exactly one `.post`, to its configured
@@ -721,16 +727,31 @@ holdings and P&L derive from one source. The phase-6 plan predates phases 1-5.
 
 7. **Analyzer discovery.** `registry.discover()` imports every `wfm/analyzers/*.py` that
    exposes `ANALYZER`, in sorted order, so a new analyzer file needs no edit to the
-   registry. `python -m wfm` already worked (`3df0a7e`).
+   registry. A module that fails to import is logged and skipped, not fatal, so a broken
+   scratch file does not take down every command that pulls in the registry. `python -m
+   wfm` already worked (`3df0a7e`).
 
 8. **`_forward_return` lookahead cap.** The replay harness credited a signal with the
    first candle on or after the horizon date with no upper bound, so a sparse series
    turned an N-day forward return into a much longer swing. Beyond `_FORWARD_SLACK_DAYS`
-   (3) past the target the signal is left unscored. Carried from the phase 5 re-review.
+   (3, capped at `horizon_days`) past the target the signal is left unscored; the target
+   series is loaded that far past `--end` so signals near the boundary can still resolve.
+   Carried from the phase 5 re-review.
+
+9. **`wfm pnl --since` filters lots, not the FIFO input.** Realized P&L runs FIFO
+   matching over every trade, then keeps the lots sold on or after `--since`. Filtering
+   the trade list first would strand a windowed sale against an empty buy queue and drop
+   its realized profit.
+
+10. **Trades resolve strictly.** `ledger_service.record` refuses a name that matches
+    more than one catalog item unless it is an exact name or slug, rather than recording
+    money against `matches[0]`. The read-only `catalog_service.resolve` keeps its lenient
+    first-match behaviour (phase 3 deferred item 12).
 
 **Alternatives:** Per-message Discord POSTs rather than one batched post (rejected:
-rate-limit exposure, no benefit). Marking the digest delivered per-sink (rejected:
-reintroduces the double-send the idempotency key exists to prevent). Deriving holdings
+rate-limit exposure, no benefit). Withholding the digest mark until every sink succeeds
+(rejected: a broken webhook then reprints a forever-growing digest and the overflow past
+the render cap is lost; the terminal is a sufficient sink of record). Deriving holdings
 `avg_cost` from the FIFO remainder now (deferred: no behavioural difference for
 single-lot positions, and it belongs with the phase 7 P&L work). An entry-point plugin
 system for analyzers (rejected: package-dir scan is enough for a single-repo tool).

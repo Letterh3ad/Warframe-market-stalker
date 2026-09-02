@@ -28,3 +28,12 @@ def test_is_none_when_the_next_candle_is_far_past_the_horizon():
 
 def test_is_none_when_there_is_no_later_candle_at_all():
     assert _forward_return([_c("2026-01-01", 100.0)], "2026-01-01", 7) is None
+
+
+def test_slack_never_exceeds_the_horizon():
+    # horizon 1 day: a candle 3 days past the target is not a "1-day forward return".
+    candles = [_c("2026-01-01", 100.0), _c("2026-01-05", 150.0)]
+    assert _forward_return(candles, "2026-01-01", 1) is None
+    # the candle exactly one day past the 1-day target is inside the (capped) slack
+    on_time = [_c("2026-01-01", 100.0), _c("2026-01-03", 150.0)]
+    assert _forward_return(on_time, "2026-01-01", 1) == pytest.approx(0.5)

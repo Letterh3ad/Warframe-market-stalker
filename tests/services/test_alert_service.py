@@ -59,6 +59,23 @@ async def test_deliver_marks_only_what_a_sink_confirmed(ctx):
     assert ctx.signals.query()[0].alerted_at is not None
 
 
+async def test_deliver_leaves_a_plain_daily_signal_for_the_digest(ctx):
+    stored = _store(ctx, horizon=Horizon.DAILY, analyzer="revert")
+    sink = RecordingSink(name="terminal")
+    await alert_service.deliver(ctx, [stored], sinks={"terminal": sink})
+    assert sink.batches == [[]]
+    assert ctx.signals.query()[0].alerted_at is None
+
+
+async def test_deliver_sends_a_daily_signal_live_when_the_item_is_overridden(ctx):
+    ctx.watchlist.add("x", 0, added_at=ctx.clock.utcnow(), alert_override=True)
+    stored = _store(ctx, horizon=Horizon.DAILY, analyzer="revert")
+    sink = RecordingSink(name="terminal")
+    await alert_service.deliver(ctx, [stored], sinks={"terminal": sink})
+    assert sink.batches == [[stored]]
+    assert ctx.signals.query()[0].alerted_at is not None
+
+
 async def test_a_failed_sink_leaves_the_signal_undelivered(ctx):
     stored = _store(ctx, horizon=Horizon.URGENT)
     sink = RecordingSink(name="terminal", fail=True)
@@ -109,6 +126,28 @@ async def test_without_a_webhook_the_digest_still_marks_terminal_delivery(ctx, c
     result = await alert_service.run_digest(ctx)
     assert result["delivered"] == 1
     assert result["sinks"] == ["terminal"]
+
+
+async def test_the_digest_renders_every_pending_signal_not_just_a_capped_top_slice(ctx):
+    for i in range(20):
+        _store(ctx, magnitude=float(i))
+    sink = RecordingSink()
+    result = await alert_service.run_digest(ctx, sinks={"discord": sink})
+    assert result["delivered"] == 20
+    assert "more below the cap" not in sink.texts[0]
+    assert all(s.alerted_at is not None for s in ctx.signals.query(limit=50))
+
+
+async def test_a_broken_discord_does_not_block_the_terminal_digest_from_marking(ctx):
+    _store(ctx)
+    sinks = {"terminal": RecordingSink(name="terminal"), "discord": RecordingSink(fail=True)}
+    result = await alert_service.run_digest(ctx, sinks=sinks)
+    assert result["delivered"] == 1
+    assert "discord" in result["error"]
+    assert ctx.signals.query()[0].alerted_at is not None
+
+    second = await alert_service.run_digest(ctx, sinks=sinks)
+    assert second["delivered"] == 0
 
 
 def test_list_signals_renders_through_the_same_formatter(ctx):

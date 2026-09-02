@@ -66,15 +66,19 @@ class DiscordSink:
 
 
 def _chunk(body: str, limit: int) -> list[str]:
+    """Pack lines into <=limit blocks. A single line longer than limit is broken
+    into limit-sized pieces rather than truncated, so no content is lost."""
     chunks: list[str] = []
     current = ""
     for line in body.splitlines():
-        candidate = f"{current}\n{line}" if current else line
-        if len(candidate) > limit and current:
-            chunks.append(current)
-            current = line[:limit]
-        else:
-            current = candidate[:limit]
+        pieces = [line[i : i + limit] for i in range(0, len(line), limit)] or [""]
+        for piece in pieces:
+            candidate = f"{current}\n{piece}" if current else piece
+            if len(candidate) > limit and current:
+                chunks.append(current)
+                current = piece
+            else:
+                current = candidate
     if current:
         chunks.append(current)
     return chunks

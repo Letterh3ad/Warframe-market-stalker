@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 import wfm.analyzers
@@ -12,11 +10,14 @@ def test_the_three_shipped_analyzers_are_registered():
     assert {a.name for a in registry.all()} == {"flip", "revert", "selltime"}
 
 
-def test_a_new_analyzer_module_is_discovered_without_editing_the_registry():
-    # The contract behind drop-in modules: a file in wfm/analyzers/ that exposes
-    # ANALYZER is picked up by discover(), no import list to maintain.
-    probe = Path(wfm.analyzers.__file__).parent / "probe_analyzer.py"
-    probe.write_text(
+def test_a_new_analyzer_module_is_discovered_without_editing_the_registry(tmp_path, monkeypatch):
+    # The contract behind drop-in modules: a file in the wfm.analyzers package path
+    # that exposes ANALYZER is picked up by discover(), no import list to maintain.
+    # The probe lives in a tmp dir grafted onto __path__, never in the tracked tree.
+    monkeypatch.setattr(
+        wfm.analyzers, "__path__", [*wfm.analyzers.__path__, str(tmp_path)]
+    )
+    (tmp_path / "probe_analyzer.py").write_text(
         "from wfm.models import Horizon, Scope\n"
         "class _Probe:\n"
         "    name = 'probe'\n"
@@ -32,8 +33,16 @@ def test_a_new_analyzer_module_is_discovered_without_editing_the_registry():
         registry.discover()
         assert "probe" in {a.name for a in registry.all()}
     finally:
-        probe.unlink()
         registry._REGISTERED.pop("probe", None)
+
+
+def test_discover_skips_a_module_that_fails_to_import(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr(
+        wfm.analyzers, "__path__", [*wfm.analyzers.__path__, str(tmp_path)]
+    )
+    (tmp_path / "broken_analyzer.py").write_text("import a_package_that_is_not_installed\n")
+    registry.discover()  # must not raise
+    assert {"flip", "revert", "selltime"} <= {a.name for a in registry.all()}
 
 
 def test_lookup_by_name():

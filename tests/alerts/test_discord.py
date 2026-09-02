@@ -96,6 +96,20 @@ async def test_deliver_text_posts_the_digest_verbatim():
     assert posted == ["Daily digest: 3 signals"]
 
 
+async def test_a_single_oversized_line_is_split_not_truncated():
+    posted = []
+
+    def handler(request):
+        posted.append(json.loads(request.content)["content"])
+        return httpx.Response(204)
+
+    sink = _sink(handler)
+    await sink.deliver_text("A" * 5000)
+    await sink.aclose()
+    assert all(len(chunk) <= 2000 for chunk in posted)
+    assert "".join(posted) == "A" * 5000
+
+
 async def test_delivering_nothing_makes_no_request():
     calls = []
 

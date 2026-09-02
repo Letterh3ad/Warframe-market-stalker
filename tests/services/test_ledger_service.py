@@ -32,6 +32,24 @@ def test_a_non_positive_quantity_is_refused(ctx):
         ledger_service.record(ctx, "buy", "x", quantity=0, platinum=40)
 
 
+def test_record_refuses_an_ambiguous_name_rather_than_guessing(ctx):
+    ctx.items.upsert_many([
+        Item(slug="continuity", name="Continuity", url_name="continuity"),
+        Item(slug="primed_continuity", name="Primed Continuity", url_name="primed_continuity"),
+    ])
+    with pytest.raises(ValueError, match="ambiguous"):
+        ledger_service.record(ctx, "buy", "continu", quantity=1, platinum=40)
+
+
+def test_record_takes_an_exact_name_even_with_other_partial_matches(ctx):
+    ctx.items.upsert_many([
+        Item(slug="continuity", name="Continuity", url_name="continuity"),
+        Item(slug="primed_continuity", name="Primed Continuity", url_name="primed_continuity"),
+    ])
+    result = ledger_service.record(ctx, "buy", "Continuity", quantity=1, platinum=40)
+    assert result["slug"] == "continuity"
+
+
 def test_selling_more_than_held_is_refused(ctx):
     ledger_service.record(ctx, "buy", "x", quantity=1, platinum=40)
     with pytest.raises(ValueError) as excinfo:
@@ -62,3 +80,24 @@ def test_pnl_reports_realized_and_unrealized(ctx):
     report = ledger_service.pnl(ctx)
     assert report["realized_profit"] == 60
     assert len(report["open_positions"]) == 1
+
+
+def test_pnl_since_keeps_the_cost_basis_of_a_buy_that_predates_the_window(ctx):
+    old = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    mid = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    ledger_service.record(ctx, "buy", "x", quantity=2, platinum=40, when=old)
+    ledger_service.record(ctx, "sell", "x", quantity=2, platinum=70, when=mid)
+    report = ledger_service.pnl(ctx, since=datetime(2026, 1, 15, tzinfo=timezone.utc))
+    # The sale is in the window; its buy is not. Realized profit is still (70-40)*2.
+    assert report["realized_profit"] == 60
+    assert len(report["lots"]) == 1
+
+
+def test_pnl_since_excludes_a_lot_sold_before_the_window(ctx):
+    ledger_service.record(ctx, "buy", "x", quantity=2, platinum=40,
+                          when=datetime(2026, 1, 1, tzinfo=timezone.utc))
+    ledger_service.record(ctx, "sell", "x", quantity=2, platinum=70,
+                          when=datetime(2026, 1, 2, tzinfo=timezone.utc))
+    report = ledger_service.pnl(ctx, since=datetime(2026, 6, 1, tzinfo=timezone.utc))
+    assert report["realized_profit"] == 0
+    assert report["lots"] == []
