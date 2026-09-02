@@ -18,7 +18,7 @@ def _evidence_line(signal: Signal) -> str:
     return "  " + "  ".join(f"{k}={signal.evidence[k]}" for k in keys)
 
 
-def render_signal(signal: Signal, name: str | None = None, width: int = 80) -> str:
+def render_signal(signal: Signal, name: str | None = None) -> str:
     label = name or signal.slug
     head = (
         f"[{signal.analyzer}] {signal.direction.value.upper()} {label} (rank {signal.rank})  "

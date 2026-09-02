@@ -17,17 +17,19 @@ def _mark_for(ctx: AppContext, slug: str, rank: int) -> float | None:
 
 def _resolve_for_trade(ctx: AppContext, query: str, rank: str | int | None):
     # A trade records money. Unlike a read-only lookup it must not silently pick the
-    # first fuzzy match: require an exact name/slug, or a single candidate.
+    # first fuzzy match: require an exact name/slug, or a single candidate. A miss or a
+    # genuinely ambiguous name falls through to catalog_service.resolve, which raises the
+    # standard "no catalog item matches" / picks the sole hit.
     if ctx.items.get(query) is None:
-        matches = ctx.items.search(query, limit=5)
+        matches = ctx.items.search(query, limit=25)
         exact = [
             m for m in matches
             if m.name.lower() == query.lower() or m.slug == query.lower()
         ]
         if exact:
             query = exact[0].slug
-        elif len(matches) != 1:
-            listed = ", ".join(f"{m.name!r} ({m.slug})" for m in matches) or "nothing"
+        elif len(matches) > 1:
+            listed = ", ".join(f"{m.name!r} ({m.slug})" for m in matches)
             raise ValueError(
                 f"{query!r} is ambiguous for a trade; it matches {listed}. "
                 "Pass the exact name or slug."
@@ -86,8 +88,7 @@ def pnl(ctx: AppContext, since: datetime | None = None, realized_only: bool = Fa
     # may predate it. `since` then filters the reported lots by when they were sold,
     # never the matcher's input.
     all_trades = ctx.trades.all()
-    stats = pnl_module.summary(all_trades)
-    lots = stats["lots"]
+    lots = pnl_module.realized(all_trades)
     if since is not None:
         lots = [lot for lot in lots if datetime.fromisoformat(lot["sold_at"]) >= since]
     payload = {

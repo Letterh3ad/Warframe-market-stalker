@@ -713,6 +713,10 @@ holdings and P&L derive from one source. The phase-6 plan predates phases 1-5.
    (renamed `test_only_the_client_and_discord_sink_construct_an_http_transport` and
    `test_no_write_verb_reaches_the_transport_except_in_the_discord_sink`) and a new
    `test_the_discord_sink_posts_only_to_its_configured_webhook` pins the exemption down.
+   The Discord mirror is best-effort and lossy by design: a multi-chunk message that
+   fails partway is not retried, and a transient 5xx/429 is not distinguished from a
+   permanent failure. The terminal sink holds the full content; Discord retry/backoff
+   is a phase 7 daemon concern, not built here.
 
 5. **FIFO realized P&L, not average cost.** `ledger/pnl.py::realized` matches sells to
    buys first-in-first-out per `(slug, rank)`, so a lot report shows which specific buys

@@ -56,3 +56,23 @@ def test_signals_renders_stored_signals(wired, capsys):
 def test_signals_filters(wired, capsys):
     assert main(["--json", "signals", "--analyzer", "flip"]) == 0
     assert json.loads(capsys.readouterr().out) == []
+
+
+def test_signals_since_bad_input_exits_one(wired, capsys):
+    assert main(["signals", "--since", "not-a-date"]) == 1
+    assert "since" in capsys.readouterr().err.lower()
+
+
+def test_pnl_since_bad_input_exits_one(wired, capsys):
+    assert main(["pnl", "--since", "garbage"]) == 1
+    assert "since" in capsys.readouterr().err.lower()
+
+
+def test_digest_runs_and_marks_pending_daily_signals(wired, capsys):
+    wired.signals.insert(
+        Signal(slug="x", rank=0, analyzer="revert", ts=NOW, direction=Direction.BUY,
+               magnitude=2.0, confidence=0.8, horizon=Horizon.DAILY, evidence={"robust_z": -2.0})
+    )
+    assert main(["digest"]) == 0
+    assert "Daily digest: 1 signals" in capsys.readouterr().out
+    assert wired.signals.query()[0].alerted_at is not None

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+import sys
 
 from wfm.cli import context_factory
 from wfm.cli.output import emit
+from wfm.cli.timeframe import parse_since
 from wfm.services import alert_service
 
 
@@ -15,17 +16,13 @@ def register(parser) -> None:
     parser.set_defaults(handler=run)
 
 
-def _parse_since(value: str | None) -> datetime | None:
-    if value is None:
-        return None
-    if value.endswith("d") and value[:-1].isdigit():
-        return datetime.now(timezone.utc) - timedelta(days=int(value[:-1]))
-    return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-
-
 def run(args) -> int:
+    try:
+        since = parse_since(args.since)
+    except ValueError as exc:
+        print(f"bad --since {args.since!r}: {exc}", file=sys.stderr)
+        return 1
     ctx = context_factory.build(args)
-    since = _parse_since(args.since)
     if args.json:
         emit(
             alert_service.list_signals(
