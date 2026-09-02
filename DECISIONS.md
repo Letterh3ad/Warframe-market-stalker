@@ -608,3 +608,65 @@ that should pin the window). Deferred, with a HANDOFF note: `market.build`'s `sl
 default of `None` (latent, `feature_service` always passes it), the `donchian_position`
 fallback coverage gate and `in_window(end=None)` close anchoring (both unreachable on
 real payloads), and `in_window` re-sorting/re-parsing dates per call (efficiency, phase 7).
+
+## 2026-09-02 - Phase 5 analyzers: tuned thresholds and the shape of the analyzer layer
+
+**Context:** Phase 5 added three analyzers (`flip`, `revert`, `selltime`) behind the
+`Analyzer` protocol and a registry, a runner in `analysis_service`, a replay harness, and
+`wfm validate`. Task 9 tunes the thresholds against `wfm_market.db` (3839 items, daily
+candles 2026-06-04..2026-08-31) before the numbers go live.
+
+**Decision:**
+
+1. **`revert.z_threshold = 2.0`; `flip.min_margin_pct = 0.15`, `flip.min_margin_plat = 12`.**
+   Written to `wfm.toml.example`. The stored history is too short to validate `revert` at
+   its design horizon: `robust_z` needs 81 closes in a 90 day window, the DB holds ~89
+   days total, so `robust_z` is null for every replay date through 2026-08-22 and only
+   ~30% of items acquire one by 2026-08-31. Combined with the harness end boundary (point
+   6), the only usable replay is `--start 2026-08-23 --end 2026-08-28 --horizon-days 3`,
+   three scored days. Over it the `z_threshold` sweep 1.0/1.5/2.0/2.5/3.0 gave hit rates
+   0.73/0.73/0.73/0.71/0.72 on 798/390/337/206/119 signals, median forward return 0.0
+   except -0.07 at z=3.0. Hit rate is flat, so 2.0 is chosen as the joint peak and a
+   standard 2 sigma cut, not because it is clearly best: 1.0-1.5 fire on nearly every
+   eligible item, 2.5-3.0 thin out without buying accuracy. The confirmation rerun with
+   the written `wfm.toml` reproduced the sweep's z=2.0 row exactly (337 signals, 247
+   hits, hit rate 0.733). `flip` could not be tuned at all: the harness has no order-book
+   history, so every `min_margin_pct` in 0.10/0.15/0.20/0.30 produced zero signals. Its
+   values are design defaults; real validation is a phase 7 live watch.
+
+2. **Dedup and cooldown live in `analysis_service`, not the analyzers.** An analyzer is a
+   pure `FeatureSet -> list[Signal]` function with no memory. Suppression against open
+   signals and the per-item per-analyzer cooldown are a persistence concern and sit with
+   the code that already holds `SignalsRepo`.
+
+3. **`analyze_item` / `analyze_group` are synchronous.** Feature assembly is in memory and
+   the analyzers do no IO, so async bought nothing. The runner is a plain function.
+
+4. **Online-only depth-curve primitive.** `BookFeatures.online_bid_depth` /
+   `online_ask_depth` are tuples of cumulative quantity at the best N online prices, added
+   to the feature layer and persisted by migration `m0002` (five `online_{bid,ask}_depth_N`
+   columns on `order_snapshots`, executed statement by statement like `m0001`). Offline
+   orders are excluded: an offline wall does not stop an online fill and must not read as
+   proof a price is real. `flip` reads `[0]`, `selltime` reads `[-1]`.
+
+5. **`selltime` replay uses a synthetic one-unit holding and rank 0 only.** The harness
+   has no ledger, so it injects `Holding(quantity=1, avg_cost=last_close)` for every item
+   to exercise the ledger-gated path, and replays rank 0 only. Its unrealized-P&L and
+   sizing outputs under replay are therefore not meaningful; only the list-now / hold /
+   wait decision and its forward return are.
+
+6. **Harness `_load` end-boundary limitation.** Candles load only up to the replay
+   `--end`, so a signal emitted within `--horizon-days` of `--end` has no forward candle
+   and is silently dropped from the scored count. Mitigation: choose `--end` at least
+   `horizon-days` before the newest candle. This DB leaves no room at the 7 day horizon,
+   which is why Task 9 tuned at a 3 day horizon and documented the ambiguity rather than
+   reporting a clean number.
+
+**Alternatives:** Picking the highest `z_threshold` that still fired (3.0) for the
+tightest filter (rejected: no better hit rate, 119 signals over three days is not an
+interpretable sample). Tuning `revert` over the brief's `--start 2026-06-01 --end
+2026-08-20` window (rejected: `robust_z` is null across all of it, every value scores
+zero). Deriving flip numbers from the price side (rejected: the analyzer is defined on
+the order book; a price-only proxy validates a different thing). Loading forward candles
+past `--end` to fix the end boundary (deferred: it widens the lookahead surface the
+harness exists to control and needs its own review).

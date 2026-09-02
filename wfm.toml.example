@@ -1,0 +1,15 @@
+# Copy to wfm.toml (gitignored) and edit. Values here are the tuned analyzer
+# thresholds from Task 9 (see DECISIONS.md 2026-09-02).
+
+[analyzers.revert]
+# Robust-z gate on the 90-day close window. Hit rate was flat at ~0.72-0.74 across
+# z 1.0-3.0 on the only replay window the stored history supports (2026-08-23..25,
+# 2-3 day forward horizon); 2.0 is the hit-rate peak and a standard 2-sigma cut.
+z_threshold = 2.0
+
+[analyzers.flip]
+# Not validated by replay: the harness has no order-book history, so every margin
+# value produced zero signals. These are design defaults, to be tuned on live
+# signals in phase 7.
+min_margin_pct = 0.15
+min_margin_plat = 12
