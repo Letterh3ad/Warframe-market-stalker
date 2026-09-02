@@ -26,6 +26,21 @@ def test_insert_and_latest_round_trip(conn):
     assert got.ts == TS
 
 
+def test_online_depth_curves_round_trip(conn):
+    repo = OrderSnapshotsRepo(conn)
+    ts = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
+    repo.insert(
+        BookSnapshot(
+            slug="x", rank=0, ts=ts,
+            bid_depth=(3, 7), ask_depth=(2, 5),
+            online_bid_depth=(2, 4), online_ask_depth=(1,),
+        )
+    )
+    got = repo.latest("x", 0)
+    assert got.online_bid_depth == (2, 4)
+    assert got.online_ask_depth == (1,)
+
+
 def test_latest_returns_the_newest(conn):
     repo = OrderSnapshotsRepo(conn)
     repo.insert(_snap(TS, 45))

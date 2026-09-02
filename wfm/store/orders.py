@@ -12,6 +12,8 @@ _COLS = (
     'slug, "rank", ts, best_bid, best_ask, online_best_bid, online_best_ask, '
     "bid_depth_1, bid_depth_2, bid_depth_3, bid_depth_4, bid_depth_5, "
     "ask_depth_1, ask_depth_2, ask_depth_3, ask_depth_4, ask_depth_5, "
+    "online_bid_depth_1, online_bid_depth_2, online_bid_depth_3, online_bid_depth_4, online_bid_depth_5, "
+    "online_ask_depth_1, online_ask_depth_2, online_ask_depth_3, online_ask_depth_4, online_ask_depth_5, "
     "bid_count, ask_count, online_bid_count, online_ask_count, stale_share"
 )
 
@@ -31,6 +33,7 @@ class OrderSnapshotsRepo:
             snapshot.best_bid, snapshot.best_ask,
             snapshot.online_best_bid, snapshot.online_best_ask,
             *_pad(snapshot.bid_depth), *_pad(snapshot.ask_depth),
+            *_pad(snapshot.online_bid_depth), *_pad(snapshot.online_ask_depth),
             snapshot.bid_count, snapshot.ask_count,
             snapshot.online_bid_count, snapshot.online_ask_count, snapshot.stale_share,
         ]
@@ -89,11 +92,14 @@ class RawSnapshotsRepo:
 def _to_snapshot(row: sqlite3.Row) -> BookSnapshot:
     bid = tuple(v for v in (row[f"bid_depth_{i}"] for i in range(1, 6)) if v is not None)
     ask = tuple(v for v in (row[f"ask_depth_{i}"] for i in range(1, 6)) if v is not None)
+    online_bid = tuple(v for v in (row[f"online_bid_depth_{i}"] for i in range(1, 6)) if v is not None)
+    online_ask = tuple(v for v in (row[f"online_ask_depth_{i}"] for i in range(1, 6)) if v is not None)
     return BookSnapshot(
         slug=row["slug"], rank=row["rank"], ts=datetime.fromisoformat(row["ts"]),
         best_bid=row["best_bid"], best_ask=row["best_ask"],
         online_best_bid=row["online_best_bid"], online_best_ask=row["online_best_ask"],
         bid_depth=bid, ask_depth=ask,
+        online_bid_depth=online_bid, online_ask_depth=online_ask,
         bid_count=row["bid_count"], ask_count=row["ask_count"],
         online_bid_count=row["online_bid_count"], online_ask_count=row["online_ask_count"],
         stale_share=row["stale_share"],
