@@ -74,6 +74,14 @@ def test_delete_reports_whether_a_row_was_removed(conn):
     assert repo.delete("x", 0) is False
 
 
+def test_delete_removes_the_row_from_all(conn):
+    repo = PollStateRepo(conn)
+    repo.upsert(slug="x", rank=0, due_at=NOW, interval_minutes=15.0, unchanged_polls=0)
+    repo.upsert(slug="y", rank=0, due_at=NOW, interval_minutes=15.0, unchanged_polls=0)
+    repo.delete("x", 0)
+    assert set(repo.all().keys()) == {("y", 0)}
+
+
 def test_due_at_survives_a_fresh_repo_over_the_same_connection(conn):
     PollStateRepo(conn).upsert(slug="x", rank=0, due_at=NOW, interval_minutes=15.0, unchanged_polls=0)
     reopened = PollStateRepo(conn)

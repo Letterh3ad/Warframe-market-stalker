@@ -59,14 +59,17 @@ class DaemonStateRepo:
         row = self._conn.execute("SELECT status FROM daemon_state WHERE id=1").fetchone()
         return row is not None and row["status"] == "stopping"
 
-    def mark_daily_done(self, kind: str, day: date, when: datetime) -> None:
-        """kind is 'sweep' or 'digest'. Raises ValueError on anything else."""
+    def mark_daily_done(self, kind: str, day: date) -> None:
+        """kind is 'sweep' or 'digest'. Raises ValueError on anything else.
+
+        Deliberately does not touch heartbeat_at: liveness has exactly one source,
+        the poll loop's per-iteration heartbeat(). The sweep and digest run on their
+        own code path inside the loop, so a write here must not make a daemon whose
+        polling is wedged look alive to the staleness check.
+        """
         column = _require_daily_column(kind)
         with transaction(self._conn):
-            self._conn.execute(
-                f"UPDATE daemon_state SET {column}=?, heartbeat_at=? WHERE id=1",
-                (day.isoformat(), to_utc_iso(when)),
-            )
+            self._conn.execute(f"UPDATE daemon_state SET {column}=? WHERE id=1", (day.isoformat(),))
 
     def daily_done(self, kind: str) -> date | None:
         column = _require_daily_column(kind)

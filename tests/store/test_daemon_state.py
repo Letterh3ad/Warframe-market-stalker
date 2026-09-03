@@ -79,7 +79,14 @@ def test_mark_daily_done_rejects_an_unknown_kind(conn):
     repo = DaemonStateRepo(conn)
     repo.mark_started(pid=1, when=NOW)
     with pytest.raises(ValueError):
-        repo.mark_daily_done("brunch", date(2026, 8, 27), when=NOW)
+        repo.mark_daily_done("brunch", date(2026, 8, 27))
+
+
+def test_daily_done_rejects_an_unknown_kind(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    with pytest.raises(ValueError):
+        repo.daily_done("brunch")
 
 
 def test_daily_done_is_none_until_marked(conn):
@@ -89,18 +96,19 @@ def test_daily_done_is_none_until_marked(conn):
     assert repo.daily_done("digest") is None
 
 
-def test_mark_daily_done_records_its_when_as_the_heartbeat(conn):
+def test_mark_daily_done_does_not_touch_the_heartbeat(conn):
+    # Liveness has exactly one source: the poll loop's per-iteration heartbeat().
+    # A sweep/digest write must not make a wedged-polling daemon look alive.
     repo = DaemonStateRepo(conn)
     repo.mark_started(pid=1, when=NOW)
-    finished_at = NOW + timedelta(hours=3)
-    repo.mark_daily_done("digest", date(2026, 8, 27), when=finished_at)
-    assert repo.get()["heartbeat_at"] == finished_at
+    repo.mark_daily_done("digest", date(2026, 8, 27))
+    assert repo.get()["heartbeat_at"] == NOW
 
 
 def test_daily_done_survives_a_restart(conn):
     repo = DaemonStateRepo(conn)
     repo.mark_started(pid=1, when=NOW)
-    repo.mark_daily_done("sweep", date(2026, 8, 27), when=NOW)
+    repo.mark_daily_done("sweep", date(2026, 8, 27))
     assert repo.daily_done("sweep") == date(2026, 8, 27)
     assert repo.daily_done("digest") is None
 
