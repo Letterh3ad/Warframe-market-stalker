@@ -16,7 +16,7 @@ PRICE_WINDOW_DAYS = 90
 HOURLY_WINDOW_HOURS = 24 * 42
 
 
-def _anchor_date(ctx: AppContext, now: datetime) -> str:
+def anchor_date(ctx: AppContext, now: datetime) -> str:
     """Windows end at the newest complete day of data, not at today.
 
     warframe.market publishes closed days only, so today never has a candle. Anchoring on
@@ -51,7 +51,7 @@ def market_context(
     only the "a" items and reports their tag mix as the market's. The stride costs the
     same, stays deterministic, and tracks the real distribution.
     """
-    end = _anchor_date(ctx, now or ctx.clock.utcnow())
+    end = anchor_date(ctx, now or ctx.clock.utcnow())
     slugs = spread(ctx.items.all_slugs(), sample_limit)
     series = {}
     tags: dict[str, tuple[str, ...]] = {}
@@ -80,7 +80,7 @@ def build_for(
     samples: dict[str, int] = {}
     available: set[str] = set()
 
-    anchor = _anchor_date(ctx, now)
+    anchor = anchor_date(ctx, now)
     candles = ctx.daily.window(slug, rank, days=PRICE_WINDOW_DAYS, end=anchor)
     # The anchor is passed down, never re-derived from this item's own candles: a
     # dead item's last dense run would otherwise report as current data.

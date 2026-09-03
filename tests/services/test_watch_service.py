@@ -70,3 +70,21 @@ def test_suggest_ranks_by_volume_and_volatility_and_never_auto_adds(ctx):
 def test_suggest_excludes_already_watched_items(ctx):
     watch_service.add(ctx, "hot")
     assert "hot" not in {s["slug"] for s in watch_service.suggest(ctx, top=5)}
+
+
+def test_suggest_anchors_on_the_injected_clock_not_wall_clock(conn):
+    """Old code called DailyStatsRepo.window with no end=, so it anchored on real wall
+    time. A clock set to a date far from the actual system clock, with candles dated
+    to match the clock, only produces suggestions if suggest() actually reads ctx.clock.
+    """
+    context = AppContext(
+        Config(), conn=conn, clock=FakeClock(start_utc=datetime(2019, 6, 25, tzinfo=timezone.utc))
+    )
+    context.items.upsert_many([Item(slug="old", name="Old Item", url_name="old")])
+    context.daily.upsert_many(
+        [DailyCandle(slug="old", rank=0, date=f"2019-06-{d:02d}", volume=200,
+                     close=40 + (d % 5) * 6, high=60, low=30, median=44)
+         for d in range(1, 16)]
+    )
+    suggestions = watch_service.suggest(context, top=5)
+    assert [s["slug"] for s in suggestions] == ["old"]
