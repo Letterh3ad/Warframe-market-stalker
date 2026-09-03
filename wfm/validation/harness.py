@@ -3,16 +3,14 @@
 Scope limits, deliberate and not yet lifted:
 
 - ITEM-scoped analyzers only. `replay` raises on a GROUP analyzer.
-- Rank-0 daily series only. The target series, the synthetic holding and the
-  `FeatureSet` are all built at rank 0, whereas production
-  `feature_service.market_context` uses `item.canonical_rank`. For a ranked mod whose
-  canonical rank is non-zero, production evaluates a different price series, so a
-  replayed hit rate for such an item does not transfer directly. Phases 6-7 re-tune
-  against accrued live data.
 - Forward-return scoring loads `horizon_days` of candles past `end` for the target
   series so a signal emitted near `end` still has a candle to score against. Those
   extra candles reach an analyzer only through `_forward_return`; the per-day
   `c.date <= as_of` slice keeps them out of every feature window.
+
+Per-item analyzer failures are caught and counted (see `ReplayResult.failures` /
+`failed_slugs`), not fatal to the replay. Rank is read from `Item.canonical_rank`, the
+same field `feature_service.market_context` keys on.
 """
 
 from __future__ import annotations
@@ -23,6 +21,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from wfm.analyzers import registry
 from wfm.analyzers.base import Context, Holding
+from wfm.analyzers.runner import run_item
 from wfm.features import market as market_features
 from wfm.features import price as price_features
 from wfm.features.types import FeatureSet, Provenance
@@ -47,6 +46,8 @@ class ReplayResult:
     hit_rate: float | None = None
     median_forward_return: float | None = None
     by_direction: dict = field(default_factory=dict)
+    failures: int = 0
+    failed_slugs: tuple[str, ...] = ()
 
 
 def _forward_return(candles: list, as_of: str, horizon_days: int) -> float | None:
@@ -65,7 +66,7 @@ def _forward_return(candles: list, as_of: str, horizon_days: int) -> float | Non
     return (by_date[later[0]] - start) / start
 
 
-def _feature_set_as_of(slug, window, tags, market_context, as_of: str) -> FeatureSet:
+def _feature_set_as_of(slug, rank, window, tags, market_context, as_of: str) -> FeatureSet:
     anchor = date.fromisoformat(as_of)
     price_block, samples = price_features.build(window, end=anchor)
     market_block, market_samples = market_features.build(
@@ -74,7 +75,7 @@ def _feature_set_as_of(slug, window, tags, market_context, as_of: str) -> Featur
     samples.update(market_samples)
     return FeatureSet(
         slug=slug,
-        rank=0,
+        rank=rank,
         ts=datetime.fromisoformat(as_of).replace(tzinfo=timezone.utc),
         price=price_block,
         market=market_block,
@@ -108,13 +109,20 @@ def replay(
     if sample is not None:
         targets = spread(list(targets), sample)
 
+    # Rank is read per item, the way feature_service.market_context does. A slug with
+    # no catalog entry falls back to rank 0.
+    ranks = {
+        slug: (item.canonical_rank if (item := ctx.items.get(slug)) else 0)
+        for slug in all_slugs
+    }
+
     # Loaded once, sliced per day. The full catalog is far larger than the target set,
     # so the market context is built from a strided sample of it, matching production.
     sample_slugs = spread(all_slugs, MARKET_SAMPLE_LIMIT)
     def _load(slug_list, load_end=end, load_days=_LOAD_DAYS):
         out = {}
         for slug in slug_list:
-            candles = ctx.daily.window(slug, 0, days=load_days, end=load_end)
+            candles = ctx.daily.window(slug, ranks.get(slug, 0), days=load_days, end=load_end)
             if candles:
                 out[slug] = candles
         return out
@@ -133,6 +141,7 @@ def replay(
     returns: list[float] = []
     hits = 0
     by_direction: dict[str, dict] = {}
+    failed_slugs: set[str] = set()
 
     current = date.fromisoformat(start)
     last = date.fromisoformat(end)
@@ -150,15 +159,28 @@ def replay(
             window = [c for c in candles if c.date <= as_of][-PRICE_WINDOW_DAYS:]
             if not window or window[-1].date != as_of:
                 continue
-            fs = _feature_set_as_of(slug, window, tags.get(slug, ()), market_context, as_of)
+            rank = ranks.get(slug, 0)
+            fs = _feature_set_as_of(
+                slug, rank, window, tags.get(slug, ()), market_context, as_of
+            )
             analyzer_ctx = Context(
                 now=fs.ts,
                 holdings={
-                    (slug, 0): Holding(slug, 0, quantity=1, avg_cost=window[-1].close or 0)
+                    (slug, rank): Holding(slug, rank, quantity=1, avg_cost=window[-1].close or 0)
                 },
                 thresholds=thresholds,
             )
-            for signal in analyzer.evaluate(fs, analyzer_ctx):
+            # run_item's `skipped` also fires when required features are missing (e.g.
+            # flip needs book data the harness never has); that is expected and not a
+            # failure. Only count it when the feature set was covered and the analyzer
+            # still didn't run, since that can only mean it raised.
+            covered = fs.provenance.covers(*analyzer.required_features())
+            signals, skipped = run_item([analyzer], fs, analyzer_ctx)
+            if skipped:
+                if covered:
+                    failed_slugs.add(slug)
+                continue
+            for signal in signals:
                 if signal.direction is Direction.HOLD:
                     continue
                 forward = _forward_return(target_series[slug], as_of, horizon_days)
@@ -182,6 +204,8 @@ def replay(
         hit_rate=(hits / total) if total else None,
         median_forward_return=statistics.median(returns) if returns else None,
         by_direction=by_direction,
+        failures=len(failed_slugs),
+        failed_slugs=tuple(sorted(failed_slugs)),
     )
 
 

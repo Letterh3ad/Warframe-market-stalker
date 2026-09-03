@@ -759,3 +759,29 @@ the render cap is lost; the terminal is a sufficient sink of record). Deriving h
 `avg_cost` from the FIFO remainder now (deferred: no behavioural difference for
 single-lot positions, and it belongs with the phase 7 P&L work). An entry-point plugin
 system for analyzers (rejected: package-dir scan is enough for a single-repo tool).
+
+## 2026-09-03 - Validation harness: per-item isolation and canonical_rank threading
+
+**Context:** Two phase 5 deferrals tagged for phase 7 (2026-09-02 entry, point 5, and the
+harness's own module docstring). `replay` called `analyzer.evaluate` directly, so one
+item's exception aborted a multi-thousand-item replay with nothing salvaged. It also
+hardcoded rank 0 for every item, while production `feature_service.market_context` reads
+`item.canonical_rank`; about 38% of a 500-item market sample carries a non-zero rank, so
+the harness was tuning a different series than the one that ships for those items.
+
+**Decision:** Route per-item evaluation through `wfm/analyzers/runner.py::run_item`,
+which already isolates analyzer exceptions. `run_item`'s `skipped` return also fires when
+a feature set lacks required features (e.g. `flip` needs book data the harness never
+builds); that is expected, not a failure, so the harness only counts a skip as a failure
+when the feature set was covered and the analyzer still didn't run. `ReplayResult` gained
+`failures` and `failed_slugs` (additive, existing keys unchanged). Rank is now read from
+`Item.canonical_rank` per slug, matching `market_context`, and threaded through the
+target/sample series load, the `FeatureSet`, and the synthetic `Holding`. No analyzer
+threshold was retuned; a changed replay number for a ranked item is expected and belongs
+to the phase 7 live watch, not this task.
+
+**Alternatives:** Reporting failures as a plain exception count with no slugs (rejected:
+the brief requires seeing which items failed, not just how many). Adding a `rank`
+override parameter to `replay` (rejected: no existing signature slot for it and no
+caller needs to override per-item rank; `canonical_rank` is the single source of truth
+production also uses).
