@@ -94,6 +94,10 @@ class PollQueue:
         self._heap: list[tuple[float, int, QueueItem]] = []
         self._items: dict[tuple[str, int], QueueItem] = {}
         self._counter = 0
+        # Keys currently checked out via pop_due but not yet returned via reschedule.
+        # A rebuild must not resurrect these with their old, already-passed due_at,
+        # or the runner gets handed the same slug again seconds after the first poll.
+        self._inflight: set[tuple[str, int]] = set()
 
     @property
     def size(self) -> int:
@@ -105,6 +109,7 @@ class PollQueue:
 
         for key in (set(self._items) | set(stored)) - set(wanted):
             self._items.pop(key, None)
+            self._inflight.discard(key)
             self._state_delete(*key)
 
         now = self._clock.now()
@@ -153,7 +158,9 @@ class PollQueue:
         self._drop_stale()
         if not self._heap or self._heap[0][0] > self._clock.now():
             return None
-        return heapq.heappop(self._heap)[2]
+        item = heapq.heappop(self._heap)[2]
+        self._inflight.add(item.key())
+        return item
 
     def seconds_until_next(self) -> float | None:
         item = self.peek()
@@ -162,6 +169,7 @@ class PollQueue:
         return max(0.0, item.due_at - self._clock.now())
 
     def reschedule(self, item: QueueItem, score_value: float, changed: bool) -> None:
+        self._inflight.discard(item.key())
         if item.key() not in self._items:
             return
         item.unchanged_polls = 0 if changed else item.unchanged_polls + 1
@@ -183,7 +191,12 @@ class PollQueue:
     def _reheap(self) -> None:
         self._heap = []
         self._counter = 0
-        for item in self._items.values():
+        for key, item in self._items.items():
+            # An in-flight item has no valid due_at to schedule from; pushing its old,
+            # already-passed one would hand the runner the same slug a second time.
+            # reschedule() re-pushes it once the poll actually completes.
+            if key in self._inflight:
+                continue
             self._push(item)
 
     def _drop_stale(self) -> None:

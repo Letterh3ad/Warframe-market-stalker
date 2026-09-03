@@ -204,22 +204,32 @@ def test_a_restart_resumes_the_stored_schedule_rather_than_a_cold_start(conn):
 
 
 def test_a_restart_after_a_long_sleep_makes_overdue_items_due_oldest_first(conn):
+    """Wall-clock age must win regardless of watchlist order, not just insertion order.
+
+    "a" is listed first in the watchlist, but "b" is scheduled first here, so "b"
+    has the older stored due_at and is the more-starved item. catchup_max_items=1
+    forces a real deferral choice: without the oldest-first sort, this degrades to
+    heap tie-break order (insertion order via _counter, which tracks wanted-dict
+    iteration order, i.e. watchlist order [a, b]), so "a" would wrongly stay due
+    now and the genuinely older "b" would wrongly get deferred.
+    """
     state = PollStateRepo(conn)
     clock1 = FakeClock(start_utc=START)
     queue1 = PollQueue(clock1, state=state)
     queue1.rebuild([_entry("a"), _entry("b")])
     first, second = queue1.pop_due(), queue1.pop_due()
     a, b = (first, second) if first.slug == "a" else (second, first)
-    queue1.reschedule(a, score_value=0.0, changed=True)
+    queue1.reschedule(b, score_value=0.0, changed=True)  # b scheduled first -> older due_at
     clock1.advance(5 * 60)
-    queue1.reschedule(b, score_value=0.0, changed=True)
+    queue1.reschedule(a, score_value=0.0, changed=True)  # a scheduled later -> newer due_at
 
     clock2 = FakeClock(start_utc=clock1.utcnow() + timedelta(hours=8), start_monotonic=0.0)
-    queue2 = PollQueue(clock2, state=state)
-    queue2.rebuild([_entry("a"), _entry("b")])
+    queue2 = PollQueue(clock2, state=state, catchup_max_items=1)
+    queue2.rebuild([_entry("a"), _entry("b")])  # watchlist order is [a, b], opposite of age order
 
-    assert queue2.pop_due().slug == "a", "a was scheduled earlier, so it is more overdue"
-    assert queue2.pop_due().slug == "b"
+    due_now = queue2.pop_due()
+    assert due_now.slug == "b", "b was scheduled earlier, so it is more overdue, despite coming second in watchlist order"
+    assert queue2.pop_due() is None, "a was deferred by the cap"
 
 
 def test_bounded_catchup_caps_immediate_pops_and_spreads_the_rest(conn):
@@ -244,6 +254,49 @@ def test_bounded_catchup_caps_immediate_pops_and_spreads_the_rest(conn):
     assert due_now == 10
     assert queue2.seconds_until_next() is not None
     assert queue2.seconds_until_next() <= 30 * 60, "deferred ones still land within the floor"
+
+
+# --- In-flight bookkeeping: a rebuild or a crash must not touch the floor (I1) ---
+
+
+def test_rebuild_during_an_inflight_poll_does_not_resurrect_it_below_the_floor():
+    queue, clock = _queue()
+    queue.rebuild([_entry("a")])
+    item = queue.pop_due()  # "a" is checked out, as if the runner is mid-request
+    queue.rebuild([_entry("a")])  # a concurrent watchlist refresh while "a" is still in flight
+    assert queue.pop_due() is None, "an in-flight item must not be handed out a second time"
+    queue.reschedule(item, score_value=0.0, changed=True)
+    assert queue.pop_due() is None
+    clock.advance(30 * 60)
+    assert queue.pop_due().slug == "a"
+
+
+def test_reschedule_after_a_rebuild_during_flight_leaves_no_duplicate_heap_entry():
+    queue, clock = _queue()
+    queue.rebuild([_entry("a")])
+    item = queue.pop_due()
+    queue.rebuild([_entry("a")])
+    queue.reschedule(item, score_value=5.0, changed=True)  # hot score -> ceiling interval
+    clock.advance(2 * 60)
+    assert queue.pop_due().slug == "a"
+    assert queue.pop_due() is None, "a stale duplicate heap entry would pop a a second time"
+
+
+def test_an_item_popped_but_never_rescheduled_is_not_lost_forever(conn):
+    state = PollStateRepo(conn)
+    clock1 = FakeClock(start_utc=START)
+    queue1 = PollQueue(clock1, state=state)
+    queue1.rebuild([_entry("a")])
+    queue1.reschedule(queue1.pop_due(), score_value=0.0, changed=True)
+    clock1.advance(30 * 60)
+    stuck = queue1.pop_due()
+    assert stuck is not None  # the runner picks "a" up here, then crashes before reschedule
+
+    clock2 = FakeClock(start_utc=clock1.utcnow(), start_monotonic=0.0)
+    queue2 = PollQueue(clock2, state=state)
+    queue2.rebuild([_entry("a")])
+
+    assert queue2.pop_due() is not None, "a crash mid-poll must not strand the item forever"
 
 
 def test_rebuild_deletes_the_stored_row_of_a_removed_item(conn):
