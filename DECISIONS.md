@@ -785,3 +785,33 @@ the brief requires seeing which items failed, not just how many). Adding a `rank
 override parameter to `replay` (rejected: no existing signature slot for it and no
 caller needs to override per-item rank; `canonical_rank` is the single source of truth
 production also uses).
+
+## 2026-09-03 - watch_service anchors on ctx.clock; holdings avg_cost is the FIFO remainder
+
+**Context:** Two deferred defects flagged as phase 7 opening cleanup (2026-09-02 entry,
+point 6; task-0b brief).
+
+`watch_service.suggest` called `DailyStatsRepo.window` without `end=`, so it anchored on
+real wall-clock time rather than `ctx.clock`, the same defect phase 4 fixed in
+`feature_service`. `feature_service._anchor_date` is promoted to `anchor_date` (module-
+level, no longer private) and `watch_service.suggest` now anchors its window on it.
+
+The `holdings` SQL view's `avg_cost` blends every buy including lots a sale has already
+closed out. `wfm/ledger/pnl.py::_match` (the existing FIFO matcher, refactored to also
+return the unmatched buy queues) backs a new `cost_basis(trades)` that averages only the
+FIFO remainder. `ledger_service.cost_basis` wraps it; both `ledger_service.holdings` and
+`analysis_service.build_context` now override the view's `avg_cost` with it, keeping
+`quantity` from the view (already correct) unchanged. `build_context` needed the same
+fix, not just `ledger_service.holdings`, because it queries `ctx.trades.holdings()`
+directly rather than through the ledger service; without it `Holding.avg_cost` reaching
+`selltime` through `build_context` would have stayed on the blended figure. This does
+move `selltime`'s inputs for any item with a closed-out lot; no analyzer threshold was
+retuned to compensate, per the brief.
+
+**Alternatives:** Computing the corrected `avg_cost` inside `TradesRepo.holdings()`
+itself (rejected: pulls FIFO matching, a business rule, into the store layer, which
+elsewhere only depends on `wfm.store` and `wfm.models`). Leaving `analysis_service`
+unfixed since the brief's file list didn't name it (rejected: the brief's own note says
+the fix must reach `selltime` through `build_context`, and `build_context` bypasses
+`ledger_service.holdings` entirely, so the fix has to be duplicated at its call site or
+shared via a service-level helper; chose the shared helper).

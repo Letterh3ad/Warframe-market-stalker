@@ -76,3 +76,20 @@ def test_unrealized_reports_none_when_there_is_no_mark():
     rows = pnl.unrealized([("x", 0, 4, 40.0)], marks={})
     assert rows[0]["mark"] is None
     assert rows[0]["unrealized_profit"] is None
+
+
+def test_cost_basis_uses_only_the_fifo_remainder_not_the_blended_average():
+    trades = [
+        _t(Side.BUY, 2, 30, day=0),
+        _t(Side.BUY, 2, 50, day=1),
+        _t(Side.SELL, 1, 90, day=2),
+    ]
+    basis = pnl.cost_basis(trades)
+    # Blended average over all buys would be 40.0. The sale closes the first unit of
+    # the 30-cost lot first (FIFO), leaving 1@30 and 2@50: (30 + 100) / 3.
+    assert basis[("x", 0)] == pytest.approx((30 + 100) / 3)
+
+
+def test_cost_basis_omits_a_fully_closed_position():
+    trades = [_t(Side.BUY, 1, 40), _t(Side.SELL, 1, 60)]
+    assert pnl.cost_basis(trades) == {}

@@ -7,13 +7,14 @@ from wfm.analyzers.base import Context, Holding
 from wfm.analyzers.runner import run_group, run_item
 from wfm.features.market import MarketContext
 from wfm.models import BookSnapshot, Signal
-from wfm.services import feature_service
+from wfm.services import feature_service, ledger_service
 from wfm.services.context import AppContext
 
 
 def build_context(ctx: AppContext, now: datetime | None = None) -> Context:
+    basis = ledger_service.cost_basis(ctx)
     holdings = {
-        (slug, rank): Holding(slug, rank, quantity, avg_cost)
+        (slug, rank): Holding(slug, rank, quantity, basis.get((slug, rank), avg_cost))
         for slug, rank, quantity, avg_cost in ctx.trades.holdings()
     }
     watchlist = {

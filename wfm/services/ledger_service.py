@@ -73,8 +73,19 @@ def record(
     }
 
 
+def cost_basis(ctx: AppContext) -> dict[tuple[str, int], float]:
+    """FIFO remainder cost basis, keyed like the holdings view. The view's own avg_cost
+    blends every buy including closed-out lots; this is the corrected figure.
+    """
+    return pnl_module.cost_basis(ctx.trades.all())
+
+
 def holdings(ctx: AppContext) -> list[dict]:
-    raw = ctx.trades.holdings()
+    basis = cost_basis(ctx)
+    raw = [
+        (slug, rank, quantity, basis.get((slug, rank), avg_cost))
+        for slug, rank, quantity, avg_cost in ctx.trades.holdings()
+    ]
     marks = {(slug, rank): _mark_for(ctx, slug, rank) for slug, rank, _, _ in raw}
     rows = pnl_module.unrealized(raw, {k: v for k, v in marks.items() if v is not None})
     for row in rows:
