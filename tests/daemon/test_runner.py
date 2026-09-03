@@ -319,8 +319,66 @@ async def test_a_stop_event_interrupts_a_long_idle_sleep_within_one_chunk(ctx):
 async def test_sleep_until_next_does_not_sleep_at_all_once_already_stopped(ctx):
     daemon = Daemon(ctx)
     daemon.request_stop()
-    await daemon._sleep_until_next(1800.0)
+    await daemon._sleep_until_next(1800.0, "idle")
     assert ctx.clock.now() == 0.0
+
+
+async def test_a_mid_run_flag_stop_ends_the_loop_on_the_poll_path(ctx, monkeypatch):
+    """Round 2 regression test (N1): the per-iteration heartbeat wrote status=
+    "running" unconditionally, which erased a "stopping" flag written by another
+    process mid-run before the loop-top check ever saw it. request_stop() fires right
+    after the first poll completes, exactly where the old heartbeat call ran next."""
+    original_poll_once = Daemon.poll_once
+
+    async def poll_once_then_flag_stop(self, item):
+        result = await original_poll_once(self, item)
+        ctx.daemon_state.request_stop(ctx.clock.utcnow())
+        return result
+
+    monkeypatch.setattr(Daemon, "poll_once", poll_once_then_flag_stop)
+    report = await Daemon(ctx).run(max_iterations=20)
+    assert ctx.daemon_state.get()["status"] == "stopped"
+    assert report.polls == 1
+
+
+async def test_a_mid_run_flag_stop_ends_the_loop_on_the_idle_path(ctx, monkeypatch):
+    """Round 2 regression test (N1), idle-path half. request_stop() fires right after
+    the first sleep chunk completes, before that chunk's own heartbeat call."""
+    ctx.watchlist.remove("a", 0)  # nothing due, so every iteration takes the idle branch
+    original_sleep = ctx.clock.sleep
+    fired = {"once": False}
+
+    async def sleep_then_flag_stop(seconds):
+        await original_sleep(seconds)
+        if not fired["once"]:
+            fired["once"] = True
+            ctx.daemon_state.request_stop(ctx.clock.utcnow())
+
+    monkeypatch.setattr(ctx.clock, "sleep", sleep_then_flag_stop)
+    report = await Daemon(ctx).run(max_iterations=100)
+    assert ctx.daemon_state.get()["status"] == "stopped"
+    assert report.polls == 0
+
+
+async def test_the_heartbeat_cadence_is_independent_of_the_sleep_length(ctx):
+    """N2: heartbeat_at must not be bounded by seconds_until_next(). A quiet,
+    non-empty watchlist used to advance it only once per floor interval, up to 30
+    minutes, which is C1's original failure scenario (a wedged loop and a quiet loop
+    look identical for that whole stretch)."""
+    daemon = Daemon(ctx)
+    await daemon.run(max_iterations=1)  # polls "a", schedules its next due far out
+
+    calls: list = []
+    original_heartbeat = ctx.daemon_state.heartbeat
+
+    def recording_heartbeat(when, status="running", detail=None):
+        calls.append(when)
+        return original_heartbeat(when, status=status, detail=detail)
+
+    ctx.daemon_state.heartbeat = recording_heartbeat
+    await daemon.run(max_iterations=1)  # idle: sleeps the whole gap to "a"'s next due
+    assert len(calls) > 1, "one long idle wait must still heartbeat more than once"
+    assert calls == sorted(calls), "each heartbeat call is later than the last"
 
 
 async def test_a_foreground_run_does_not_claim_daemon_identity_when_own_state_is_false(ctx):
@@ -353,3 +411,42 @@ async def test_the_sweep_declines_to_run_without_budget_slack(ctx):
     assert not sweep_calls
     # Still due: nothing marked it done, so a later run with slack can still catch up.
     assert ctx.daemon_state.daily_done("sweep") != ctx.clock.utcnow().date()
+
+
+async def test_a_foreground_run_never_executes_the_sweep_or_digest_when_own_state_is_false(ctx):
+    """N3: own_state=False used to only skip the mark_daily_done ledger write, while
+    the sweep and digest branches still ran (sync_catalog/run_sweep issuing thousands
+    of BULK requests from a short-lived CLI process). The branches themselves must be
+    gated, not just the write recording that they ran."""
+    ctx.clock.advance(28 * 60 * 60)  # day 2, past both sweep_hour and digest_hour
+    report = await Daemon(ctx, own_state=False).run(max_iterations=5)
+    assert report.sweeps == 0
+    assert report.digests == 0
+    sweep_calls = [c for c in ctx.new_client().calls if "/versions" in c[0]]
+    assert not sweep_calls
+
+
+async def test_the_poll_loop_reserves_budget_proportional_to_watchlist_size(ctx):
+    """I5 controller ruling: the sweep's reservation was the only one production code
+    ever created, so remaining_for() never reflected real poll-loop pressure. The
+    poll loop must reserve too, so the figure actually varies with the watchlist."""
+    daemon = Daemon(ctx)
+    daemon._queue.rebuild(ctx.watchlist.all())
+    daemon._reserve_poll_budget()
+    remaining_small = ctx.budget.remaining_for(Priority.BACKGROUND, 3600.0)
+
+    for i in range(50):
+        ctx.items.upsert_many([Item(slug=f"x{i}", name=f"X{i}", url_name=f"x{i}")])
+        ctx.watchlist.add(f"x{i}", 0, START)
+    daemon._queue.rebuild(ctx.watchlist.all())
+    daemon._reserve_poll_budget()
+    remaining_large = ctx.budget.remaining_for(Priority.BACKGROUND, 3600.0)
+
+    assert remaining_large < remaining_small
+    assert remaining_small - remaining_large == 50, "one reserved slot per added item"
+
+
+async def test_the_poll_loops_reservation_is_released_when_the_run_ends(ctx):
+    full_allowance = int(ctx.config.requests_per_second * 3600.0)
+    await Daemon(ctx).run(max_iterations=3)
+    assert ctx.budget.remaining_for(Priority.BACKGROUND, 3600.0) == full_allowance

@@ -36,6 +36,31 @@ def test_there_is_only_ever_one_row(conn):
     assert repo.get()["pid"] == 2
 
 
+def test_a_running_heartbeat_does_not_clear_a_pending_stop(conn):
+    """Round 2 regression (task 4 review N1): a per-iteration liveness heartbeat with
+    status="running" must not silently erase a "stopping" flag another process wrote,
+    since that flag is the only mechanism `wfm daemon stop` has on Windows."""
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.request_stop(when=NOW + timedelta(seconds=1))
+    assert repo.get()["status"] == "stopping"
+
+    repo.heartbeat(when=NOW + timedelta(seconds=2), status="running", detail="polled a")
+    state = repo.get()
+    assert state["status"] == "stopping"
+    # Liveness still advances; only the status column is protected.
+    assert state["heartbeat_at"] == NOW + timedelta(seconds=2)
+    assert state["detail"] == "polled a"
+
+
+def test_a_non_running_heartbeat_status_still_overrides_a_pending_stop(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.request_stop(when=NOW + timedelta(seconds=1))
+    repo.heartbeat(when=NOW + timedelta(seconds=2), status="halted", detail="breaker tripped")
+    assert repo.get()["status"] == "halted"
+
+
 def test_a_halted_status_records_its_reason(conn):
     repo = DaemonStateRepo(conn)
     repo.mark_started(pid=1, when=NOW)

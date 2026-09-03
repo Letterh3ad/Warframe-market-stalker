@@ -36,10 +36,24 @@ class DaemonStateRepo:
 
     def heartbeat(self, when: datetime, status: str = "running", detail: str | None = None) -> None:
         with transaction(self._conn):
-            self._conn.execute(
-                "UPDATE daemon_state SET heartbeat_at=?, status=?, detail=? WHERE id=1",
-                (to_utc_iso(when), status, detail),
-            )
+            if status == "running":
+                # A per-iteration liveness heartbeat must never silently clear a
+                # pending stop: "stopping" is the only signal `wfm daemon stop` has
+                # on Windows, where os.kill cannot deliver a SIGTERM. heartbeat_at and
+                # detail still advance normally; only the status column is protected,
+                # and only from this one caller's own default status. An explicit
+                # non-"running" transition (halted/stopped) always applies below.
+                self._conn.execute(
+                    "UPDATE daemon_state SET heartbeat_at=?, "
+                    "status=CASE WHEN status='stopping' THEN status ELSE ? END, "
+                    "detail=? WHERE id=1",
+                    (to_utc_iso(when), status, detail),
+                )
+            else:
+                self._conn.execute(
+                    "UPDATE daemon_state SET heartbeat_at=?, status=?, detail=? WHERE id=1",
+                    (to_utc_iso(when), status, detail),
+                )
 
     def mark_stopped(self, when: datetime, detail: str | None = None) -> None:
         self.heartbeat(when, status="stopped", detail=detail)
