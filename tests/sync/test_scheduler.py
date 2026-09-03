@@ -1,7 +1,12 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from wfm.config import Config
-from wfm.sync.scheduler import ScoreInputs, Weights, interval_minutes, score
+from wfm.store.poll_state import PollStateRepo
+from wfm.sync.scheduler import PollQueue, ScoreInputs, Weights, interval_minutes, score
+from tests.fakes.clock import FakeClock
+from wfm.models import WatchlistEntry
 
 WEIGHTS = Weights.from_config(Config())
 
@@ -54,3 +59,202 @@ def test_interval_decreases_monotonically_with_score():
 
 def test_interval_never_goes_below_the_ceiling_however_large_the_score():
     assert interval_minutes(10_000.0, floor=30, ceiling=2) == 2
+
+
+START = datetime(2026, 8, 27, tzinfo=timezone.utc)
+
+
+def _entry(slug: str, pin: float = 0.0) -> WatchlistEntry:
+    return WatchlistEntry(slug=slug, rank=0, added_at=START, pin_weight=pin)
+
+
+def _queue(**kwargs):
+    clock = FakeClock(start_utc=START)
+    return PollQueue(clock, **kwargs), clock
+
+
+def test_rebuild_makes_every_item_due_immediately():
+    queue, _ = _queue()
+    queue.rebuild([_entry("a"), _entry("b")])
+    assert queue.size == 2
+    assert queue.pop_due() is not None
+    assert queue.pop_due() is not None
+    assert queue.pop_due() is None
+
+
+def test_a_polled_item_returns_at_the_floor_when_its_score_is_zero():
+    queue, clock = _queue()
+    queue.rebuild([_entry("a")])
+    item = queue.pop_due()
+    queue.reschedule(item, score_value=0.0, changed=True)
+    assert queue.pop_due() is None
+    assert queue.seconds_until_next() == pytest.approx(30 * 60)
+    clock.advance(30 * 60)
+    assert queue.pop_due().slug == "a"
+
+
+def test_a_hot_item_returns_at_the_ceiling():
+    queue, clock = _queue()
+    queue.rebuild([_entry("a")])
+    queue.reschedule(queue.pop_due(), score_value=5.0, changed=True)
+    clock.advance(2 * 60)
+    assert queue.pop_due().slug == "a"
+
+
+def test_an_unchanged_book_decays_the_interval_back_toward_the_floor():
+    queue, clock = _queue(decay_after=3)
+    queue.rebuild([_entry("a")])
+    intervals = []
+    for _ in range(5):
+        item = queue.pop_due()
+        queue.reschedule(item, score_value=5.0, changed=False)
+        intervals.append(queue.peek().interval_minutes)
+        clock.advance(queue.seconds_until_next())
+    assert intervals[0] == pytest.approx(2)
+    assert intervals[-1] > intervals[0], "a book that never moves stops being polled hard"
+    assert intervals[-1] <= 30
+
+
+def test_a_change_resets_the_decay():
+    queue, clock = _queue(decay_after=2)
+    queue.rebuild([_entry("a")])
+    for _ in range(3):
+        queue.reschedule(queue.pop_due(), score_value=5.0, changed=False)
+        clock.advance(queue.seconds_until_next())
+    decayed = queue.peek().interval_minutes
+    queue.reschedule(queue.pop_due(), score_value=5.0, changed=True)
+    assert queue.peek().interval_minutes < decayed
+    assert queue.peek().unchanged_polls == 0
+
+
+def test_the_queue_orders_by_due_time_not_insertion():
+    queue, clock = _queue()
+    queue.rebuild([_entry("slow"), _entry("fast")])
+    slow, fast = queue.pop_due(), queue.pop_due()
+    if slow.slug != "slow":
+        slow, fast = fast, slow
+    queue.reschedule(slow, score_value=0.0, changed=True)
+    queue.reschedule(fast, score_value=5.0, changed=True)
+    clock.advance(30 * 60)
+    assert queue.pop_due().slug == "fast"
+
+
+def test_rebuild_drops_items_removed_from_the_watchlist():
+    queue, _ = _queue()
+    queue.rebuild([_entry("a"), _entry("b")])
+    queue.rebuild([_entry("a")])
+    assert queue.size == 1
+    assert queue.pop_due().slug == "a"
+
+
+def test_rebuild_preserves_the_schedule_of_items_that_remain():
+    queue, clock = _queue()
+    queue.rebuild([_entry("a")])
+    queue.reschedule(queue.pop_due(), score_value=0.0, changed=True)
+    queue.rebuild([_entry("a"), _entry("b")])
+    assert queue.pop_due().slug == "b", "a is still on its 30 minute schedule"
+
+
+def test_seconds_until_next_on_an_empty_queue_is_none():
+    queue, _ = _queue()
+    assert queue.seconds_until_next() is None
+
+
+# --- Persistence: survive a restart / a host sleeping (addendum, binding) ---
+
+
+def test_the_restore_across_a_restart_converts_wall_clock_to_monotonic(conn):
+    """The pinned wall-clock <-> monotonic conversion test the addendum requires.
+
+    A second queue is built with a different monotonic origin (as a real restart
+    would have) and a wall clock 10 minutes further along. A naive implementation
+    that reuses due_at verbatim, or that just marks everything due now, both fail
+    this: the restored item must be due in ~20 of its original 30 minutes, not 30
+    and not immediately.
+    """
+    state = PollStateRepo(conn)
+    clock1 = FakeClock(start_utc=START, start_monotonic=100.0)
+    queue1 = PollQueue(clock1, state=state)
+    queue1.rebuild([_entry("a")])
+    queue1.reschedule(queue1.pop_due(), score_value=0.0, changed=True)
+
+    clock2 = FakeClock(start_utc=START + timedelta(minutes=10), start_monotonic=9999.0)
+    queue2 = PollQueue(clock2, state=state)
+    queue2.rebuild([_entry("a")])
+
+    assert queue2.pop_due() is None, "not due immediately"
+    assert queue2.seconds_until_next() == pytest.approx(20 * 60, abs=1)
+
+
+def test_a_restart_resumes_the_stored_schedule_rather_than_a_cold_start(conn):
+    state = PollStateRepo(conn)
+    clock1 = FakeClock(start_utc=START)
+    queue1 = PollQueue(clock1, state=state)
+    queue1.rebuild([_entry("a")])
+    queue1.reschedule(queue1.pop_due(), score_value=0.0, changed=True)
+
+    clock2 = FakeClock(start_utc=START, start_monotonic=500.0)
+    queue2 = PollQueue(clock2, state=state)
+    queue2.rebuild([_entry("a")])
+
+    assert queue2.pop_due() is None
+    assert queue2.seconds_until_next() == pytest.approx(30 * 60)
+    clock2.advance(30 * 60)
+    assert queue2.pop_due().slug == "a"
+
+
+def test_a_restart_after_a_long_sleep_makes_overdue_items_due_oldest_first(conn):
+    state = PollStateRepo(conn)
+    clock1 = FakeClock(start_utc=START)
+    queue1 = PollQueue(clock1, state=state)
+    queue1.rebuild([_entry("a"), _entry("b")])
+    first, second = queue1.pop_due(), queue1.pop_due()
+    a, b = (first, second) if first.slug == "a" else (second, first)
+    queue1.reschedule(a, score_value=0.0, changed=True)
+    clock1.advance(5 * 60)
+    queue1.reschedule(b, score_value=0.0, changed=True)
+
+    clock2 = FakeClock(start_utc=clock1.utcnow() + timedelta(hours=8), start_monotonic=0.0)
+    queue2 = PollQueue(clock2, state=state)
+    queue2.rebuild([_entry("a"), _entry("b")])
+
+    assert queue2.pop_due().slug == "a", "a was scheduled earlier, so it is more overdue"
+    assert queue2.pop_due().slug == "b"
+
+
+def test_bounded_catchup_caps_immediate_pops_and_spreads_the_rest(conn):
+    state = PollStateRepo(conn)
+    clock1 = FakeClock(start_utc=START)
+    entries = [_entry(f"item{i}") for i in range(40)]
+    queue1 = PollQueue(clock1, state=state)
+    queue1.rebuild(entries)
+    for _ in range(40):
+        item = queue1.pop_due()
+        queue1.reschedule(item, score_value=0.0, changed=True)
+        clock1.advance(1)
+
+    clock2 = FakeClock(start_utc=clock1.utcnow() + timedelta(hours=8), start_monotonic=0.0)
+    queue2 = PollQueue(clock2, state=state, catchup_max_items=10)
+    queue2.rebuild(entries)
+
+    assert queue2.size == 40, "none of the 40 are lost"
+    due_now = 0
+    while queue2.pop_due() is not None:
+        due_now += 1
+    assert due_now == 10
+    assert queue2.seconds_until_next() is not None
+    assert queue2.seconds_until_next() <= 30 * 60, "deferred ones still land within the floor"
+
+
+def test_rebuild_deletes_the_stored_row_of_a_removed_item(conn):
+    state = PollStateRepo(conn)
+    clock = FakeClock(start_utc=START)
+    queue = PollQueue(clock, state=state)
+    queue.rebuild([_entry("a"), _entry("b")])
+    queue.reschedule(queue.pop_due(), score_value=0.0, changed=True)
+    queue.reschedule(queue.pop_due(), score_value=0.0, changed=True)
+    assert state.get("a", 0) is not None
+
+    queue.rebuild([_entry("b")])
+
+    assert state.get("a", 0) is None

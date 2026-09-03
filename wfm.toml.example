@@ -8,6 +8,7 @@ w_spread = 0.8           # Bid-ask spread weight in priority score.
 w_pin = 1.5              # Manual pin weight in priority score.
 score_saturation = 1.0   # Score value at which interval reaches ceiling.
 decay_after_unchanged_polls = 3  # Polls before deprioritizing an unchanged item.
+catchup_max_items = 25  # Overdue items released as due-now after a restart; the rest spread out.
 
 [analyzers.revert]
 # Robust-z gate on the 90-day close window. Hit rate was flat at ~0.72-0.74 across

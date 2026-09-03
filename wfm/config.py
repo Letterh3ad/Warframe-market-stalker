@@ -41,6 +41,7 @@ class Config:
     w_pin: float = 1.5
     score_saturation: float = 1.0
     decay_after_unchanged_polls: int = 3
+    catchup_max_items: int = 25
     analyzers: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
