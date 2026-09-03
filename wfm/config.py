@@ -35,6 +35,12 @@ class Config:
     discord_min_magnitude: float = 0.0
     persist_features: bool = False
     cooldown_minutes: int = 120
+    w_vol: float = 1.0
+    w_liq: float = 0.5
+    w_spread: float = 0.8
+    w_pin: float = 1.5
+    score_saturation: float = 1.0
+    decay_after_unchanged_polls: int = 3
     analyzers: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -78,6 +84,11 @@ class Config:
                 "request_timeout_s",
                 "discord_min_confidence",
                 "discord_min_magnitude",
+                "w_vol",
+                "w_liq",
+                "w_spread",
+                "w_pin",
+                "score_saturation",
             ):
                 out[name] = float(raw)
             elif name in ("crossplay", "persist_features"):

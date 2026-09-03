@@ -74,3 +74,9 @@ def test_non_positive_rate_is_rejected():
     for bad in (0, -5.0):
         with pytest.raises(ValueError):
             Config(requests_per_second=bad)
+
+
+def test_env_override_weight_float_as_float(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("WFM_W_VOL", "1.5")
+    cfg = Config.load(tmp_path / "absent.toml")
+    assert cfg.w_vol == 1.5
