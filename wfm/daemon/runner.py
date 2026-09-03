@@ -28,6 +28,21 @@ IDLE_SLEEP_S = 60.0
 # is empty (nothing else would ever pick up a first watchlist entry).
 WATCHLIST_REFRESH_S = 60.0
 
+# An idle wait can be up to poll_floor_minutes long (1800s by default). Sleeping it
+# in one shot leaves a stop request (the event or the on-disk flag) unheard for the
+# whole wait, which is exactly the unclean shutdown the design exists to avoid.
+# Chunking the sleep and re-checking between chunks bounds that to one chunk.
+MAX_SLEEP_CHUNK_S = 10.0
+
+# Budget name for the sweep's own reservation. Freed as soon as the sweep call
+# returns (or as soon as the slack check itself declines to run it).
+SWEEP_RESERVATION_NAME = "daily_sweep"
+
+# Horizon the "does the queue have slack" check reasons over. Short relative to the
+# sweep's own runtime: the question is "is BACKGROUND starved right now", not
+# "over the whole day".
+SWEEP_SLACK_HORIZON_S = 3600.0
+
 
 @dataclass(frozen=True)
 class DaemonReport:
@@ -46,9 +61,20 @@ class Daemon:
     without locking.
     """
 
-    def __init__(self, ctx: AppContext, stop_event: asyncio.Event | None = None) -> None:
+    def __init__(
+        self,
+        ctx: AppContext,
+        stop_event: asyncio.Event | None = None,
+        own_state: bool = True,
+    ) -> None:
         self._ctx = ctx
         self._stop = stop_event or asyncio.Event()
+        # False for a foreground, short-lived run (`wfm scan --once`) sharing the DB
+        # with a possibly-running real daemon: it must not claim daemon identity
+        # (mark_started/heartbeat/mark_stopped), or it clobbers pid/status/heartbeat
+        # the real daemon owns, and it must not consume a pending stop meant for that
+        # daemon (review I2).
+        self._own_state = own_state
         self._weights = Weights.from_config(ctx.config)
         self._queue = PollQueue(
             ctx.clock,
@@ -70,12 +96,17 @@ class Daemon:
 
         # A stop already on record (e.g. `wfm daemon stop` fired before this process
         # picked it up) is honoured without ever claiming the daemon started, rather
-        # than clearing it via mark_started() below and running anyway.
+        # than clearing it via mark_started() below and running anyway. The read is
+        # unconditional (own_state or not: a foreground run should still notice), but
+        # only an own_state run may write mark_stopped() (review I2) - the daemon
+        # process itself is the only one allowed to mark itself stopped.
         if ctx.daemon_state.stop_requested():
-            ctx.daemon_state.mark_stopped(ctx.clock.utcnow())
-            return DaemonReport()
+            if self._own_state:
+                ctx.daemon_state.mark_stopped(ctx.clock.utcnow())
+            return DaemonReport(reason="stop requested")
 
-        ctx.daemon_state.mark_started(pid=os.getpid(), when=ctx.clock.utcnow())
+        if self._own_state:
+            ctx.daemon_state.mark_started(pid=os.getpid(), when=ctx.clock.utcnow())
         polls = sweeps = digests = 0
         iterations = 0
         stop_requested = False
@@ -98,7 +129,7 @@ class Daemon:
                     ctx.daemon_state.mark_daily_done("digest", now.date())
                     digests += 1
 
-                if self._sweep_due(now):
+                if self._sweep_due(now) and self._queue_has_slack():
                     await self._run_sweep()
                     ctx.daemon_state.mark_daily_done("sweep", now.date())
                     sweeps += 1
@@ -106,20 +137,37 @@ class Daemon:
                 self._maybe_refresh_queue()
                 item = self._queue.pop_due()
                 if item is None:
-                    await ctx.clock.sleep(self._queue.seconds_until_next() or IDLE_SLEEP_S)
-                    continue
+                    await self._sleep_until_next(self._queue.seconds_until_next() or IDLE_SLEEP_S)
+                    detail = "idle"
+                else:
+                    await self.poll_once(item)
+                    polls += 1
+                    detail = f"polled {item.slug}"
 
-                await self.poll_once(item)
-                polls += 1
-                ctx.daemon_state.heartbeat(
-                    ctx.clock.utcnow(), status="running", detail=f"polled {item.slug}"
-                )
+                # Written every iteration, poll or idle: this is the daemon's one
+                # liveness source (addendum section 8). A daemon idling at the 30
+                # minute floor with nothing to poll must still look alive.
+                if self._own_state:
+                    ctx.daemon_state.heartbeat(ctx.clock.utcnow(), status="running", detail=detail)
             except CircuitOpen as exc:
-                ctx.daemon_state.heartbeat(ctx.clock.utcnow(), status="halted", detail=exc.reason)
+                if self._own_state:
+                    ctx.daemon_state.heartbeat(
+                        ctx.clock.utcnow(), status="halted", detail=exc.reason
+                    )
                 await operational(ctx, f"wfm daemon halted: {exc.reason}")
                 return DaemonReport(polls, sweeps, digests, halted=True, reason=exc.reason)
+            except Exception as exc:
+                # Anything else (a locked DB, a bad candle row, ...) must not kill the
+                # process silently with state stuck at "running" and no alert. A
+                # tripped breaker still must not retry into a block, so this does not
+                # loop back and try again; it halts exactly like a CircuitOpen would.
+                log.exception("daemon iteration failed")
+                if self._own_state:
+                    ctx.daemon_state.heartbeat(ctx.clock.utcnow(), status="halted", detail=str(exc))
+                await operational(ctx, f"wfm daemon halted: {exc}")
+                return DaemonReport(polls, sweeps, digests, halted=True, reason=str(exc))
 
-        if stop_requested:
+        if stop_requested and self._own_state:
             ctx.daemon_state.mark_stopped(ctx.clock.utcnow())
         return DaemonReport(polls, sweeps, digests)
 
@@ -185,15 +233,50 @@ class Daemon:
             self._weights,
         )
 
+    async def _sleep_until_next(self, seconds: float) -> None:
+        """Sleeps in bounded chunks, re-checking both stop paths between them, so a
+        stop wakes the loop within one chunk instead of waiting out a full idle
+        interval (up to the 30 minute floor). Each chunk still goes through
+        ctx.clock.sleep(), so under FakeClock the total elapsed time and shape of the
+        test are unchanged: the chunking only matters against a real clock."""
+        ctx = self._ctx
+        remaining = max(0.0, seconds)
+        while remaining > 0:
+            if self._stop.is_set() or ctx.daemon_state.stop_requested():
+                return
+            chunk = min(remaining, MAX_SLEEP_CHUNK_S)
+            await ctx.clock.sleep(chunk)
+            remaining -= chunk
+
+    def _queue_has_slack(self) -> bool:
+        """The brief's loop-body prose, "run the sweep if the queue has slack", given
+        real teeth:
+        reserve the sweep's estimated request footprint and only proceed if that
+        still leaves BACKGROUND (the poll loop) some near-term budget. If another
+        reservation (or a low configured rate) has already used it up, decline this
+        iteration; the sweep stays "due" and is retried on a later one."""
+        ctx = self._ctx
+        # Rough estimate: one BULK request per catalog item plus catalog sync's own
+        # couple of calls. Good enough for a slack check, not a request accountant.
+        estimate = 2 + ctx.items.count()
+        ctx.budget.reserve(SWEEP_RESERVATION_NAME, estimate)
+        slack = ctx.budget.remaining_for(Priority.BACKGROUND, SWEEP_SLACK_HORIZON_S) > 0
+        if not slack:
+            ctx.budget.release_reservation(SWEEP_RESERVATION_NAME)
+        return slack
+
     async def _run_sweep(self) -> None:
         ctx = self._ctx
-        await sync_catalog(ctx.new_client(), ctx.items, ctx.sweep_state, ctx.clock)
-        await run_sweep(
-            ctx.new_client(), ctx.items, ctx.daily, ctx.hourly, ctx.sweep_state, ctx.clock
-        )
-        # Rebuilt once per sweep, not per poll: it is a catalog-wide aggregate that
-        # moves on a daily timescale.
-        self._market = market_context(ctx)
+        try:
+            await sync_catalog(ctx.new_client(), ctx.items, ctx.sweep_state, ctx.clock)
+            await run_sweep(
+                ctx.new_client(), ctx.items, ctx.daily, ctx.hourly, ctx.sweep_state, ctx.clock
+            )
+            # Rebuilt once per sweep, not per poll: it is a catalog-wide aggregate
+            # that moves on a daily timescale.
+            self._market = market_context(ctx)
+        finally:
+            ctx.budget.release_reservation(SWEEP_RESERVATION_NAME)
 
     def _maybe_refresh_queue(self) -> None:
         now = self._ctx.clock.now()

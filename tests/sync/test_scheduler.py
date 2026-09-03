@@ -115,6 +115,23 @@ def test_an_unchanged_book_decays_the_interval_back_toward_the_floor():
     assert intervals[-1] <= 30
 
 
+def test_a_pinned_items_decay_is_bounded_rather_than_reaching_the_floor():
+    """Controller ruling on the task 4 review: decay used to override pin_weight
+    entirely, dragging any unchanging item, pinned or not, to the 30 minute floor.
+    That detects the first move on a pinned item up to a floor interval late, which
+    is exactly the case a pin exists for."""
+    queue, clock = _queue(decay_after=3)
+    queue.rebuild([_entry("a", pin=3.0)])
+    intervals = []
+    for _ in range(8):
+        item = queue.pop_due()
+        queue.reschedule(item, score_value=5.0, changed=False)
+        intervals.append(queue.peek().interval_minutes)
+        clock.advance(queue.seconds_until_next())
+    assert intervals[-1] < 30, "a pin keeps the item well short of the unpinned floor"
+    assert intervals[-1] == pytest.approx(8.0), "capped at earned interval * PIN_DECAY_CAP_MULTIPLIER"
+
+
 def test_a_change_resets_the_decay():
     queue, clock = _queue(decay_after=2)
     queue.rebuild([_entry("a")])

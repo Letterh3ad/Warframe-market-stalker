@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 
 import pytest
@@ -7,7 +8,7 @@ from tests.fakes.clock import FakeClock
 from wfm.api.errors import CircuitOpen
 from wfm.config import Config
 from wfm.daemon.runner import Daemon
-from wfm.models import DailyCandle, Item
+from wfm.models import DailyCandle, Direction, Horizon, Item, Signal
 from wfm.services.context import AppContext
 from wfm.sync.budget import Priority
 
@@ -63,24 +64,46 @@ async def test_the_thirty_minute_floor_holds_for_a_quiet_item(ctx):
     assert report.polls <= elapsed_hours * 2 + 1, "no faster than the floor allows on a flat item"
 
 
-async def test_a_pinned_item_polls_far_more_often_than_an_unpinned_one(ctx):
+def _add_item_b(ctx, pin_weight: float) -> None:
     ctx.items.upsert_many([Item(slug="b", name="B", url_name="b", tags=("mod",))])
     ctx.daily.upsert_many(
         [DailyCandle(slug="b", rank=0, date=f"2026-06-{d:02d}", close=50, high=52, low=48,
                      median=50, volume=30) for d in range(1, 31)]
     )
-    ctx.watchlist.add("b", 0, START, pin_weight=3.0)
-    # Short window: unchanged-poll decay (identical book data every poll) pulls both
-    # items' intervals toward the floor after a handful of polls, which would erase
-    # the pin's advantage over a long run. The gap is real early on.
-    report = await Daemon(ctx).run(max_iterations=12)
+    ctx.watchlist.add("b", 0, START, pin_weight=pin_weight)
+
+
+def _poll_counts(ctx) -> dict[str, int]:
     counts: dict[str, int] = {}
     for url, _ in ctx.new_client().calls:
         if "/orders/item/" in url:
             slug = url.rstrip("/").split("/")[-1]
             counts[slug] = counts.get(slug, 0) + 1
+    return counts
+
+
+async def test_a_pinned_item_polls_far_more_often_early_in_a_run(ctx):
+    """This is an early-run property, not a standing one: see the companion
+    convergence test below. Named for what it actually proves, per review."""
+    _add_item_b(ctx, pin_weight=3.0)
+    # Short window: unchanged-poll decay (identical book data every poll) pulls both
+    # items' intervals toward the floor after a handful of polls, which narrows the
+    # pin's advantage. The gap is wide early on, before decay has caught up.
+    report = await Daemon(ctx).run(max_iterations=12)
+    counts = _poll_counts(ctx)
     assert counts["b"] > counts["a"] * 2
     assert report.polls == sum(counts.values())
+
+
+async def test_a_pinned_and_an_unpinned_item_both_settle_short_of_the_floor(ctx):
+    """Controller ruling on the task 4 review: decay is now bounded by pin_weight, so
+    a pinned item's interval no longer decays all the way to the 30 minute floor like
+    an unpinned item's does. Long-run behaviour, the complement of the test above."""
+    _add_item_b(ctx, pin_weight=3.0)
+    await Daemon(ctx).run(max_iterations=400)
+    interval = {slug: ctx.poll_state.get(slug, 0)["interval_minutes"] for slug in ("a", "b")}
+    assert interval["a"] == pytest.approx(ctx.config.poll_floor_minutes)
+    assert interval["b"] < interval["a"], "the pin keeps b polling more often, even long-run"
 
 
 async def test_a_tripped_breaker_halts_every_task_and_records_the_reason(conn):
@@ -194,13 +217,39 @@ async def test_an_empty_watchlist_sleeps_rather_than_spinning(ctx):
 
 
 async def test_a_heartbeat_is_written_each_iteration(ctx):
-    await Daemon(ctx).run(max_iterations=2)
+    # Fixture already calls mark_started(when=START), which sets heartbeat_at; the
+    # assertion has to move past START and pin the poll-path detail text to be able
+    # to fail if the per-iteration write were removed (review finding C1).
+    await Daemon(ctx).run(max_iterations=1)
     state = ctx.daemon_state.get()
     assert state["status"] == "running"
     assert state["heartbeat_at"] is not None
+    # mark_started() also sets status="running" with detail=None; only a real
+    # per-iteration heartbeat() call sets this detail, so this is what makes the
+    # test able to fail if that call were deleted.
+    assert state["detail"] == "polled a"
+
+
+async def test_a_heartbeat_advances_on_the_idle_path_too(ctx):
+    ctx.watchlist.remove("a", 0)
+    await Daemon(ctx).run(max_iterations=2)
+    state = ctx.daemon_state.get()
+    assert state["heartbeat_at"] > START
+    assert state["detail"] == "idle"
 
 
 async def test_signals_from_a_poll_are_delivered(ctx, monkeypatch):
+    fake_signal = Signal(
+        slug="a", rank=0, analyzer="flip", ts=ctx.clock.utcnow(), direction=Direction.BUY,
+        magnitude=1.0, confidence=0.9, horizon=Horizon.URGENT, id=99,
+    )
+
+    def fake_records(context, slug, rank, snapshot=None, market=None, now=None, persist=True):
+        payload = {"slug": slug, "rank": rank, "signals": [], "skipped": [], "suppressed": []}
+        return payload, [fake_signal]
+
+    monkeypatch.setattr("wfm.daemon.runner.analyze_item_records", fake_records)
+
     delivered = []
 
     async def fake_deliver(context, signals, sinks=None):
@@ -208,14 +257,36 @@ async def test_signals_from_a_poll_are_delivered(ctx, monkeypatch):
         return []
 
     monkeypatch.setattr("wfm.daemon.runner.deliver", fake_deliver)
-    await Daemon(ctx).run(max_iterations=2)
-    assert isinstance(delivered, list)  # zero is fine on flat data, the wiring is what matters
+    await Daemon(ctx).run(max_iterations=1)
+    # Deleting the `if signals: await deliver(...)` call in poll_once must fail this.
+    assert delivered == [fake_signal]
+    assert delivered[0].id == 99
+
+
+async def test_an_unexpected_exception_halts_the_daemon_with_an_alert(ctx, monkeypatch):
+    def boom(*args, **kwargs):
+        raise ValueError("bad candle")
+
+    monkeypatch.setattr("wfm.daemon.runner.analyze_item_records", boom)
+    alerts = []
+
+    async def fake_operational(context, message, sinks=None):
+        alerts.append(message)
+        return []
+
+    monkeypatch.setattr("wfm.daemon.runner.operational", fake_operational)
+    report = await Daemon(ctx).run(max_iterations=5)
+    assert report.halted is True
+    assert "bad candle" in report.reason
+    assert ctx.daemon_state.get()["status"] == "halted"
+    assert alerts
 
 
 async def test_a_stop_request_already_set_returns_without_polling(ctx):
     ctx.daemon_state.request_stop(ctx.clock.utcnow())
     report = await Daemon(ctx).run(max_iterations=5)
     assert report.polls == 0
+    assert report.reason == "stop requested"
     assert ctx.daemon_state.get()["status"] == "stopped"
 
 
@@ -225,3 +296,60 @@ async def test_the_stop_event_ends_the_loop_cleanly(ctx):
     report = await daemon.run(max_iterations=5)
     assert report.polls == 0
     assert ctx.daemon_state.get()["status"] == "stopped"
+
+
+async def test_a_stop_event_interrupts_a_long_idle_sleep_within_one_chunk(ctx):
+    """review I1: seconds_until_next() can be up to the 30 minute floor; the loop must
+    not sleep it out once a stop is requested mid-wait."""
+    ctx.watchlist.remove("a", 0)  # nothing due, so the idle branch sleeps IDLE_SLEEP_S
+    daemon = Daemon(ctx)
+
+    async def request_stop_after_one_chunk():
+        await asyncio.sleep(0)
+        daemon.request_stop()
+
+    asyncio.create_task(request_stop_after_one_chunk())
+    report = await daemon.run(max_iterations=100)
+    assert report.polls == 0
+    # Far less than the full 60s idle sleep elapsed: the chunk cap bounded the wait
+    # rather than sleeping it out before the stop was even checked again.
+    assert ctx.clock.now() < 60.0
+
+
+async def test_sleep_until_next_does_not_sleep_at_all_once_already_stopped(ctx):
+    daemon = Daemon(ctx)
+    daemon.request_stop()
+    await daemon._sleep_until_next(1800.0)
+    assert ctx.clock.now() == 0.0
+
+
+async def test_a_foreground_run_does_not_claim_daemon_identity_when_own_state_is_false(ctx):
+    """review I2: `wfm scan --once` runs Daemon.run() in a separate, short-lived
+    process against the same DB as a possibly-running real daemon. own_state=False
+    means it must not overwrite pid/status/heartbeat, which the real daemon owns."""
+    ctx.daemon_state.heartbeat(START, status="running", detail="real daemon polling")
+    before = ctx.daemon_state.get()
+    report = await Daemon(ctx, own_state=False).run(max_iterations=1)
+    after = ctx.daemon_state.get()
+    assert report.polls == 1
+    assert after == before
+
+
+async def test_a_foreground_run_does_not_swallow_a_pending_stop_when_own_state_is_false(ctx):
+    ctx.daemon_state.request_stop(ctx.clock.utcnow())
+    report = await Daemon(ctx, own_state=False).run(max_iterations=1)
+    # The real daemon's own process is the only one allowed to mark itself stopped.
+    assert ctx.daemon_state.get()["status"] == "stopping"
+    assert report.reason == "stop requested"
+
+
+async def test_the_sweep_declines_to_run_without_budget_slack(ctx):
+    ctx.clock.advance(23 * 60 * 60)  # day 2, 04:00 UTC: sweep due
+    # Starve BACKGROUND's near-term allowance so the sweep's own slack check fails.
+    ctx.budget.reserve("other-consumer", 1_000_000)
+    report = await Daemon(ctx).run(max_iterations=5)
+    assert report.sweeps == 0
+    sweep_calls = [c for c in ctx.new_client().calls if "/versions" in c[0]]
+    assert not sweep_calls
+    # Still due: nothing marked it done, so a later run with slack can still catch up.
+    assert ctx.daemon_state.daily_done("sweep") != ctx.clock.utcnow().date()

@@ -10,6 +10,11 @@ from wfm.config import Config
 from wfm.models import WatchlistEntry
 from wfm.store.poll_state import PollStateRepo
 
+# How far unchanged-poll decay may stretch a pinned item's interval beyond the one it
+# earned from score(), as a multiple of that interval. Bounds it well short of the
+# floor an unpinned item decays to.
+PIN_DECAY_CAP_MULTIPLIER = 4.0
+
 
 @dataclass(frozen=True)
 class Weights:
@@ -178,7 +183,16 @@ class PollQueue:
         )
         if item.unchanged_polls >= self._decay_after:
             decay_steps = item.unchanged_polls - self._decay_after + 1
-            interval = min(self._floor, interval * (2**decay_steps))
+            decayed = interval * (2**decay_steps)
+            # A pin means "tell me the moment this moves". Decaying a pinned item all
+            # the way to the floor like an unpinned one detects the first move on it
+            # up to a floor interval late, which is exactly the case a pin exists for.
+            # Bound the decay to a small multiple of the item's own earned interval
+            # instead, so it plateaus well short of the floor.
+            if item.pin_weight > 0:
+                interval = min(interval * PIN_DECAY_CAP_MULTIPLIER, decayed, self._floor)
+            else:
+                interval = min(self._floor, decayed)
         item.interval_minutes = interval
         item.due_at = self._clock.now() + interval * 60
         self._push(item)
