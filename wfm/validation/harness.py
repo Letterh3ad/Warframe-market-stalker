@@ -15,6 +15,7 @@ same field `feature_service.market_context` keys on.
 
 from __future__ import annotations
 
+import bisect
 import statistics
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
@@ -50,8 +51,17 @@ class ReplayResult:
     failed_slugs: tuple[str, ...] = ()
 
 
-def _forward_return(candles: list, as_of: str, horizon_days: int) -> float | None:
+def _forward_index(candles: list) -> tuple[dict[str, float], list[str]]:
+    """A series' closes-by-date map and its sorted date list, built once per target
+    series rather than once per (day, signal) pair inside the replay double loop.
+    """
     by_date = {c.date: c.close for c in candles if c.close is not None}
+    return by_date, sorted(by_date)
+
+
+def _forward_return(
+    by_date: dict[str, float], sorted_dates: list[str], as_of: str, horizon_days: int
+) -> float | None:
     start = by_date.get(as_of)
     if not start:
         return None
@@ -60,10 +70,16 @@ def _forward_return(candles: list, as_of: str, horizon_days: int) -> float | Non
     # "1-day forward return".
     slack = min(_FORWARD_SLACK_DAYS, horizon_days)
     cutoff = (target + timedelta(days=slack)).isoformat()
-    later = [d for d in sorted(by_date) if d >= target.isoformat()]
-    if not later or later[0] > cutoff:
+    target_iso = target.isoformat()
+    # sorted_dates is sorted and ISO dates compare lexicographically like dates, so
+    # bisect finds the same "first date >= target" that a linear scan would.
+    idx = bisect.bisect_left(sorted_dates, target_iso)
+    if idx >= len(sorted_dates):
         return None
-    return (by_date[later[0]] - start) / start
+    candidate = sorted_dates[idx]
+    if candidate > cutoff:
+        return None
+    return (by_date[candidate] - start) / start
 
 
 def _feature_set_as_of(slug, rank, window, tags, market_context, as_of: str) -> FeatureSet:
@@ -138,6 +154,10 @@ def replay(
     sample_series = _load(sample_slugs)
     tags = {slug: (item.tags if (item := ctx.items.get(slug)) else ()) for slug in all_slugs}
 
+    # Built once per target series rather than once per _forward_return call: the
+    # series itself never changes across the day loop below.
+    forward_index = {slug: _forward_index(candles) for slug, candles in target_series.items()}
+
     returns: list[float] = []
     hits = 0
     by_direction: dict[str, dict] = {}
@@ -183,7 +203,8 @@ def replay(
             for signal in signals:
                 if signal.direction is Direction.HOLD:
                     continue
-                forward = _forward_return(target_series[slug], as_of, horizon_days)
+                by_date, sorted_dates = forward_index[slug]
+                forward = _forward_return(by_date, sorted_dates, as_of, horizon_days)
                 if forward is None:
                     continue
                 returns.append(forward)
