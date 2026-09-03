@@ -7,12 +7,14 @@ from wfm.api.client import WFMClient
 from wfm.api.ratelimit import TokenBucket
 from wfm.clock import Clock, SystemClock
 from wfm.config import Config
+from wfm.store.daemon_state import DaemonStateRepo
 from wfm.store.db import connect
 from wfm.store.groups import GroupsRepo
 from wfm.store.http_cache import HttpCacheRepo
 from wfm.store.items import ItemsRepo
 from wfm.store.migrate import migrate
 from wfm.store.orders import OrderSnapshotsRepo, RawSnapshotsRepo
+from wfm.store.poll_state import PollStateRepo
 from wfm.store.signals import SignalsRepo
 from wfm.store.stats import DailyStatsRepo, HourlyStatsRepo
 from wfm.store.sweep import SweepStateRepo
@@ -59,6 +61,8 @@ class AppContext:
         self.trades = TradesRepo(self.conn)
         self.sweep_state = SweepStateRepo(self.conn)
         self.http_cache = HttpCacheRepo(self.conn)
+        self.daemon_state = DaemonStateRepo(self.conn)
+        self.poll_state = PollStateRepo(self.conn)
 
     def new_client(self) -> WFMClient:
         if self._client is None:

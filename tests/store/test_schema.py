@@ -14,6 +14,8 @@ EXPECTED_TABLES = {
     "sweep_state",
     "features",
     "http_cache",
+    "daemon_state",
+    "poll_state",
 }
 
 
@@ -66,3 +68,21 @@ def test_group_members_cascade_on_group_delete(conn):
     conn.execute('INSERT INTO group_members(group_id,slug,"rank") VALUES(?, ?, 0)', (gid, "x"))
     conn.execute("DELETE FROM groups WHERE id=?", (gid,))
     assert conn.execute("SELECT COUNT(*) FROM group_members").fetchone()[0] == 0
+
+
+def test_daemon_state_has_daily_task_columns(conn):
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(daemon_state)")}
+    assert "last_sweep_date" in cols
+    assert "last_digest_date" in cols
+
+
+def test_daemon_state_is_a_singleton_row(conn):
+    with pytest.raises(Exception):
+        conn.execute(
+            "INSERT INTO daemon_state (id, status) VALUES (2, 'running')"
+        )
+
+
+def test_poll_state_keys_on_slug_and_rank(conn):
+    key = [r["name"] for r in conn.execute("PRAGMA table_info(poll_state)") if r["pk"]]
+    assert key[:2] == ["slug", "rank"]
