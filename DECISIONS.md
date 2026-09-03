@@ -815,3 +815,34 @@ unfixed since the brief's file list didn't name it (rejected: the brief's own no
 the fix must reach `selltime` through `build_context`, and `build_context` bypasses
 `ledger_service.holdings` entirely, so the fix has to be duplicated at its call site or
 shared via a service-level helper; chose the shared helper).
+
+## 2026-09-03 - Daemon runner: max_iterations exhaustion is not a stop, and a pending stop is honoured before mark_started
+
+**Context:** Task 4 (phase 7), the single-loop daemon (`wfm/daemon/runner.py`) wiring the
+adaptive poll queue, the daily sweep, and the digest onto one `asyncio` loop, per the
+task-4 brief and its binding addendum.
+
+Two behaviors the brief's sketch did not get right once `daemon_state` (task 1) entered
+the picture. First, `Daemon.run(max_iterations=N)` returning because the budget ran out
+is not the same event as a real stop: only `stop_event.is_set()` or
+`daemon_state.stop_requested()` calls `mark_stopped()`. A bounded run (used by tests and
+by `wfm scan --once`) leaves `status="running"` so a caller can start another bounded run
+right after, and the per-iteration `heartbeat()` write stays the one place status flips
+back to "running" after a poll. Second, `run()` checks `stop_requested()` before calling
+`mark_started()`, not after: `mark_started()` unconditionally resets `status` to
+`"running"` (by design, to clear a stale flag from a crashed process), so checking after
+would silently clear a stop request nobody has acted on yet. A pending stop now short
+circuits straight to `mark_stopped()` without ever claiming the daemon started.
+
+Also split `analysis_service.analyze_item` into a dict-only wrapper around a new
+`analyze_item_records(...) -> tuple[dict, list[Signal]]`, per the addendum: the daemon
+needs the persisted `Signal` objects (with their DB-assigned `id`) to pass straight to
+`alert_service.deliver`, and re-querying `ctx.signals.query(slug=...)` for them (the
+brief's original approach) can return signals from a different rank or an earlier poll.
+
+**Alternatives:** Calling `mark_stopped()` unconditionally at loop exit, matching the
+brief literally (rejected: fails the brief's own heartbeat test once `daemon_state` is
+real, since two bounded `run()` calls in the same test would otherwise show "stopped"
+between them). Checking `stop_requested()` only inside the loop body, after
+`mark_started()` (rejected: a stop requested between process start and the first
+`Daemon(ctx).run()` call would be silently cleared).

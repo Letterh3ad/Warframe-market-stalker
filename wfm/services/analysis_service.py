@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 from wfm.analyzers import registry
@@ -47,7 +48,7 @@ def _is_duplicate(ctx: AppContext, signal: Signal, now: datetime) -> bool:
     return last is not None and now - last < cooldown
 
 
-def analyze_item(
+def analyze_item_records(
     ctx: AppContext,
     slug: str,
     rank: int,
@@ -55,7 +56,9 @@ def analyze_item(
     market: MarketContext | None = None,
     now: datetime | None = None,
     persist: bool = True,
-) -> dict:
+) -> tuple[dict, list[Signal]]:
+    """The payload analyze_item returns, plus the kept Signal objects the caller needs
+    to deliver. analyze_item stays dict-only because wfm --json serializes it."""
     now = now or ctx.clock.utcnow()
     market = market if market is not None else feature_service.market_context(ctx, now=now)
     fs = feature_service.build_for(ctx, slug, rank, snapshot=snapshot, market=market, now=now)
@@ -71,16 +74,32 @@ def analyze_item(
             suppressed.append(signal.analyzer)
             continue
         if persist:
-            ctx.signals.insert(signal)
+            signal = replace(signal, id=ctx.signals.insert(signal))
         kept.append(signal)
 
-    return {
+    payload = {
         "slug": slug,
         "rank": rank,
         "signals": [_as_dict(s) for s in kept],
         "skipped": skipped,
         "suppressed": suppressed,
     }
+    return payload, kept
+
+
+def analyze_item(
+    ctx: AppContext,
+    slug: str,
+    rank: int,
+    snapshot: BookSnapshot | None = None,
+    market: MarketContext | None = None,
+    now: datetime | None = None,
+    persist: bool = True,
+) -> dict:
+    payload, _ = analyze_item_records(
+        ctx, slug, rank, snapshot=snapshot, market=market, now=now, persist=persist
+    )
+    return payload
 
 
 def analyze_group(ctx: AppContext, name: str, persist: bool = True) -> dict:
