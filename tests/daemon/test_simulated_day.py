@@ -91,7 +91,13 @@ def _gaps_minutes(timed_calls: list[tuple[str, datetime]], slug: str) -> list[fl
 
 async def test_a_simulated_day_respects_the_floor_the_ceiling_and_the_budget(ctx):
     # Long enough to cross midnight into Aug 28's sweep_hour (4) and digest_hour (9),
-    # not just span a single day: see the report assertions below (review finding 1).
+    # not just span a single day: see the report assertions at the end (review
+    # finding 1). Scheduling assertions run first, on purpose: a clamp regression
+    # in interval_minutes starves the sweep/digest of iterations long before Aug 28
+    # (all 2000 iterations go to re-polling hot), so if the sweep/digest assertions
+    # ran first they would be the one to fail and point a future engineer at
+    # daily-boundary/sweep-gating code instead of the actual cause (review round 2,
+    # finding 1).
     report = await Daemon(ctx).run(max_iterations=2000)
     elapsed_hours = (ctx.clock.utcnow() - START).total_seconds() / 3600
     client = ctx.new_client()
@@ -100,23 +106,12 @@ async def test_a_simulated_day_respects_the_floor_the_ceiling_and_the_budget(ctx
         if "/orders/item/" in url:
             counts[_slug_of(url)] = counts.get(_slug_of(url), 0) + 1
 
-    # The daily work is not incidental here: the run deliberately spans a day
-    # boundary (see START's comment), and each must fire exactly once over it.
-    # There is no daily-boundary clamp on the loop (a known deferred item), so
-    # this only asserts each fires once, not the exact minute it does.
-    assert report.sweeps == 1
-    assert report.digests == 1
-
     # the volatile, liquid, moving item polls harder than the flat one. This is
     # also the assertion that catches a floor/ceiling swap inside PollQueue: the
     # gap bounds below are numerically the same [2, 30] range either way round, but
     # a swap makes the high-scoring item earn the long interval instead of the
     # short one, which flips this comparison.
     assert counts["hot"] > counts["cold"]
-    # nothing polls faster than the 2 minute ceiling. hot's score is pushed past
-    # score_saturation (see the fixture), so it polls at the ceiling for the whole
-    # run and this bound is close to tight, not just a loose upper limit.
-    assert counts["hot"] <= elapsed_hours * 30 + 1
     # nothing polls slower than the 30 minute floor while budget remains
     assert counts["cold"] >= elapsed_hours - 1
 
@@ -131,6 +126,15 @@ async def test_a_simulated_day_respects_the_floor_the_ceiling_and_the_budget(ctx
         assert min(gaps) >= ceiling - 1e-6, f"{slug} polled faster than the ceiling allows"
         # No watched item is starved past the floor plus one interval of decay slack.
         assert max(gaps) <= floor * 2 + 1e-6, f"{slug} starved past the floor's slack"
+
+    # The daily work is not incidental here: the run deliberately spans a day
+    # boundary (see START's comment), and each must fire exactly once over it.
+    # There is no daily-boundary clamp on the loop (a known deferred item), so
+    # this only asserts each fires once, not the exact minute it does. Checked
+    # last, after the scheduling assertions above, so a clamp regression is
+    # diagnosed by the assertion that actually targets it (see the docstring note).
+    assert report.sweeps == 1
+    assert report.digests == 1
 
 
 async def test_a_dead_item_decays_out_of_the_hot_band(ctx):
