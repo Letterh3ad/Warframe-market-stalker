@@ -16,10 +16,22 @@ from wfm.sync.budget import Priority
 STALE_AFTER_S = 15 * 60
 
 
-async def start(ctx: AppContext) -> dict:
+async def start(ctx: AppContext, force: bool = False) -> dict:
+    if force:
+        # PID recycling (routine on Windows) can make an orphaned pid file point at
+        # an unrelated live process, which the guard below then reads as "already
+        # running" forever. --force is the only escape short of deleting the file.
+        control.clear_pid(ctx.config.pid_file)
     existing = control.read_pid(ctx.config.pid_file)
     if existing and control.is_running(existing):
         return {"started": False, "reason": f"already running as pid {existing}"}
+
+    # The guard above proves no live daemon owns the state, so a "stopping" flag on
+    # record is stale: a daemon killed (power loss, TerminateProcess) before it
+    # consumed its own stop. Left in place, run() honours it and returns immediately,
+    # reporting started=True with nothing started.
+    if ctx.daemon_state.stop_requested():
+        ctx.daemon_state.mark_stopped(ctx.clock.utcnow(), detail="stale stop flag cleared")
 
     daemon = Daemon(ctx)
     control.write_pid(ctx.config.pid_file, os.getpid())

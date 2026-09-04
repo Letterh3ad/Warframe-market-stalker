@@ -971,3 +971,33 @@ out the other three). Releasing every overdue item as due-now after a restart (r
 the budget serializes it anyway, so the only effect is a loop that looks stalled).
 `os.kill`/`SIGTERM` as the sole stop mechanism (rejected: not graceful on Windows, which
 is this project's primary platform).
+
+## 2026-09-04 - The TokenBucket is the sole rate enforcement; reservation-based admission control removed
+
+**Context:** The final phase 7 review found the daemon's budget-slack gate
+(`_queue_has_slack`, `_reserve_poll_budget`, `POLL_RESERVATION_NAME`) enforced nothing at
+this project's real magnitudes. `remaining_for(BACKGROUND, 3600)` is
+`10080 - (2 + 3839) - |watchlist|`, positive for any watchlist under roughly 6,000 items,
+so the gate was unconditionally open in production and only its test could close it, with
+a synthetic 1,000,000 slot reservation. `interval_minutes` never consulted `remaining_for`
+at all, so the companion constraint ("the scheduler shortens intervals only with budget
+the sweep has not reserved") existed in prose only. None of this could ever breach the
+rate ceiling: reservations are pure bookkeeping.
+
+**Decision:** Delete the admission control rather than implement the clamp. Every request
+reaches the wire through `client._wait_for_clearance` to `Budget.acquire` to the single
+`TokenBucket`, breaker-checked on both sides of the wait, at concurrency 1. That bucket is
+the only thing that enforces the 2.8 req/s default and the 3.0 hard ceiling, and it is
+sufficient. The daily sweep is now gated on the daily rule, the breaker and the stop flag
+only. `Budget.reserve`/`release_reservation`/`remaining_for` stay (tested in
+`tests/sync/test_budget.py`) as the primitive a future multi-node scheduler will need.
+Admission control returns as an open question for phase 9's multi-node work, where several
+processes really do contend for one quota and the gate can actually bind.
+
+**Alternatives:** Implementing the interval clamp for real (rejected: at this user's scale
+it can never bind, so it would ship unvalidated scheduling behaviour to solve a problem
+that does not exist yet, against this project's standing rule not to tune scheduler
+behaviour by guessing). Leaving the gate in place as documentation of intent (rejected:
+code that reads as enforcement but enforces nothing is worse than either shipping the
+clamp or shipping neither, because the next reader budgets their attention on the belief
+that the limit is guarded there).

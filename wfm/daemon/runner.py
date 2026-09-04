@@ -16,7 +16,7 @@ from wfm.services.report_service import poll_book
 from wfm.sync.budget import Priority
 from wfm.sync.catalog import sync_catalog
 from wfm.sync.scheduler import PollQueue, ScoreInputs, Weights, score
-from wfm.sync.sweep import run_sweep
+from wfm.sync.sweep import SweepResult, run_sweep
 
 log = logging.getLogger(__name__)
 
@@ -34,19 +34,14 @@ WATCHLIST_REFRESH_S = 60.0
 # Chunking the sleep and re-checking between chunks bounds that to one chunk.
 MAX_SLEEP_CHUNK_S = 10.0
 
-# Budget name for the sweep's own reservation. Freed as soon as the sweep call
-# returns (or as soon as the slack check itself declines to run it).
-SWEEP_RESERVATION_NAME = "daily_sweep"
 
-# Budget name for the poll loop's own standing reservation. Without this,
-# remaining_for() only ever sees the sweep's reservation and the slack check reduces
-# to a constant that never reflects real poll-loop pressure (task 4 review I5 ruling).
-POLL_RESERVATION_NAME = "poll_loop"
+class _SweepInterrupted(Exception):
+    """Raised out of the sweep's progress callback when a stop is requested.
 
-# Horizon the "does the queue have slack" check reasons over. Short relative to the
-# sweep's own runtime: the question is "is BACKGROUND starved right now", not
-# "over the whole day".
-SWEEP_SLACK_HORIZON_S = 3600.0
+    A full sweep is ~3,800 items and 20+ minutes at the configured rate. Without an
+    escape from inside it, `wfm daemon stop` goes unanswered for that whole stretch
+    even though it tells the user the daemon exits after its current poll.
+    """
 
 
 @dataclass(frozen=True)
@@ -116,64 +111,69 @@ class Daemon:
         iterations = 0
         stop_requested = False
 
-        try:
-            while True:
-                if self._stop.is_set() or ctx.daemon_state.stop_requested():
-                    stop_requested = True
-                    break
-                if max_iterations is not None and iterations >= max_iterations:
-                    # Exhausting the iteration budget is not a stop: it is how a
-                    # bounded test run (and `wfm scan --once`) samples the loop. The
-                    # daemon stays "running" so a caller can start another bounded
-                    # run right after.
-                    break
-                iterations += 1
-                now = ctx.clock.utcnow()
+        while True:
+            if self._stop.is_set() or ctx.daemon_state.stop_requested():
+                stop_requested = True
+                break
+            if max_iterations is not None and iterations >= max_iterations:
+                # Exhausting the iteration budget is not a stop: it is how a
+                # bounded test run (and `wfm scan --once`) samples the loop. The
+                # daemon stays "running" so a caller can start another bounded
+                # run right after.
+                break
+            iterations += 1
+            now = ctx.clock.utcnow()
 
-                try:
-                    # Gated on own_state, not just the mark_daily_done write below: a
-                    # foreground `wfm scan --once` sharing this DB must never issue a
-                    # full BULK sweep or a live digest send on the real daemon's
-                    # behalf (review N3). It still counts as "not done today" for the
-                    # real daemon to pick up on its own next iteration.
-                    if self._own_state and self._digest_due(now):
-                        await run_digest(ctx)
-                        ctx.daemon_state.mark_daily_done("digest", now.date())
-                        digests += 1
+            try:
+                # Gated on own_state, not just the mark_daily_done write below: a
+                # foreground `wfm scan --once` sharing this DB must never issue a
+                # full BULK sweep or a live digest send on the real daemon's
+                # behalf (review N3). It still counts as "not done today" for the
+                # real daemon to pick up on its own next iteration.
+                if self._own_state and self._digest_due(now):
+                    await run_digest(ctx)
+                    ctx.daemon_state.mark_daily_done("digest", now.date())
+                    digests += 1
 
-                    if self._own_state and self._sweep_due(now) and self._queue_has_slack():
-                        await self._run_sweep()
+                if self._own_state and self._sweep_due(now):
+                    result = await self._run_sweep()
+                    # A halted sweep (breaker tripped part way through) is not the
+                    # day's sweep: marking it done would leave the remaining items
+                    # waiting until tomorrow even though a restart after the
+                    # cooldown could resume the cursor immediately.
+                    if result is not None and not result.halted:
                         ctx.daemon_state.mark_daily_done("sweep", now.date())
                         sweeps += 1
 
-                    self._maybe_refresh_queue()
-                    item = self._queue.pop_due()
-                    if item is None:
-                        # Heartbeats internally, once per chunk, so liveness is not
-                        # bounded by the sleep length (review N2).
-                        await self._sleep_until_next(
-                            self._queue.seconds_until_next() or IDLE_SLEEP_S, "idle"
-                        )
-                    else:
-                        await self.poll_once(item)
-                        polls += 1
-                        self._heartbeat(f"polled {item.slug}")
-                except CircuitOpen as exc:
-                    self._heartbeat(exc.reason, status="halted")
-                    await operational(ctx, f"wfm daemon halted: {exc.reason}")
-                    return DaemonReport(polls, sweeps, digests, halted=True, reason=exc.reason)
-                except Exception as exc:
-                    # Anything else (a locked DB, a bad candle row, ...) must not
-                    # kill the process silently with state stuck at "running" and no
-                    # alert. A tripped breaker still must not retry into a block, so
-                    # this does not loop back and try again; it halts exactly like a
-                    # CircuitOpen would.
-                    log.exception("daemon iteration failed")
-                    self._heartbeat(str(exc), status="halted")
-                    await operational(ctx, f"wfm daemon halted: {exc}")
-                    return DaemonReport(polls, sweeps, digests, halted=True, reason=str(exc))
-        finally:
-            ctx.budget.release_reservation(POLL_RESERVATION_NAME)
+                self._maybe_refresh_queue()
+                item = self._queue.pop_due()
+                if item is None:
+                    # Heartbeats internally, once per chunk, so liveness is not
+                    # bounded by the sleep length (review N2).
+                    await self._sleep_until_next(
+                        self._queue.seconds_until_next() or IDLE_SLEEP_S, "idle"
+                    )
+                else:
+                    await self.poll_once(item)
+                    polls += 1
+                    self._heartbeat(f"polled {item.slug}")
+            except _SweepInterrupted:
+                stop_requested = True
+                break
+            except CircuitOpen as exc:
+                self._heartbeat(exc.reason, status="halted")
+                await operational(ctx, f"wfm daemon halted: {exc.reason}")
+                return DaemonReport(polls, sweeps, digests, halted=True, reason=exc.reason)
+            except Exception as exc:
+                # Anything else (a locked DB, a bad candle row, ...) must not
+                # kill the process silently with state stuck at "running" and no
+                # alert. A tripped breaker still must not retry into a block, so
+                # this does not loop back and try again; it halts exactly like a
+                # CircuitOpen would.
+                log.exception("daemon iteration failed")
+                self._heartbeat(str(exc), status="halted")
+                await operational(ctx, f"wfm daemon halted: {exc}")
+                return DaemonReport(polls, sweeps, digests, halted=True, reason=str(exc))
 
         if stop_requested and self._own_state:
             ctx.daemon_state.mark_stopped(ctx.clock.utcnow())
@@ -268,35 +268,48 @@ class Daemon:
             remaining -= chunk
             self._heartbeat(detail)
 
-    def _queue_has_slack(self) -> bool:
-        """The brief's loop-body prose, "run the sweep if the queue has slack", given
-        real teeth:
-        reserve the sweep's estimated request footprint and only proceed if that
-        still leaves BACKGROUND (the poll loop) some near-term budget. If another
-        reservation (or a low configured rate) has already used it up, decline this
-        iteration; the sweep stays "due" and is retried on a later one."""
-        ctx = self._ctx
-        # Rough estimate: one BULK request per catalog item plus catalog sync's own
-        # couple of calls. Good enough for a slack check, not a request accountant.
-        estimate = 2 + ctx.items.count()
-        ctx.budget.reserve(SWEEP_RESERVATION_NAME, estimate)
-        slack = ctx.budget.remaining_for(Priority.BACKGROUND, SWEEP_SLACK_HORIZON_S) > 0
-        if not slack:
-            ctx.budget.release_reservation(SWEEP_RESERVATION_NAME)
-        return slack
+    def _sweep_progress(self, slug: str, processed: int) -> None:
+        """Called by run_sweep once per item. The sweep owns the loop for 20+ minutes,
+        so without this the heartbeat goes stale (status reports the daemon as wedged
+        at exactly its busiest moment) and a pending stop is never read.
 
-    async def _run_sweep(self) -> None:
+        One heartbeat write per item is cheap next to the HTTP request that item
+        already cost, so it is not throttled."""
+        if self._stop.is_set() or self._ctx.daemon_state.stop_requested():
+            raise _SweepInterrupted
+        self._heartbeat(f"sweep {processed}: {slug}")
+
+    async def _run_sweep(self) -> SweepResult | None:
+        """Returns the SweepResult, or None when a transient ApiError ended it.
+
+        Either way the caller leaves the day unmarked unless the sweep actually
+        finished, so a later iteration retries."""
         ctx = self._ctx
         try:
             await sync_catalog(ctx.new_client(), ctx.items, ctx.sweep_state, ctx.clock)
-            await run_sweep(
-                ctx.new_client(), ctx.items, ctx.daily, ctx.hourly, ctx.sweep_state, ctx.clock
+            result = await run_sweep(
+                ctx.new_client(),
+                ctx.items,
+                ctx.daily,
+                ctx.hourly,
+                ctx.sweep_state,
+                ctx.clock,
+                on_progress=self._sweep_progress,
             )
-            # Rebuilt once per sweep, not per poll: it is a catalog-wide aggregate
-            # that moves on a daily timescale.
-            self._market = market_context(ctx)
-        finally:
-            ctx.budget.release_reservation(SWEEP_RESERVATION_NAME)
+        except CircuitOpen:
+            # Subclasses ApiError, so it has to be re-raised ahead of the clause below:
+            # a tripped breaker still halts the daemon (run_sweep's own CircuitOpen
+            # never gets here, it comes back as SweepResult(halted=True)).
+            raise
+        except ApiError as exc:
+            # A flaky /versions call or a run of 500s must not cost the whole night's
+            # polling: leave the day unmarked and let a later iteration retry.
+            log.warning("daily sweep failed with a transient API error: %s", exc)
+            return None
+        # Rebuilt once per sweep, not per poll: it is a catalog-wide aggregate
+        # that moves on a daily timescale.
+        self._market = market_context(ctx)
+        return result
 
     def _maybe_refresh_queue(self) -> None:
         now = self._ctx.clock.now()
@@ -309,16 +322,6 @@ class Daemon:
             return
         self._queue.rebuild(self._ctx.watchlist.all())
         self._last_watchlist_refresh = now
-        self._reserve_poll_budget()
-
-    def _reserve_poll_budget(self) -> None:
-        """Keeps BACKGROUND's own near-term demand visible to remaining_for(), which
-        otherwise only ever sees the sweep's reservation (task 4 review I5 ruling:
-        "the scheduler shortens intervals only with budget the sweep has not
-        reserved" needs the poll side of that trade to exist too). One reserved slot
-        per watched item is a floor estimate, not a request accountant: every item
-        needs at least one background request per cycle."""
-        self._ctx.budget.reserve(POLL_RESERVATION_NAME, self._queue.size)
 
     def _sweep_due(self, now: datetime) -> bool:
         ctx = self._ctx

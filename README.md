@@ -85,8 +85,10 @@ Run `wfm <command> --help` for a command's own flags. `--json` (before the comma
 - **`wfm holdings`**: current positions, marked to the last stored order book.
 - **`wfm pnl [--realized] [--since WHEN]`**: realized/unrealized profit and loss (FIFO
   matched).
-- **`wfm daemon start`** / **`wfm daemon stop`** / **`wfm daemon status`**: run, stop or
-  check the background daemon (see below).
+- **`wfm daemon start [--force]`** / **`wfm daemon stop`** / **`wfm daemon status`**: run,
+  stop or check the background daemon (see below). `--force` clears an orphaned pid file
+  first, for when a crashed daemon left one behind and the pid has since been reused by
+  an unrelated process.
 - **`wfm scan [--slug SLUG]`**: a one-shot manual poll of the watchlist (or one item),
   outside the daemon.
 

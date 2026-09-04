@@ -7,16 +7,22 @@ from wfm.services import daemon_service
 
 def register(parser) -> None:
     sub = parser.add_subparsers(dest="daemon_command", required=True)
-    for name in ("start", "stop", "status"):
+    start = sub.add_parser("start")
+    start.add_argument(
+        "--force",
+        action="store_true",
+        help="clear an orphaned pid file before the single-instance guard",
+    )
+    for name in ("stop", "status"):
         sub.add_parser(name)
-    parser.set_defaults(handler=run)
+    parser.set_defaults(handler=run, force=False)
 
 
 async def run(args) -> int:
     ctx = context_factory.build(args)
     try:
         if args.daemon_command == "start":
-            emit(await daemon_service.start(ctx), args.json)
+            emit(await daemon_service.start(ctx, force=args.force), args.json)
         elif args.daemon_command == "stop":
             emit(daemon_service.stop(ctx), args.json)
         else:

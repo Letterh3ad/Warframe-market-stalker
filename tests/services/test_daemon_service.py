@@ -8,6 +8,7 @@ from tests.fakes.api import StubClient
 from tests.fakes.clock import FakeClock
 from wfm.config import Config
 from wfm.daemon import control
+from wfm.daemon.runner import Daemon
 from wfm.models import DailyCandle, Item
 from wfm.services import daemon_service
 from wfm.services.context import AppContext
@@ -115,14 +116,74 @@ async def test_start_refuses_a_second_instance(ctx):
     assert result == {"started": False, "reason": f"already running as pid {os.getpid()}"}
 
 
-async def test_start_clears_the_pid_file_once_the_run_ends(ctx):
-    # A pre-set stop flag makes Daemon.run() return immediately (task 4 behaviour,
-    # exercised in tests/daemon/test_runner.py), so this drives a real start() call
-    # without an unbounded loop or a real process.
+def _daily_work_already_done(ctx) -> None:
+    """START is 10:00, past both sweep_hour and digest_hour, so a bounded run would
+    otherwise spend its one iteration on the daily tasks instead of a poll."""
     ctx.daemon_state.mark_started(pid=1, when=START)
-    ctx.daemon_state.request_stop(when=START)
+    ctx.daemon_state.mark_daily_done("sweep", START.date())
+    ctx.daemon_state.mark_daily_done("digest", START.date())
+
+
+def _bounded_daemon(monkeypatch, iterations: int = 1, on_run=None):
+    """start() runs the loop to completion, so tests need a bounded run. Bounding it
+    here rather than pre-setting a stop flag: the flag is exactly what start() now
+    clears, so it can no longer double as a way to end the run."""
+
+    class BoundedDaemon(Daemon):
+        async def run(self, max_iterations=None):
+            if on_run is not None:
+                on_run()
+            return await super().run(max_iterations=iterations)
+
+    monkeypatch.setattr(daemon_service, "Daemon", BoundedDaemon)
+
+
+async def test_start_clears_the_pid_file_once_the_run_ends(ctx, monkeypatch):
+    _daily_work_already_done(ctx)
+    _bounded_daemon(monkeypatch)
 
     result = await daemon_service.start(ctx)
 
     assert result["started"] is True
     assert control.read_pid(ctx.config.pid_file) is None
+
+
+async def test_start_clears_a_stale_stopping_flag_instead_of_reporting_a_phantom_start(
+    ctx, monkeypatch
+):
+    """I4: a daemon killed before it consumed its own stop leaves status='stopping'.
+    run() reads that before mark_started() clears it, so the next `wfm daemon start`
+    returned {"started": True, "polls": 0} and exited without polling anything."""
+    _daily_work_already_done(ctx)
+    ctx.daemon_state.request_stop(when=START)
+    seen = {}
+    _bounded_daemon(
+        monkeypatch, on_run=lambda: seen.update(stop_flag=ctx.daemon_state.stop_requested())
+    )
+
+    result = await daemon_service.start(ctx)
+
+    assert seen["stop_flag"] is False, "the stale flag is cleared before the run starts"
+    assert result["polls"] == 1, "the daemon actually ran rather than exiting at once"
+    assert result["reason"] is None
+
+
+async def test_start_force_clears_an_orphaned_pid_file(ctx, monkeypatch):
+    """PID recycling can point an orphaned pid file at an unrelated live process,
+    which the single-instance guard then reads as a running daemon forever."""
+    _daily_work_already_done(ctx)
+    control.write_pid(ctx.config.pid_file, os.getpid())
+    _bounded_daemon(monkeypatch)
+
+    result = await daemon_service.start(ctx, force=True)
+
+    assert result["started"] is True
+    assert result["polls"] == 1
+
+
+async def test_start_without_force_still_refuses_a_live_pid_file(ctx):
+    control.write_pid(ctx.config.pid_file, os.getpid())
+
+    result = await daemon_service.start(ctx)
+
+    assert result["started"] is False
