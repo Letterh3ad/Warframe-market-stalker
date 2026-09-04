@@ -3,7 +3,8 @@ from datetime import date, datetime, timedelta, timezone
 import pytest
 
 from wfm.store.daemon_state import DaemonStateRepo
-from wfm.store.migrate import SCHEMA_VERSION, current_version
+from wfm.store.db import connect
+from wfm.store.migrate import SCHEMA_VERSION, current_version, migrate
 
 NOW = datetime(2026, 8, 27, 4, 0, tzinfo=timezone.utc)
 
@@ -139,3 +140,24 @@ def test_daily_done_survives_a_restart(conn):
 
     repo.mark_started(pid=1, when=NOW + timedelta(hours=1))
     assert repo.daily_done("sweep") == date(2026, 8, 27)
+
+
+def test_stop_request_on_one_connection_is_visible_on_another(tmp_path):
+    """wfm daemon stop and the running daemon process open separate sqlite
+    connections to the same file. A stop flag written on one must be readable
+    from the other without either process restarting."""
+    db_path = tmp_path / "shared.db"
+    writer = connect(db_path)
+    migrate(writer)
+    reader = connect(db_path)
+
+    writer_repo = DaemonStateRepo(writer)
+    reader_repo = DaemonStateRepo(reader)
+    writer_repo.mark_started(pid=1, when=NOW)
+    assert reader_repo.stop_requested() is False
+
+    assert writer_repo.request_stop(when=NOW + timedelta(minutes=1)) is True
+    assert reader_repo.stop_requested() is True
+
+    writer.close()
+    reader.close()

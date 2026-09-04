@@ -80,3 +80,20 @@ def test_env_override_weight_float_as_float(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("WFM_W_VOL", "1.5")
     cfg = Config.load(tmp_path / "absent.toml")
     assert cfg.w_vol == 1.5
+
+
+def test_pid_file_defaults_to_a_path():
+    assert Config().pid_file == Path("wfm.pid")
+
+
+def test_pid_file_from_toml_is_coerced_to_a_path(tmp_path: Path):
+    cfg_file = tmp_path / "wfm.toml"
+    cfg_file.write_text('pid_file = "wfm.pid"\n', encoding="utf-8")
+    cfg = Config.load(cfg_file)
+    assert cfg.pid_file == Path("wfm.pid")
+
+
+def test_env_override_pid_file_loads_as_a_path(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("WFM_PID_FILE", str(tmp_path / "x.pid"))
+    cfg = Config.load(tmp_path / "absent.toml")
+    assert cfg.pid_file == tmp_path / "x.pid"

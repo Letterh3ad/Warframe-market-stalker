@@ -1,6 +1,8 @@
 # Copy to wfm.toml (gitignored) and edit. Values here are the tuned analyzer
 # thresholds from Task 9 (see DECISIONS.md 2026-09-02).
 
+pid_file = "wfm.pid"  # Where `wfm daemon start/stop/status` tracks the running daemon's pid.
+
 # Adaptive polling weights for priority scoring.
 w_vol = 1.0              # Volatility weight in priority score.
 w_liq = 0.5              # Liquidity (volume) weight in priority score.

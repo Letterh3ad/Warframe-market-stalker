@@ -18,6 +18,7 @@ _ENV_PREFIX = "WFM_"
 @dataclass(frozen=True)
 class Config:
     db_path: Path = Path("wfm_market.db")
+    pid_file: Path = Path("wfm.pid")
     requests_per_second: float = 2.8
     concurrency: int = 1
     request_timeout_s: float = 20.0
@@ -56,6 +57,7 @@ class Config:
         if self.concurrency != 1:
             object.__setattr__(self, "concurrency", 1)
         object.__setattr__(self, "db_path", Path(self.db_path))
+        object.__setattr__(self, "pid_file", Path(self.pid_file))
 
     @property
     def user_agent(self) -> str:
@@ -78,7 +80,7 @@ class Config:
             raw = os.environ.get(_ENV_PREFIX + name.upper())
             if raw is None:
                 continue
-            if name == "db_path":
+            if name in ("db_path", "pid_file"):
                 out[name] = Path(raw)
             elif name in (
                 "requests_per_second",
