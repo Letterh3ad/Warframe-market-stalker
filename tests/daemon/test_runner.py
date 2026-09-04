@@ -176,6 +176,41 @@ async def test_a_second_run_the_same_day_does_not_refire_the_digest(ctx, monkeyp
     assert len(fired) == 1
 
 
+async def test_a_transient_api_error_in_the_digest_leaves_the_daemon_running(ctx, monkeypatch):
+    """Same shape as I3, on the digest: one flaky send at 09:00 must not reach the
+    blanket except Exception and halt the daemon for the rest of the day."""
+
+    async def flaky(context, sinks=None):
+        raise ApiError("connect timeout")
+
+    monkeypatch.setattr("wfm.daemon.runner.run_digest", flaky)
+    ctx.clock.advance(28 * 60 * 60)  # day 2, 09:00 UTC
+
+    report = await Daemon(ctx).run(max_iterations=2)
+
+    assert report.halted is False
+    assert report.digests == 0
+    # Left unmarked deliberately: a later iteration retries the digest.
+    assert ctx.daemon_state.daily_done("digest") != ctx.clock.utcnow().date()
+
+
+async def test_a_tripped_breaker_in_the_digest_still_halts_the_daemon(ctx, monkeypatch):
+    """The other half: the ApiError tolerance must not swallow a CircuitOpen, which
+    is an ApiError subclass. A tripped breaker still halts."""
+
+    async def tripped(context, sinks=None):
+        raise CircuitOpen("3 consecutive 429s")
+
+    monkeypatch.setattr("wfm.daemon.runner.run_digest", tripped)
+    monkeypatch.setattr("wfm.daemon.runner.operational", _swallow_alert)
+    ctx.clock.advance(28 * 60 * 60)  # day 2, 09:00 UTC
+
+    report = await Daemon(ctx).run(max_iterations=2)
+
+    assert report.halted is True
+    assert "429" in report.reason
+
+
 async def test_the_sweep_runs_in_its_configured_window_at_bulk_priority(ctx):
     ctx.clock.advance(23 * 60 * 60)  # day 2, 04:00 UTC
     report = await Daemon(ctx).run(max_iterations=30)

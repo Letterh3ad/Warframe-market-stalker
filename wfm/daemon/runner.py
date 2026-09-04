@@ -131,9 +131,9 @@ class Daemon:
                 # behalf (review N3). It still counts as "not done today" for the
                 # real daemon to pick up on its own next iteration.
                 if self._own_state and self._digest_due(now):
-                    await run_digest(ctx)
-                    ctx.daemon_state.mark_daily_done("digest", now.date())
-                    digests += 1
+                    if await self._run_digest():
+                        ctx.daemon_state.mark_daily_done("digest", now.date())
+                        digests += 1
 
                 if self._own_state and self._sweep_due(now):
                     result = await self._run_sweep()
@@ -278,6 +278,23 @@ class Daemon:
         if self._stop.is_set() or self._ctx.daemon_state.stop_requested():
             raise _SweepInterrupted
         self._heartbeat(f"sweep {processed}: {slug}")
+
+    async def _run_digest(self) -> bool:
+        """Returns True on success, False when a transient ApiError ended it.
+
+        Same shape as _run_sweep (I3): the caller leaves the day unmarked unless
+        this returns True, so a later iteration retries rather than the daemon
+        halting for the rest of the day on one flaky request."""
+        try:
+            await run_digest(self._ctx)
+        except CircuitOpen:
+            # Subclasses ApiError, so it has to be re-raised ahead of the clause
+            # below: a tripped breaker still halts the daemon.
+            raise
+        except ApiError as exc:
+            log.warning("digest failed with a transient API error: %s", exc)
+            return False
+        return True
 
     async def _run_sweep(self) -> SweepResult | None:
         """Returns the SweepResult, or None when a transient ApiError ended it.
