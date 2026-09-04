@@ -846,3 +846,49 @@ real, since two bounded `run()` calls in the same test would otherwise show "sto
 between them). Checking `stop_requested()` only inside the loop body, after
 `mark_started()` (rejected: a stop requested between process start and the first
 `Daemon(ctx).run()` call would be silently cleared).
+
+## 2026-09-03 - Phase 7 tasks 3 and 4: the pin decay bound, the poll loop's own budget reservation, and the stop flag
+
+**Context:** Three decisions taken on the user's behalf while reviewing the due queue
+(task 3) and the daemon runner (task 4), each one against what the plan and its task
+briefs actually said.
+
+The first: the unchanged-poll decay lengthens an item's interval every time its book comes
+back identical, and it did so without reference to `pin_weight`. A pinned item whose book
+goes quiet was therefore dragged all the way to the 30 minute floor, so the first move on
+it would be seen up to 30 minutes late. That is the exact case a pin exists for. It is
+inherited from tasks 2 and 3, but task 4 is the first task that can observe it.
+
+The second: the plan's rate constraint reads "the scheduler shortens intervals only with
+budget the sweep has not reserved". Task 4 shipped `reserve`/`release`/`remaining_for` with
+the sweep as the only production caller, so `remaining_for` never saw poll pressure and the
+sweep's slack gate reduced to a constant that is always true.
+
+The third: the per-iteration heartbeat added in a fix round wrote `status="running"`
+unconditionally, erasing a pending `status='stopping'` before the loop top could read it.
+The DB flag is the only stop mechanism on Windows, where `os.kill` calls
+`TerminateProcess`, so `wfm daemon stop` silently stopped working. The fix round's suite
+stayed green because no test set the flag mid-run.
+
+**Decision:** Bound the decay by pin weight in `scheduler.py` (a
+`PIN_DECAY_CAP_MULTIPLIER`, currently 4.0), leaving the unpinned branch byte-identical and
+the 2 minute ceiling untouched, rather than deferring it to the live soak. Make the poll
+loop reserve and release its own budget so the slack gate reflects real pressure. Fix the
+stop flag at the repo layer, `status=CASE WHEN status='stopping' THEN status ELSE ? END`
+on the `running` branch only, so every future heartbeat caller inherits the guard, with a
+mid-run flag-stop regression test on both the idle and the poll path.
+
+The pin multiplier is a judgement call, not derived from the spec, and is a candidate for
+calibration in the phase 7 live soak. The reservation is advisory: the single `TokenBucket`
+is what actually enforces the rate, so a too-permissive gate costs poll latency, not
+compliance. At real catalog magnitudes (3839 items against 10080 requests/hour at the
+default 2.8 req/s) the gate is still effectively always true, and the scheduler still never
+consults `remaining_for`; closing that is left to task 5.
+
+**Alternatives:** Deferring the pin decay to the live soak (rejected: task 6's simulated
+day and the task 7 soak both read pin behaviour, so deferring means calibrating against a
+curve already known to be wrong). Leaving the budget reservation with only the sweep as a
+caller (rejected: a rate constraint that never constrains is decoration, and task 5 wires
+the CLI on top of it). A blanket stop-preserving guard across the whole `heartbeat` method
+(rejected: `mark_stopped` routes through `heartbeat`, so a blanket guard breaks it; a
+`halted` transition overriding a pending `stopping` loses the label, not the stop).
