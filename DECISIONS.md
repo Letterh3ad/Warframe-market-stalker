@@ -791,8 +791,8 @@ production also uses).
 **Context:** Two deferred defects flagged as phase 7 opening cleanup (2026-09-02 entry,
 point 6; task-0b brief).
 
-`watch_service.suggest` called `DailyStatsRepo.window` without `end=`, so it anchored on
-real wall-clock time rather than `ctx.clock`, the same defect phase 4 fixed in
+**Decision:** `watch_service.suggest` called `DailyStatsRepo.window` without `end=`, so it
+anchored on real wall-clock time rather than `ctx.clock`, the same defect phase 4 fixed in
 `feature_service`. `feature_service._anchor_date` is promoted to `anchor_date` (module-
 level, no longer private) and `watch_service.suggest` now anchors its window on it.
 
@@ -892,3 +892,82 @@ caller (rejected: a rate constraint that never constrains is decoration, and tas
 the CLI on top of it). A blanket stop-preserving guard across the whole `heartbeat` method
 (rejected: `mark_stopped` routes through `heartbeat`, so a blanket guard breaks it; a
 `halted` transition overriding a pending `stopping` loses the label, not the stop).
+
+## 2026-09-04 - Phase 7: daemon and adaptive scheduler
+
+**Context:** Phase 7 replaces the phase 3 idea of a scheduled `wfm sync` invocation with a
+long-running process that owns the poll loop, the daily sweep and the digest send, and
+that has to survive being killed, sleeping overnight, and running on Windows where POSIX
+signals are not a reliable stop mechanism.
+
+**Decision:** One `asyncio` event loop (`wfm/daemon/runner.py::Daemon.run`) carries the
+poll loop, the daily sweep and the 09:00 digest, rather than three concurrent `asyncio`
+tasks each owning a slice of the work. At `concurrency = 1` nothing in this process is
+ever genuinely parallel, so three tasks would buy nothing but a second layer of locking
+around the queue, the budget and the circuit breaker, all of which a single loop body can
+touch directly in sequence. The loop body checks each piece of daily work in a fixed order
+every iteration: digest, then sweep (gated on budget slack via `_queue_has_slack`), then
+the poll queue.
+
+The sweep and digest each fire once per day under an "hour arrived and not run today"
+rule rather than a fixed-offset timer: `_sweep_due`/`_digest_due` check `now.hour >=
+config.sweep_hour` (or `digest_hour`) and that `daemon_state.daily_done(name)` is not
+already today's date. `daemon_state.last_sweep_date`/`last_digest_date` persist which day
+each last ran, so a restart mid-morning does not re-fire a sweep that already completed
+today, and a daemon that was offline through its configured hour still catches up the
+moment it comes back up, rather than waiting for the exact hour to roll around again on a
+clock that may have moved past it. `mark_daily_done` writes the date only, never touching
+`heartbeat_at`: liveness has exactly one source, the per-iteration heartbeat, so a wedged
+loop cannot look alive just because the daily sweep wrote a row hours ago.
+
+An item whose order book comes back byte-identical to its last poll doubles its interval
+each further unchanged poll (`PollQueue.reschedule`, `decayed = interval * (2 **
+decay_steps)`, capped at the floor), so a quiet book is polled less and less often rather
+than at its full earned cadence forever. A pinned item's decay is capped at
+`PIN_DECAY_CAP_MULTIPLIER` (4.0) times its own scored interval instead of running all the
+way to the 30 minute floor: a pin means "tell me the moment this moves", and decaying it
+like an unpinned item would detect the first move on it up to a floor interval late,
+which is the exact case a pin exists for.
+
+The priority score's volume term is `log1p(volume) / 10.0`, not volume itself. Raw
+median-30d volume spans orders of magnitude across the catalog (a handful of trades a day
+for a niche mod, hundreds for a meta one), so a linear term would let volume alone
+saturate the score and drown out volatility, spread and pin for anything even moderately
+liquid. The log compresses that range so all four weighted terms stay comparable in
+practice, at the plan's chosen constant.
+
+`poll_state` persists `(slug, rank) -> last_polled_at, due_at, interval_minutes,
+unchanged_polls` (task 1's `m0003`), and `PollQueue.rebuild()` restores wall-clock
+`due_at` from it on every start rather than treating a fresh process as a blank schedule.
+A sleep or crash can leave hundreds of items simultaneously overdue; rebuild sorts the
+restored overdue set oldest-due-first, releases up to `catchup_max_items` (25) of them as
+due immediately, and spreads the remainder across the floor interval instead of firing
+them all in the same iteration. The budget would serialize a full release anyway, so
+letting it all through as "due now" would only make the loop look wedged rather than
+actually catching up any faster.
+
+`wfm daemon stop` requests a stop by writing `daemon_state.status = 'stopping'` rather
+than calling `os.kill`. On Windows, anything short of `CTRL_C_EVENT`/`CTRL_BREAK_EVENT`
+calls `TerminateProcess`, which has no graceful path: the in-flight poll is lost, the pid
+file is orphaned, and status is stuck reading "running" forever. The database flag is
+read identically by the loop on Windows and POSIX (`Daemon.run` checks it every
+iteration, and `_sleep_until_next` checks it every chunk of an idle wait so a stop is
+noticed within `MAX_SLEEP_CHUNK_S`, not after a full 30 minute sleep), so the same
+mechanism works everywhere with no platform branch in the stop path itself. POSIX signal
+handlers stay wired in `daemon_service.start` as a second path (useful for `Ctrl+C` on a
+foreground run), and Windows falls back to `signal.signal` for a real `SIGTERM` where the
+event loop's own handler registration is unavailable, but the flag is what every restart-
+survivable stop actually goes through.
+
+**Alternatives:** Three `asyncio` tasks coordinating over shared queue/budget/breaker
+state (rejected: real concurrency risk for zero real parallelism at `concurrency = 1`,
+and the phase 2 `FakeClock` cannot model true concurrency anyway, so tests of ordering
+between tasks would not be trustworthy). A fixed-offset timer for the sweep and digest,
+firing exactly at `sweep_hour`/`digest_hour` with no "already ran today" check (rejected:
+loses catch-up after downtime and cannot tell a restart from a fresh day). Decaying every
+unchanged item straight to the floor regardless of pin (rejected: defeats the purpose of
+pinning). A linear volume term in the score (rejected: lets one input dominate and drown
+out the other three). Releasing every overdue item as due-now after a restart (rejected:
+the budget serializes it anyway, so the only effect is a loop that looks stalled).
+`os.kill`/`SIGTERM` as the sole stop mechanism (rejected: not graceful on Windows, which
+is this project's primary platform).
