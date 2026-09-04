@@ -4,7 +4,6 @@ import asyncio
 import os
 import signal
 from dataclasses import asdict
-from datetime import datetime
 
 from wfm.daemon import control
 from wfm.daemon.runner import Daemon
@@ -12,6 +11,7 @@ from wfm.services.analysis_service import analyze_item
 from wfm.services.context import AppContext
 from wfm.services.feature_service import market_context
 from wfm.services.report_service import poll_book
+from wfm.sync.budget import Priority
 
 STALE_AFTER_S = 15 * 60
 
@@ -88,7 +88,7 @@ async def scan_once(ctx: AppContext, slug: str | None = None) -> dict:
     market = market_context(ctx, now=ctx.clock.utcnow())
     signals: list[dict] = []
     for entry in entries:
-        snapshot = await poll_book(ctx, entry.slug, entry.rank)
+        snapshot = await poll_book(ctx, entry.slug, entry.rank, priority=Priority.INTERACTIVE)
         result = analyze_item(ctx, entry.slug, entry.rank, snapshot=snapshot, market=market)
         signals.extend(result["signals"])
     return {"polled": len(entries), "signals": signals}
