@@ -1,3 +1,4 @@
+import asyncio
 import os
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -187,3 +188,58 @@ async def test_start_without_force_still_refuses_a_live_pid_file(ctx):
     result = await daemon_service.start(ctx)
 
     assert result["started"] is False
+
+
+# --- start(): optional embedded GUI server ---
+
+
+class _FakeServer:
+    def __init__(self, config):
+        self.config = config
+        self.should_exit = False
+        self.served = False
+
+    async def serve(self):
+        self.served = True
+        while not self.should_exit:
+            await asyncio.sleep(0)
+
+
+async def test_start_with_serve_gui_runs_a_uvicorn_server_alongside_the_daemon(ctx, monkeypatch):
+    _daily_work_already_done(ctx)
+    _bounded_daemon(monkeypatch)
+    built_apps = []
+    fake_servers = []
+
+    monkeypatch.setattr(
+        "wfm.services.daemon_service.build_app",
+        lambda context: built_apps.append(context) or object(),
+    )
+
+    def fake_server(config):
+        server = _FakeServer(config)
+        fake_servers.append(server)
+        return server
+
+    monkeypatch.setattr("wfm.services.daemon_service.uvicorn.Server", fake_server)
+
+    result = await daemon_service.start(ctx, serve_gui=True)
+
+    assert result["started"] is True
+    assert built_apps == [ctx]
+    assert fake_servers[0].served is True
+    assert fake_servers[0].should_exit is True
+
+
+async def test_start_without_serve_gui_never_touches_uvicorn(ctx, monkeypatch):
+    _daily_work_already_done(ctx)
+    _bounded_daemon(monkeypatch)
+
+    def boom(*args, **kwargs):
+        raise AssertionError("uvicorn.Server must not be constructed when serve_gui=False")
+
+    monkeypatch.setattr("wfm.services.daemon_service.uvicorn.Server", boom)
+
+    result = await daemon_service.start(ctx)
+
+    assert result["started"] is True

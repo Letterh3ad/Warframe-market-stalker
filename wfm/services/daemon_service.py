@@ -5,8 +5,11 @@ import os
 import signal
 from dataclasses import asdict
 
+import uvicorn
+
 from wfm.daemon import control
 from wfm.daemon.runner import Daemon
+from wfm.gui.app import build_app
 from wfm.services.analysis_service import analyze_item
 from wfm.services.context import AppContext
 from wfm.services.feature_service import market_context
@@ -16,7 +19,7 @@ from wfm.sync.budget import Priority
 STALE_AFTER_S = 15 * 60
 
 
-async def start(ctx: AppContext, force: bool = False) -> dict:
+async def start(ctx: AppContext, force: bool = False, serve_gui: bool = False) -> dict:
     if force:
         # PID recycling (routine on Windows) can make an orphaned pid file point at
         # an unrelated live process, which the guard below then reads as "already
@@ -47,10 +50,24 @@ async def start(ctx: AppContext, force: bool = False) -> dict:
             # signal.signal keeps a real SIGTERM working there too, as a second
             # path alongside the daemon_state "stopping" flag stop() below sets.
             signal.signal(handler, lambda *_: daemon.request_stop())
+
+    server = None
+    server_task = None
+    if serve_gui:
+        app = build_app(ctx)
+        uvicorn_config = uvicorn.Config(
+            app, host=ctx.config.gui_host, port=ctx.config.gui_port, log_level="warning"
+        )
+        server = uvicorn.Server(uvicorn_config)
+        server_task = asyncio.create_task(server.serve())
+
     try:
         report = await daemon.run()
     finally:
         control.clear_pid(ctx.config.pid_file)
+        if server is not None:
+            server.should_exit = True
+            await server_task
     return {"started": True, **asdict(report)}
 
 
