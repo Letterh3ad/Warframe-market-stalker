@@ -6,7 +6,7 @@ from wfm.config import Config
 from wfm.models import Horizon, Scope
 
 
-def test_the_three_shipped_analyzers_are_registered():
+def test_the_four_shipped_analyzers_are_registered():
     assert {a.name for a in registry.all()} == {"flip", "revert", "selltime", "set_arbitrage"}
 
 

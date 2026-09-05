@@ -107,6 +107,20 @@ def test_missing_book_on_the_set_or_a_part_produces_nothing():
     assert ANALYZER.evaluate([set_fs, no_book_part], _ctx()) == []
 
 
+def test_a_zero_min_margin_pct_does_not_raise_and_gets_full_confidence():
+    # Any positive margin trivially clears a zero threshold, so this should not hit
+    # the ZeroDivisionError the unguarded `margin_pct / (2 * min_margin_pct)` would.
+    fss = [
+        _fs("frame_prime_set", ask=80, bid=70),
+        _fs("frame_prime_chassis_blueprint", ask=None, bid=45),
+        _fs("frame_prime_systems_blueprint", ask=None, bid=50),
+    ]
+    signals = ANALYZER.evaluate(fss, _ctx(min_margin_pct=0))
+    assert len(signals) == 1
+    assert signals[0].direction is Direction.BUY
+    assert signals[0].confidence == 1.0
+
+
 def test_confidence_rises_with_margin():
     weak_fss = [
         _fs("frame_prime_set", ask=150, bid=140),

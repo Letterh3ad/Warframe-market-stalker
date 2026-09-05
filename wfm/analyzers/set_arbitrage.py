@@ -84,7 +84,13 @@ class SetArbitrageAnalyzer:
         self, set_fs: FeatureSet, direction: Direction, margin: float, margin_pct: float,
         t: dict, **evidence,
     ) -> Signal:
-        confidence = min(1.0, margin_pct / (2 * t["min_margin_pct"]))
+        # min_margin_pct=0 means any positive margin trivially clears the threshold
+        # (already true, or _signal wouldn't be called): treat that as full confidence
+        # rather than dividing by zero.
+        if t["min_margin_pct"] == 0:
+            confidence = 1.0
+        else:
+            confidence = min(1.0, margin_pct / (2 * t["min_margin_pct"]))
         return Signal(
             slug=set_fs.slug,
             rank=set_fs.rank,

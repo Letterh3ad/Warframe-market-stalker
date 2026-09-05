@@ -1040,3 +1040,23 @@ not worked around, per the design doc.
 **Alternatives:** A second standalone process for the GUI (reopens the double-rate-limit
 risk the phase 1 priority-class design exists to avoid). A supervisor process managing
 both (real added complexity, deferred until the current behavior proves annoying).
+
+## 2026-09-05 - `wfm validate`'s default analyzer set excludes GROUP-scoped analyzers
+
+**Context:** The validation harness (`wfm/validation/harness.py`) documents in its own
+docstring that `replay` only supports ITEM-scoped analyzers -- a GROUP analyzer's
+signals aren't a per-item time series a replay can score the same way. That limitation
+was unreachable until `set_arbitrage`, phase 8's first GROUP-scoped analyzer, existed:
+`validate()`'s default analyzer list (used whenever `--analyzer` is omitted) was every
+enabled analyzer, and iterating it now reached `set_arbitrage` and raised.
+
+**Decision:** `validate()`'s default analyzer list now filters to `Scope.ITEM`
+analyzers when no explicit `--analyzer` is passed. An explicit `wfm validate --analyzer
+set_arbitrage` still reaches the harness's own clear error unchanged; only the silent,
+implicit inclusion is removed.
+
+**Alternatives:** Teaching the harness to replay GROUP analyzers (out of scope: GROUP
+analyzers score a set of items together, not one item's time series, so there's no
+single-item replay to run). Leaving the default list unfiltered and letting `wfm
+validate` always raise once any GROUP analyzer is registered (the bug this fix
+corrected).
