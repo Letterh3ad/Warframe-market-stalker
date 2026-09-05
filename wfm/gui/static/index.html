@@ -114,6 +114,29 @@ button.btn {
 }
 button.btn:hover { border-color: var(--accent); color: var(--text); }
 button.btn.accent { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+button.btn:disabled { opacity: 0.5; cursor: default; border-color: var(--border); color: var(--text-dim); }
+
+/* --- detail pane (Task 7) --- */
+.detail-header { margin-bottom: 16px; }
+.detail-header .slug-line { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+.detail-header .tags { margin-bottom: 8px; }
+.watch-state { font-size: 12px; color: var(--text-faint); }
+.watch-state.on { color: var(--up); }
+.detail-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 20px; }
+.stat-block { margin-bottom: 20px; }
+.stat-block h2 { margin-bottom: 8px; }
+table.stat-table { table-layout: fixed; }
+table.stat-table th { width: 46%; font-weight: 500; color: var(--text-dim); vertical-align: top; }
+table.stat-table td { font-family: var(--mono); }
+.missing-line {
+  font-size: 12px; color: var(--warn);
+  padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: 5px; background: var(--bg-inset);
+}
+.age-line { margin-top: 8px; font-size: 12px; color: var(--text-dim); }
+.kv { display: flex; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.kv .k { width: 46%; color: var(--text-dim); }
+.kv .v { font-family: var(--mono); }
 
 input, select {
   font: inherit; background: var(--bg-inset); color: var(--text);
@@ -232,10 +255,225 @@ function stubRender(label) {
   );
 }
 
-// --- catalog tab ---------------------------------------------------------
-// Placeholder body until Task 7 wires the detail pane.
-function selectItem(slug, rank) {
-  console.log("selectItem", slug, rank);
+// --- item detail pane (Task 7) -----------------------------------------------
+// selectItem(slug, rank, meta): meta is the catalog/watchlist row that triggered
+// the click. It carries `tags` and `is_set`, which GET /items/{slug} does NOT
+// return, so the header needs it. meta is optional; without it tags are dropped
+// and `is_set` falls back to a `_set` slug suffix.
+
+function detailEmpty() {
+  document.getElementById("detail-pane").replaceChildren(
+    el("p", { class: "muted" }, "select an item")
+  );
+}
+
+// Human staleness for book_age_seconds. null -> "never fetched".
+function humanAge(seconds) {
+  if (seconds == null) return "never fetched";
+  if (seconds < 45) return "just now";
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins} ${mins === 1 ? "minute" : "minutes"} old`;
+  const hours = Math.round(seconds / 3600);
+  if (hours < 48) return `${hours} ${hours === 1 ? "hour" : "hours"} old`;
+  const days = Math.round(seconds / 86400);
+  return `${days} ${days === 1 ? "day" : "days"} old`;
+}
+
+// One line per entirely-absent block (from provenance.missing), naming it and the
+// relevant sample counts from provenance.samples. NOT a grid of unavailable rows.
+const MISSING_BLOCK_LINE = {
+  price: (s) => `price history unavailable (${s.price_90d || 0} candles in 90d, ${s.price_7d || 0} in 7d)`,
+  book: () => "order book unavailable (no snapshot fetched)",
+  seasonality: (s) => `seasonality unavailable (${s.seasonality_bucket || 0} bucket / ${s.seasonality_total || 0} total observations)`,
+  market: (s) => `market cohort unavailable (${s.market_cohort || 0} cohort members)`,
+};
+
+function missingLine(name, samples) {
+  const build = MISSING_BLOCK_LINE[name];
+  return el("div", { class: "missing-line" }, build ? build(samples) : `${name} unavailable`);
+}
+
+// Bridge fmt()'s HTML-STRING return into the DOM: build a <tbody> via innerHTML
+// from [label, fmtOutput] pairs. SAFE because every label here is a hard-coded
+// literal and every value is fmt() output (numbers/null only) - no server string
+// ever reaches this innerHTML. Server strings (name, slug, tags, market.tag) go
+// through el() text nodes instead.
+function statTable(pairs) {
+  const tbody = el("tbody");
+  tbody.innerHTML = pairs
+    .map(([label, html]) => `<tr><th>${label}</th><td>${html}</td></tr>`)
+    .join("");
+  return el("table", { class: "stat-table" }, tbody);
+}
+
+async function selectItem(slug, rank, meta) {
+  const pane = document.getElementById("detail-pane");
+  pane.replaceChildren(el("p", { class: "muted" }, "loading..."));
+  let body;
+  try {
+    body = await api(`/items/${encodeURIComponent(slug)}?rank=${encodeURIComponent(rank)}`);
+  } catch (e) {
+    pane.replaceChildren(el("p", { class: "muted" }, "could not load item."));
+    showError(e.message);
+    return;
+  }
+  renderDetail(body, { slug, rank, meta: meta || {} });
+}
+
+function renderDetail(body, ref) {
+  const pane = document.getElementById("detail-pane");
+  const price = body.price || {};
+  const market = body.market || {};
+  const book = body.book || {};
+  const season = body.seasonality || {};
+  const prov = body.provenance || { available: [], missing: [], samples: {} };
+  const available = prov.available || [];
+  const missing = prov.missing || [];
+  const samples = prov.samples || {};
+
+  const tags = ref.meta.tags || [];
+  const isSet = ref.meta.is_set != null ? ref.meta.is_set : /_set$/.test(body.slug || "");
+
+  const header = el("div", { class: "detail-header" },
+    el("h1", null,
+      body.name || body.slug,
+      isSet ? el("span", { class: "set-marker" }, "set") : null,
+    ),
+    el("div", { class: "slug-line mono" }, `${body.slug}  ·  rank ${body.rank}`),
+    tags.length
+      ? el("div", { class: "tags" }, ...tags.map((t) => el("span", { class: "tag-pill" }, t)))
+      : null,
+    el("div", { class: body.watched ? "watch-state on" : "watch-state" },
+      body.watched ? "on watchlist" : "not watched"),
+  );
+
+  // --- Refresh button: the ONLY control that contacts warframe.market ---
+  const refreshBtn = el("button", { class: "btn", type: "button" }, "Refresh live book (API call)");
+  refreshBtn.addEventListener("click", async () => {
+    const original = refreshBtn.textContent;
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = "contacting warframe.market…";
+    try {
+      const fresh = await api(
+        `/items/${encodeURIComponent(ref.slug)}?rank=${encodeURIComponent(ref.rank)}&refresh=true`
+      );
+      renderDetail(fresh, ref);
+    } catch (e) {
+      showError(e.message);
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = original;
+    }
+  });
+
+  // --- Watchlist toggle: re-fetches after so `watched` is authoritative ---
+  const watchBtn = el("button", { class: "btn", type: "button" },
+    body.watched ? "− Remove from watchlist" : "+ Add to watchlist");
+  watchBtn.addEventListener("click", async () => {
+    watchBtn.disabled = true;
+    try {
+      if (body.watched) {
+        await api(
+          `/watchlist/${encodeURIComponent(ref.slug)}/${encodeURIComponent(ref.rank)}`,
+          { method: "DELETE" }
+        );
+      } else {
+        await api("/watchlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: ref.slug, rank: ref.rank }),
+        });
+      }
+      const fresh = await api(
+        `/items/${encodeURIComponent(ref.slug)}?rank=${encodeURIComponent(ref.rank)}`
+      );
+      renderDetail(fresh, ref);
+    } catch (e) {
+      showError(e.message);
+      watchBtn.disabled = false;
+    }
+  });
+
+  const actions = el("div", { class: "detail-actions" }, refreshBtn, watchBtn);
+
+  // --- Statistics (price) ---
+  const statsBlock = el("div", { class: "stat-block" }, el("h2", null, "Statistics"));
+  if (available.includes("price")) {
+    statsBlock.append(statTable([
+      ["last close", fmt(price.last_close, "p")],
+      ["median 7d", fmt(price.median_7d, "p")],
+      ["median 30d", fmt(price.median_30d, "p")],
+      ["median 90d", fmt(price.median_90d, "p")],
+      ["robust z", fmt(price.robust_z)],
+      ["percentile 90d", fmt(price.percentile_90d)],
+      ["ATR 14d", fmt(price.atr_14d)],
+      ["ATR %", fmt(price.atr_pct)],
+      ["volume trend", fmt(price.volume_trend)],
+      ["median volume 30d", fmt(price.median_volume_30d)],
+      ["donchian position", fmt(price.donchian_position)],
+    ]));
+  } else {
+    statsBlock.append(missingLine("price", samples));
+  }
+
+  // --- Market ---
+  const marketBlock = el("div", { class: "stat-block" }, el("h2", null, "Market"));
+  if (available.includes("market")) {
+    marketBlock.append(statTable([
+      ["excess return 7d", fmt(market.excess_return_7d)],
+      ["cohort size", fmt(market.cohort_size)],
+    ]));
+    // market.tag is a server STRING; fmt would call it "unavailable". Render it as
+    // an escaped text node, with a null guard of its own.
+    marketBlock.append(
+      el("div", { class: "kv" },
+        el("span", { class: "k" }, "tag"),
+        market.tag == null
+          ? el("span", { class: "v na" }, "unavailable")
+          : el("span", { class: "v" }, market.tag),
+      )
+    );
+  } else {
+    marketBlock.append(missingLine("market", samples));
+  }
+
+  // --- Seasonality (rows when the block is present, else one missing line) ---
+  const seasonBlock = el("div", { class: "stat-block" }, el("h2", null, "Seasonality"));
+  if (available.includes("seasonality")) {
+    seasonBlock.append(statTable([
+      ["bucket", fmt(season.bucket)],
+      ["observed bucket", fmt(season.observed_bucket)],
+      ["observed age (h)", fmt(season.observed_age_hours)],
+      ["expected price", fmt(season.expected_price)],
+      ["expected volume", fmt(season.expected_volume)],
+      ["price deviation", fmt(season.price_deviation)],
+      ["volume deviation", fmt(season.volume_deviation)],
+      ["confidence", fmt(season.confidence)],
+      ["best bucket next 48h", fmt(season.best_bucket_next_48h)],
+    ]));
+  } else {
+    seasonBlock.append(missingLine("seasonality", samples));
+  }
+
+  // --- Book ---
+  const bookBlock = el("div", { class: "stat-block" }, el("h2", null, "Order book"));
+  if (available.includes("book")) {
+    bookBlock.append(statTable([
+      ["online best bid", fmt(book.online_best_bid, "p")],
+      ["online best ask", fmt(book.online_best_ask, "p")],
+      ["online spread", fmt(book.online_spread, "p")],
+      ["online spread %", fmt(book.online_spread_pct)],
+      ["stale share", fmt(book.stale_share)],
+      ["online bid count", fmt(book.online_bid_count)],
+      ["online ask count", fmt(book.online_ask_count)],
+    ]));
+  } else {
+    bookBlock.append(missingLine("book", samples));
+  }
+  bookBlock.append(
+    el("div", { class: "age-line" }, `book age: ${humanAge(body.book_age_seconds)}`)
+  );
+
+  pane.replaceChildren(header, actions, statsBlock, marketBlock, seasonBlock, bookBlock);
 }
 
 let catalogDebounce = null;
@@ -262,6 +500,7 @@ function renderCatalog() {
     el("div", { class: "catalog-search" }, input),
     el("div", { id: "catalog-body" }),
   );
+  detailEmpty();
   loadCatalog();
 }
 
@@ -285,7 +524,10 @@ async function loadCatalog() {
     return;
   }
   if (seq !== catalogReqSeq) return;
-  clearError();
+  // No unconditional clearError() here: the detail pane (Task 7) raises errors
+  // from Refresh / watchlist actions, and a background catalog refetch or a
+  // tab-switch back to Catalog must not silently wipe one the user hasn't seen.
+  // The banner clears only on dismiss or when a new showError replaces it.
   state.catalog.total = data.total || 0;
   paintCatalog(body, data.items || []);
 }
@@ -302,7 +544,7 @@ function paintCatalog(body, items) {
       onclick: () => {
         for (const s of body.querySelectorAll("tr.row.selected")) s.classList.remove("selected");
         tr.classList.add("selected");
-        selectItem(it.slug, it.canonical_rank);
+        selectItem(it.slug, it.canonical_rank, it);
       },
     },
       el("td", null,
