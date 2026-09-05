@@ -1123,3 +1123,21 @@ second chart, or client state that must survive a tab switch.
 and the file is currently working). Do nothing and leave the trip unrecorded (rejected:
 the exit condition existing means the trip has to be on the record even if the call is to
 stay).
+
+## 2026-09-05 - Catalog search matches tags via LIKE on the JSON column
+
+**Context:** The dashboard's Catalog tab needed to search by tag as well as name.
+`items.tags` is stored as a JSON array string (e.g. `["warframe", "prime", "set"]`);
+there is no normalised tag table and no FTS index.
+
+**Decision:** `ItemsRepo.page`/`count` widened their filter from `name LIKE ?` to
+`name LIKE ? OR tags LIKE ?`, the same wildcard-escaped `%q%` pattern bound to both.
+Substring match against the raw JSON text: searching `prime` matches the tag, searching
+`arc` matches the `arcane` tag and any name containing `arc`. Good enough for a
+personal single-user search box; no migration, no new index.
+
+**Alternatives:** A normalised `item_tags` table with an exact-match join (correct, but a
+migration and a sync-path change for a feature that works fine as substring). SQLite FTS5
+over name+tags (heavier; the catalog is 3839 rows and every query is already sub-ms).
+`json_each` on the tags column (exact tag match without a schema change, but more complex
+SQL and still no real gain over LIKE at this scale).
