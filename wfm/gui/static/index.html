@@ -87,7 +87,24 @@ table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 th { color: var(--text-dim); font-weight: 500; }
 tbody tr:hover { background: var(--bg-raised); }
+tbody tr.row { cursor: pointer; }
+tbody tr.row.selected { background: var(--bg-raised); box-shadow: inset 2px 0 0 var(--accent); }
 code, .mono { font-family: var(--mono); }
+
+.catalog-search { margin-bottom: 14px; }
+.catalog-search input { width: 280px; max-width: 100%; }
+.table-scroll { overflow-x: auto; }
+.tag-pill {
+  display: inline-block; margin: 0 4px 2px 0; padding: 1px 7px;
+  font-size: 11px; border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text-dim); background: var(--bg-inset); white-space: nowrap;
+}
+.set-marker { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--accent); }
+.pager {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 14px; font-size: 13px; color: var(--text-dim);
+}
+.pager button.btn:disabled { opacity: 0.4; cursor: default; border-color: var(--border); }
 
 button.btn {
   appearance: none; cursor: pointer; font: inherit;
@@ -135,6 +152,12 @@ input, select {
   </div>
 <script>
 "use strict";
+
+// --- shared UI state -----------------------------------------------------
+// state.catalog is read by the Catalog tab (below) and the detail pane (Task 7).
+const state = {
+  catalog: { q: "", offset: 0, limit: 100, total: 0 },
+};
 
 // --- fetch helper -----------------------------------------------------------
 // Returns parsed JSON (null for 204). Throws Error on non-2xx, using the
@@ -209,8 +232,119 @@ function stubRender(label) {
   );
 }
 
+// --- catalog tab ---------------------------------------------------------
+// Placeholder body until Task 7 wires the detail pane.
+function selectItem(slug, rank) {
+  console.log("selectItem", slug, rank);
+}
+
+let catalogDebounce = null;
+let catalogReqSeq = 0;
+
+function renderCatalog() {
+  const pane = document.getElementById("list-pane");
+  const input = el("input", {
+    type: "search",
+    placeholder: "search catalog by name...",
+    value: state.catalog.q,
+    oninput: (e) => {
+      const q = e.target.value;
+      clearTimeout(catalogDebounce);
+      catalogDebounce = setTimeout(() => {
+        state.catalog.q = q;
+        state.catalog.offset = 0;
+        loadCatalog();
+      }, 250);
+    },
+  });
+  pane.append(
+    el("h1", null, "Catalog"),
+    el("div", { class: "catalog-search" }, input),
+    el("div", { id: "catalog-body" }),
+  );
+  loadCatalog();
+}
+
+async function loadCatalog() {
+  const body = document.getElementById("catalog-body");
+  if (!body) return;
+  const seq = ++catalogReqSeq;
+  body.replaceChildren(el("p", { class: "muted" }, "loading..."));
+
+  const { q, offset, limit } = state.catalog;
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (q) params.set("q", q);
+
+  let data;
+  try {
+    data = await api(`/catalog?${params}`);
+  } catch (e) {
+    if (seq !== catalogReqSeq) return;
+    body.replaceChildren(el("p", { class: "muted" }, "could not load catalog."));
+    showError(e.message);
+    return;
+  }
+  if (seq !== catalogReqSeq) return;
+  clearError();
+  state.catalog.total = data.total || 0;
+  paintCatalog(body, data.items || []);
+}
+
+function paintCatalog(body, items) {
+  if (items.length === 0) {
+    body.replaceChildren(el("p", { class: "muted" }, "no items match"), buildPager());
+    return;
+  }
+  const rows = items.map((it) => {
+    const tr = el("tr", {
+      class: "row",
+      dataset: { slug: it.slug },
+      onclick: () => {
+        for (const s of body.querySelectorAll("tr.row.selected")) s.classList.remove("selected");
+        tr.classList.add("selected");
+        selectItem(it.slug, it.canonical_rank);
+      },
+    },
+      el("td", null,
+        it.name,
+        it.is_set ? el("span", { class: "set-marker" }, "set") : null,
+      ),
+      el("td", null, ...(it.tags || []).map((t) => el("span", { class: "tag-pill" }, t))),
+      el("td", { class: "mono" }, String(it.canonical_rank)),
+    );
+    return tr;
+  });
+  const table = el("table", null,
+    el("thead", null, el("tr", null,
+      el("th", null, "Name"), el("th", null, "Tags"), el("th", null, "Rank"))),
+    el("tbody", null, ...rows),
+  );
+  body.replaceChildren(el("div", { class: "table-scroll" }, table), buildPager());
+}
+
+function buildPager() {
+  const { offset, limit, total } = state.catalog;
+  const first = total === 0 ? 0 : Math.min(offset + 1, total);
+  const last = Math.min(offset + limit, total);
+  const prev = el("button", {
+    class: "btn", type: "button",
+    onclick: () => { state.catalog.offset = Math.max(0, offset - limit); loadCatalog(); },
+  }, "‹ prev");
+  prev.disabled = offset === 0;
+  const next = el("button", {
+    class: "btn", type: "button",
+    onclick: () => { state.catalog.offset = offset + limit; loadCatalog(); },
+  }, "next ›");
+  next.disabled = offset + limit >= total;
+  return el("div", { class: "pager" },
+    prev,
+    el("span", null, `showing ${first}–${last} of ${total}`),
+    next,
+  );
+}
+
 const TABS = [
-  { id: "catalog",   label: "Catalog",   render() { stubRender("Catalog"); } },
+  { id: "catalog",   label: "Catalog",   render() { renderCatalog(); } },
   { id: "watchlist", label: "Watchlist", render() { stubRender("Watchlist"); } },
   { id: "signals",   label: "Signals",   render() { stubRender("Signals"); } },
   { id: "groups",    label: "Groups",    render() { stubRender("Groups"); } },
