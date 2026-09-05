@@ -9,7 +9,6 @@ import uvicorn
 
 from wfm.daemon import control
 from wfm.daemon.runner import Daemon
-from wfm.gui.app import build_app
 from wfm.services.analysis_service import analyze_item
 from wfm.services.context import AppContext
 from wfm.services.feature_service import market_context
@@ -54,6 +53,7 @@ async def start(ctx: AppContext, force: bool = False, serve_gui: bool = False) -
     server = None
     server_task = None
     if serve_gui:
+        from wfm.gui.app import build_app
         app = build_app(ctx)
         uvicorn_config = uvicorn.Config(
             app, host=ctx.config.gui_host, port=ctx.config.gui_port, log_level="warning"

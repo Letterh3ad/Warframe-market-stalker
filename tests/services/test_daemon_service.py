@@ -212,7 +212,7 @@ async def test_start_with_serve_gui_runs_a_uvicorn_server_alongside_the_daemon(c
     fake_servers = []
 
     monkeypatch.setattr(
-        "wfm.services.daemon_service.build_app",
+        "wfm.gui.app.build_app",
         lambda context: built_apps.append(context) or object(),
     )
 
