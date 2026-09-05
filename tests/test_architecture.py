@@ -24,7 +24,7 @@ def _modules(package: str) -> list[Path]:
     return sorted((SOURCE_ROOT / package).rglob("*.py"))
 
 
-@pytest.mark.parametrize("path", _modules("cli"), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", _modules("cli") + _modules("gui"), ids=lambda p: p.name)
 def test_frontend_modules_only_reach_services(path):
     offenders = {
         name

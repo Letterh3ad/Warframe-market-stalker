@@ -2,6 +2,8 @@
 # thresholds from Task 9 (see DECISIONS.md 2026-09-02).
 
 pid_file = "wfm.pid"  # Where `wfm daemon start/stop/status` tracks the running daemon's pid.
+gui_host = "127.0.0.1"  # Interface the embedded GUI server binds to. 127.0.0.1 = local only.
+gui_port = 8420
 
 # Adaptive polling weights for priority scoring.
 w_vol = 1.0              # Volatility weight in priority score.
