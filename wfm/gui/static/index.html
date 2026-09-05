@@ -283,6 +283,7 @@ function fmt(value, unit) {
 // and `is_set` falls back to a `_set` slug suffix.
 
 function detailEmpty() {
+  disposePriceChart();
   document.getElementById("detail-pane").replaceChildren(
     el("p", { class: "muted" }, "select an item")
   );
@@ -335,7 +336,7 @@ function statTable(pairs) {
 // rows arrive. Stale responses (seq !== detailSeq) are dropped.
 let priceChart = null;
 let detailSeq = 0;
-const historyState = { seq: -1, status: "pending", rows: null };
+const historyState = { status: "pending", rows: null };
 
 function disposePriceChart() {
   if (priceChart) {
@@ -405,7 +406,6 @@ function drawPriceChart() {
 async function selectItem(slug, rank, meta) {
   const seq = ++detailSeq;
   disposePriceChart();
-  historyState.seq = seq;
   historyState.status = "pending";
   historyState.rows = null;
 
@@ -483,6 +483,10 @@ function renderDetail(body, ref) {
   // --- Refresh button: the ONLY control that contacts warframe.market ---
   const refreshBtn = el("button", { class: "btn", type: "button" }, "Refresh live book (API call)");
   refreshBtn.addEventListener("click", async () => {
+    // Re-rendering the SAME item: capture the current detailSeq without bumping it
+    // (a bump would wrongly invalidate a concurrent legitimate selectItem). Bail if
+    // a tab switch or a new item selection moved detailSeq during the await.
+    const seq = detailSeq;
     const original = refreshBtn.textContent;
     refreshBtn.disabled = true;
     refreshBtn.textContent = "contacting warframe.market…";
@@ -490,8 +494,10 @@ function renderDetail(body, ref) {
       const fresh = await api(
         `/items/${encodeURIComponent(ref.slug)}?rank=${encodeURIComponent(ref.rank)}&refresh=true`
       );
+      if (seq !== detailSeq) return;
       renderDetail(fresh, ref);
     } catch (e) {
+      if (seq !== detailSeq) return;
       showError(e.message);
       refreshBtn.disabled = false;
       refreshBtn.textContent = original;
@@ -502,6 +508,8 @@ function renderDetail(body, ref) {
   const watchBtn = el("button", { class: "btn", type: "button" },
     body.watched ? "− Remove from watchlist" : "+ Add to watchlist");
   watchBtn.addEventListener("click", async () => {
+    // Same-item re-render: capture detailSeq without bumping, bail if it moved.
+    const seq = detailSeq;
     watchBtn.disabled = true;
     try {
       if (body.watched) {
@@ -519,8 +527,10 @@ function renderDetail(body, ref) {
       const fresh = await api(
         `/items/${encodeURIComponent(ref.slug)}?rank=${encodeURIComponent(ref.rank)}`
       );
+      if (seq !== detailSeq) return;
       renderDetail(fresh, ref);
     } catch (e) {
+      if (seq !== detailSeq) return;
       showError(e.message);
       watchBtn.disabled = false;
     }
@@ -618,6 +628,10 @@ function renderDetail(body, ref) {
 
 let catalogDebounce = null;
 let catalogReqSeq = 0;
+// One monotonic counter shared by the simple list loaders (watchlist, ledger,
+// groups): a fast remove-then-refetch can otherwise interleave two responses and
+// paint the older one last.
+let listSeq = 0;
 
 function renderCatalog() {
   const pane = document.getElementById("list-pane");
@@ -731,7 +745,7 @@ function buildPager() {
 // innerHTML; SAFE for the same reason statTable's innerHTML is - no server
 // string ever reaches it. Server strings (name, slug) use el() text nodes.
 function signClass(value) {
-  if (typeof value !== "number" || value === 0) return null;
+  if (!Number.isFinite(value) || value === 0) return null;
   return value > 0 ? "val-up" : "val-down";
 }
 function numTd(value, unit, colorClass) {
@@ -739,9 +753,12 @@ function numTd(value, unit, colorClass) {
   td.innerHTML = fmt(value, unit);
   return td;
 }
-function statLine(label, value, unit) {
+// colorize is opt-in: only fields with real gain/loss semantics (realized profit,
+// unrealized profit, lot profit) get the red/green class. A trade count, a
+// confidence, or a magnitude has no sign meaning and stays neutral.
+function statLine(label, value, { unit, colorize } = {}) {
   const v = el("span", { class: "v" });
-  const cls = signClass(value);
+  const cls = colorize ? signClass(value) : null;
   if (cls) v.classList.add(cls);
   v.innerHTML = fmt(value, unit);
   return el("div", { class: "kv" }, el("span", { class: "k" }, label), v);
@@ -760,15 +777,18 @@ function renderWatchlist() {
 async function loadWatchlist() {
   const body = document.getElementById("watchlist-body");
   if (!body) return;
+  const seq = ++listSeq;
   body.replaceChildren(el("p", { class: "muted" }, "loading..."));
   let rows;
   try {
     rows = await api("/watchlist");
   } catch (e) {
+    if (seq !== listSeq) return;
     body.replaceChildren(el("p", { class: "muted" }, "could not load watchlist."));
     showError(e.message);
     return;
   }
+  if (seq !== listSeq) return;
   paintWatchlist(body, rows || []);
 }
 
@@ -839,6 +859,7 @@ async function loadLedger() {
   const hBox = document.getElementById("ledger-holdings");
   const pBox = document.getElementById("ledger-pnl");
   if (!hBox || !pBox) return;
+  const seq = ++listSeq;
   hBox.replaceChildren(el("h2", null, "Holdings"), el("p", { class: "muted" }, "loading..."));
   pBox.replaceChildren(el("h2", null, "P&L"), el("p", { class: "muted" }, "loading..."));
 
@@ -846,12 +867,14 @@ async function loadLedger() {
   try {
     [holdings, pnl] = await Promise.all([api("/ledger/holdings"), api("/ledger/pnl")]);
   } catch (e) {
+    if (seq !== listSeq) return;
     hBox.replaceChildren(el("h2", null, "Holdings"),
       el("p", { class: "muted" }, "could not load ledger."));
     pBox.replaceChildren();
     showError(e.message);
     return;
   }
+  if (seq !== listSeq) return;
   const nameMap = {};
   for (const r of holdings || []) nameMap[r.slug] = r.name || r.slug;
   for (const r of (pnl && pnl.open_positions) || []) nameMap[r.slug] = r.name || r.slug;
@@ -886,7 +909,7 @@ function paintHoldings(box, rows) {
 function paintPnl(box, pnl, nameMap) {
   box.replaceChildren(
     el("h2", null, "P&L"),
-    statLine("realized profit", pnl.realized_profit, "p"),
+    statLine("realized profit", pnl.realized_profit, { unit: "p", colorize: true }),
     statLine("trades", pnl.trades),
     el("h3", null, "Closed trades"),
   );
@@ -1094,7 +1117,12 @@ function scheduleSignalsReconnect() {
 }
 
 // Page unload: close the socket, null the ref, cancel any pending reconnect.
-function stopSignalsSocket() {
+// A pagehide with event.persisted === true is a bfcache freeze, not an unload: the
+// page can be restored live, so latching `unloading` here would kill the feed
+// forever (start/reconnect both short-circuit on it). Leave the socket alone; the
+// browser suspends it for the freeze and the close handler reconnects on restore.
+function stopSignalsSocket(e) {
+  if (e && e.persisted) return;
   signalsFeed.unloading = true;
   if (signalsFeed.reconnectTimer) {
     clearTimeout(signalsFeed.reconnectTimer);
@@ -1114,6 +1142,12 @@ let groupSeq = 0;
 const groupsState = { selected: null, members: [] };
 
 function renderGroups() {
+  // Fresh entry to the tab: drop any prior selection so paintGroups does not mark
+  // a stale row .selected while the members box and detail pane are empty. No
+  // auto-reselect.
+  groupsState.selected = null;
+  groupsState.members = [];
+  disposePriceChart();
   const pane = document.getElementById("list-pane");
   const newInput = el("input", { type: "text", placeholder: "new group name" });
   const newBtn = el("button", {
@@ -1135,15 +1169,18 @@ function renderGroups() {
 async function loadGroups() {
   const box = document.getElementById("groups-list");
   if (!box) return;
+  const seq = ++listSeq;
   box.replaceChildren(el("p", { class: "muted" }, "loading..."));
   let groups;
   try {
     groups = await api("/groups");
   } catch (e) {
+    if (seq !== listSeq) return;
     box.replaceChildren(el("p", { class: "muted" }, "could not load groups."));
     showError(e.message);
     return;
   }
+  if (seq !== listSeq) return;
   paintGroups(box, Array.isArray(groups) ? groups : []);
 }
 
@@ -1200,6 +1237,7 @@ async function deleteGroup(name) {
     groupsState.members = [];
     const mb = document.getElementById("group-members");
     if (mb) mb.replaceChildren();
+    disposePriceChart();
     document.getElementById("detail-pane").replaceChildren(
       el("p", { class: "muted" }, "select a group")
     );
@@ -1220,6 +1258,7 @@ async function selectGroup(name) {
   const membersBox = document.getElementById("group-members");
   membersBox.replaceChildren(el("p", { class: "muted" }, "loading members..."));
   const pane = document.getElementById("detail-pane");
+  disposePriceChart();
   pane.replaceChildren(el("p", { class: "muted" }, "loading analysis..."));
 
   let detail;
@@ -1323,6 +1362,7 @@ function arbitrageWords(direction) {
 }
 
 function paintAnalysis(pane, analysis, members) {
+  disposePriceChart();
   pane.replaceChildren(el("h1", null, `Analysis: ${analysis.name}`));
 
   // --- Set arbitrage (group_signals), rendered first ---
@@ -1489,11 +1529,20 @@ function renderDaemonDetail(s) {
     );
     if (!ok) return;
     stopBtn.disabled = true;
-    daemonStopping = true;
     try {
       await api("/daemon/stop", { method: "POST" });
-    } catch (_) {
-      // The server may drop the request as it shuts down. Expected, not an error.
+      daemonStopping = true;
+    } catch (err) {
+      // A fetch rejection is a TypeError: the daemon dropped the connection as it
+      // shut down. That is the expected outcome, so latch the terminal state.
+      // An Error from api() is a real 4xx/5xx: the daemon is still up and refused,
+      // so surface it and leave the tab live.
+      if (err instanceof TypeError) {
+        daemonStopping = true;
+      } else {
+        daemonStopping = false;
+        showError(err.message);
+      }
     }
     renderDaemonDetail(lastDaemonStatus);
   });
@@ -1534,6 +1583,11 @@ function selectTab(id) {
     btn.classList.toggle("active", btn.dataset.tab === id);
   }
   disposePriceChart();
+  // #detail-pane is a persistent node (only its children swap), so an in-flight
+  // /items/{slug} or /groups/{name}/analysis that resolves after this switch would
+  // paint into whatever tab is now showing. Bump both seqs to invalidate them.
+  detailSeq++;
+  groupSeq++;
   document.getElementById("list-pane").replaceChildren();
   document.getElementById("detail-pane").replaceChildren();
   tab.render();

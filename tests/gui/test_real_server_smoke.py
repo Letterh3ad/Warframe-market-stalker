@@ -17,11 +17,13 @@ though the same routes returned 200 under TestClient's own thread model.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import socket
 from datetime import datetime, timezone
 
 import httpx
 import uvicorn
+from fastapi.routing import APIRoute
 
 from tests.fakes.clock import FakeClock
 from wfm.config import Config
@@ -38,6 +40,55 @@ def _free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
+
+
+def _api_routes(routes, seen=None):
+    """Every APIRoute reachable from `app.routes`, recursing through the lazy
+    `_IncludedRouter` wrappers that FastAPI's router-inclusion model leaves in
+    `app.routes` instead of flattening.
+    """
+    if seen is None:
+        seen = set()
+    for route in routes:
+        if id(route) in seen:
+            continue
+        seen.add(id(route))
+        if isinstance(route, APIRoute):
+            yield route
+        original_router = getattr(route, "original_router", None)
+        if original_router is not None:
+            yield from _api_routes(original_router.routes, seen)
+        nested = getattr(route, "routes", None)
+        if nested:
+            yield from _api_routes(nested, seen)
+
+
+def test_every_api_route_endpoint_is_async(tmp_path):
+    """Structural guard: every HTTP route must be `async def`.
+
+    A sync `def` route is dispatched to an anyio worker thread, a different thread
+    from the one that created the sqlite3 connection, so it raises
+    `sqlite3.ProgrammingError` under a real server. TestClient's own thread model
+    hides that (see tests/gui/conftest.py), so this assertion, not TestClient,
+    catches a future sync-route regression without needing to boot the server.
+    """
+    conn = connect(tmp_path / "routes.db")
+    migrate(conn)
+    ctx = AppContext(
+        Config(pid_file=tmp_path / "wfm.pid"), conn=conn, clock=FakeClock(start_utc=NOW)
+    )
+    try:
+        app = build_app(ctx)
+        routes = list(_api_routes(app.routes))
+        assert len(routes) >= 15, f"expected the full route set, found {len(routes)}"
+        sync_routes = [
+            f"{sorted(r.methods)} {r.path}"
+            for r in routes
+            if not inspect.iscoroutinefunction(r.endpoint)
+        ]
+        assert not sync_routes, f"sync def routes (must be async def): {sync_routes}"
+    finally:
+        conn.close()
 
 
 async def test_every_router_answers_over_a_real_server_not_500(tmp_path):

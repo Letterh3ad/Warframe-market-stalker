@@ -1101,3 +1101,25 @@ recorded for `report_group`.
 **Alternatives:** Rebuilding per request (correct but slow, and the cost is paid on every
 click). Sharing one cache between the GUI and the poll loop (couples two components with
 different freshness needs for no measured gain).
+
+## 2026-09-05 - The frontend's Svelte exit condition is tripped, but stay vanilla for now
+
+**Context:** The phase 8 frontend design doc set an exit condition on the vanilla-HTML
+deviation: revisit Svelte at roughly 1500 lines OR the first time shared state must sync
+across three or more tabs and the manual wiring produces a bug. Both halves are now met.
+`wfm/gui/static/index.html` is ~1600 lines, and `selectItem` plus the shared persistent
+`#detail-pane` are driven from four tabs (Catalog, Watchlist, Signals, Groups). That
+shared ownership produced one real async bug: an in-flight `/items/{slug}` or
+`/groups/{name}/analysis` response resolving after a tab switch painted into the wrong
+tab, because `selectTab` cleared the panes but never invalidated the in-flight sequence.
+
+**Decision:** Stay vanilla for now. The bug is fixed in this review wave (seq bumps in
+`selectTab`, seq guards on the detail button handlers and the list loaders). Porting a
+green 1600-line file to Svelte with no test framework on either side trades a known-good
+artifact for an unknown one. Reconsider at the next substantive feature: a seventh tab, a
+second chart, or client state that must survive a tab switch.
+
+**Alternatives:** Port to Svelte now (rejected: real cost and risk with no safety net,
+and the file is currently working). Do nothing and leave the trip unrecorded (rejected:
+the exit condition existing means the trip has to be on the record even if the call is to
+stay).
