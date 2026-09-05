@@ -7,7 +7,7 @@ from wfm.models import Horizon, Scope
 
 
 def test_the_three_shipped_analyzers_are_registered():
-    assert {a.name for a in registry.all()} == {"flip", "revert", "selltime"}
+    assert {a.name for a in registry.all()} == {"flip", "revert", "selltime", "set_arbitrage"}
 
 
 def test_a_new_analyzer_module_is_discovered_without_editing_the_registry(tmp_path, monkeypatch):
@@ -42,7 +42,7 @@ def test_discover_skips_a_module_that_fails_to_import(tmp_path, monkeypatch, cap
     )
     (tmp_path / "broken_analyzer.py").write_text("import a_package_that_is_not_installed\n")
     registry.discover()  # must not raise
-    assert {"flip", "revert", "selltime"} <= {a.name for a in registry.all()}
+    assert {"flip", "revert", "selltime", "set_arbitrage"} <= {a.name for a in registry.all()}
 
 
 def test_lookup_by_name():
@@ -51,7 +51,10 @@ def test_lookup_by_name():
 
 
 def test_every_shipped_analyzer_is_item_scoped_but_the_registry_admits_group():
-    assert all(a.scope is Scope.ITEM for a in registry.all())
+    item_scoped = {a.name for a in registry.all() if a.scope is Scope.ITEM}
+    assert item_scoped == {"flip", "revert", "selltime"}
+    group_scoped = {a.name for a in registry.all() if a.scope is Scope.GROUP}
+    assert group_scoped == {"set_arbitrage"}
     assert Scope.GROUP in set(Scope)
 
 
@@ -62,11 +65,11 @@ def test_unknown_name_raises():
 
 def test_config_can_disable_an_analyzer():
     cfg = Config(analyzers={"flip": {"enabled": False}})
-    assert {a.name for a in registry.enabled(cfg)} == {"revert", "selltime"}
+    assert {a.name for a in registry.enabled(cfg)} == {"revert", "selltime", "set_arbitrage"}
 
 
 def test_analyzers_are_enabled_by_default():
-    assert len(registry.enabled(Config())) == 3
+    assert len(registry.enabled(Config())) == 4
 
 
 def test_thresholds_merge_config_over_defaults():
