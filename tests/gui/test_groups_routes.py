@@ -82,3 +82,28 @@ def test_analysis_surfaces_the_set_arbitrage_signal(conn):
     assert len(body["group_signals"]) == 1
     assert body["group_signals"][0]["analyzer"] == "set_arbitrage"
     assert body["group_signals"][0]["direction"] == "buy"
+
+
+def test_analysis_is_idempotent_within_the_cooldown_window(conn):
+    # GET must be safe to call repeatedly: with persist=True, dedup/cooldown on group
+    # signals (2026-09-05 decision) suppressed a second call's group_signals to an
+    # empty list, hiding a still-open opportunity. persist=False fixes it.
+    client = _client(conn)
+    client.post("/groups", json={"name": "frame"})
+    client.post("/groups/frame/members", json={"query": "frame_prime_set", "rank": 0})
+    client.post(
+        "/groups/frame/members", json={"query": "frame_prime_chassis_blueprint", "rank": 0}
+    )
+    client.ctx.orders.insert(
+        BookSnapshot(slug="frame_prime_set", rank=0, ts=NOW, online_best_ask=80)
+    )
+    client.ctx.orders.insert(
+        BookSnapshot(slug="frame_prime_chassis_blueprint", rank=0, ts=NOW, online_best_bid=100)
+    )
+
+    first = client.get("/groups/frame/analysis").json()
+    second = client.get("/groups/frame/analysis").json()
+
+    assert first["group_signals"] == second["group_signals"]
+    assert len(second["group_signals"]) == 1
+    assert client.ctx.signals.query() == []
