@@ -53,3 +53,28 @@ def test_resolve_raises_a_readable_error_when_ambiguous_or_missing(ctx):
     with pytest.raises(LookupError) as excinfo:
         catalog_service.resolve(ctx, "nonsense")
     assert "nonsense" in str(excinfo.value)
+
+
+@pytest.fixture
+def bare_ctx(conn):
+    """The shared `ctx` fixture pre-loads two items; browse assertions here count rows,
+    so they need an empty catalog to start from."""
+    return AppContext(Config(), conn=conn, clock=FakeClock(start_utc=START))
+
+
+def test_browse_pages_and_reports_the_unpaged_total(bare_ctx):
+    bare_ctx.items.upsert_many([
+        Item(slug=f"i{n}", name=f"Item {n:02d}", url_name=f"i{n}") for n in range(10)
+    ])
+    page = catalog_service.browse(bare_ctx, limit=3, offset=3)
+    assert page["total"] == 10
+    assert page["limit"] == 3
+    assert page["offset"] == 3
+    assert [i["name"] for i in page["items"]] == ["Item 03", "Item 04", "Item 05"]
+
+
+def test_browse_clamps_the_limit_and_floors_a_negative_offset(bare_ctx):
+    bare_ctx.items.upsert_many([Item(slug="a", name="A", url_name="a")])
+    assert catalog_service.browse(bare_ctx, limit=99999)["limit"] == catalog_service.MAX_BROWSE_LIMIT
+    assert catalog_service.browse(bare_ctx, limit=0)["limit"] == 1
+    assert catalog_service.browse(bare_ctx, offset=-5)["offset"] == 0

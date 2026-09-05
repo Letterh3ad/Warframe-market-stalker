@@ -62,6 +62,22 @@ class ItemsRepo:
         )
         return [_to_item(r) for r in rows]
 
+    def page(
+        self, query: str | None = None, limit: int = 100, offset: int = 0
+    ) -> list[Item]:
+        if query:
+            rows = self._conn.execute(
+                f"SELECT {_COLUMNS} FROM items WHERE name LIKE ? ESCAPE '\\' "
+                "ORDER BY name LIMIT ? OFFSET ?",
+                (f"%{_escape_like(query)}%", limit, offset),
+            )
+        else:
+            rows = self._conn.execute(
+                f"SELECT {_COLUMNS} FROM items ORDER BY name LIMIT ? OFFSET ?",
+                (limit, offset),
+            )
+        return [_to_item(r) for r in rows]
+
     def canonical_rank(self, slug: str) -> int:
         """Returns 0 for a slug not yet in the catalog. Callers that may be handed an
         unsynced slug must check existence separately rather than trusting this value.
@@ -71,8 +87,15 @@ class ItemsRepo:
         ).fetchone()
         return int(row[0]) if row else 0
 
-    def count(self) -> int:
-        return int(self._conn.execute("SELECT COUNT(*) FROM items").fetchone()[0])
+    def count(self, query: str | None = None) -> int:
+        if query:
+            row = self._conn.execute(
+                "SELECT COUNT(*) FROM items WHERE name LIKE ? ESCAPE '\\'",
+                (f"%{_escape_like(query)}%",),
+            ).fetchone()
+        else:
+            row = self._conn.execute("SELECT COUNT(*) FROM items").fetchone()
+        return int(row[0])
 
 
 def _escape_like(value: str) -> str:

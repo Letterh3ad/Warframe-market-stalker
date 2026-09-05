@@ -58,3 +58,38 @@ def test_canonical_rank_defaults_to_zero_for_unknown_items(conn):
     repo.upsert_many([CONTINUITY])
     assert repo.canonical_rank("primed_continuity") == 10
     assert repo.canonical_rank("unknown_slug") == 0
+
+
+def test_page_returns_items_ordered_by_name_with_an_offset(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many([
+        Item(slug="c", name="Charlie", url_name="c"),
+        Item(slug="a", name="Alpha", url_name="a"),
+        Item(slug="b", name="Bravo", url_name="b"),
+    ])
+    assert [i.name for i in repo.page(limit=2, offset=0)] == ["Alpha", "Bravo"]
+    assert [i.name for i in repo.page(limit=2, offset=2)] == ["Charlie"]
+    assert repo.page(limit=2, offset=99) == []
+
+
+def test_page_and_count_apply_the_same_filter(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many([
+        Item(slug="mp", name="Mirage Prime Set", url_name="mp"),
+        Item(slug="mb", name="Mirage Prime Blueprint", url_name="mb"),
+        Item(slug="tp", name="Tigris Prime Set", url_name="tp"),
+    ])
+    assert repo.count() == 3
+    assert repo.count("mirage") == 2
+    assert {i.slug for i in repo.page("mirage", limit=100)} == {"mp", "mb"}
+
+
+def test_page_escapes_like_wildcards_in_the_query(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many([
+        Item(slug="pct", name="100% Status", url_name="pct"),
+        Item(slug="other", name="Nothing Special", url_name="other"),
+    ])
+    # A bare % would match every row; escaped, it matches only the literal one.
+    assert [i.slug for i in repo.page("%")] == ["pct"]
+    assert repo.count("%") == 1
