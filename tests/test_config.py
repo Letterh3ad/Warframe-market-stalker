@@ -97,3 +97,17 @@ def test_env_override_pid_file_loads_as_a_path(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("WFM_PID_FILE", str(tmp_path / "x.pid"))
     cfg = Config.load(tmp_path / "absent.toml")
     assert cfg.pid_file == tmp_path / "x.pid"
+
+
+def test_gui_host_and_port_have_sane_defaults():
+    config = Config()
+    assert config.gui_host == "127.0.0.1"
+    assert config.gui_port == 8420
+
+
+def test_gui_host_is_overridable_by_env(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("WFM_GUI_HOST", "0.0.0.0")
+    monkeypatch.setenv("WFM_GUI_PORT", "9000")
+    config = Config.load(tmp_path / "absent.toml")
+    assert config.gui_host == "0.0.0.0"
+    assert config.gui_port == 9000

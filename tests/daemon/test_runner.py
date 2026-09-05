@@ -298,6 +298,31 @@ async def test_signals_from_a_poll_are_delivered(ctx, monkeypatch):
     assert delivered[0].id == 99
 
 
+async def test_signals_from_a_poll_are_published_to_the_broadcaster(ctx, monkeypatch):
+    fake_signal = Signal(
+        slug="a", rank=0, analyzer="flip", ts=ctx.clock.utcnow(), direction=Direction.BUY,
+        magnitude=1.0, confidence=0.9, horizon=Horizon.URGENT, id=99,
+    )
+
+    def fake_records(context, slug, rank, snapshot=None, market=None, now=None, persist=True):
+        payload = {"slug": slug, "rank": rank, "signals": [], "skipped": [], "suppressed": []}
+        return payload, [fake_signal]
+
+    monkeypatch.setattr("wfm.daemon.runner.analyze_item_records", fake_records)
+
+    async def fake_deliver(context, signals, sinks=None):
+        return []
+
+    monkeypatch.setattr("wfm.daemon.runner.deliver", fake_deliver)
+    queue = ctx.broadcaster.subscribe()
+
+    await Daemon(ctx).run(max_iterations=1)
+
+    published = queue.get_nowait()
+    assert published["slug"] == "a"
+    assert published["analyzer"] == "flip"
+
+
 async def test_an_unexpected_exception_halts_the_daemon_with_an_alert(ctx, monkeypatch):
     def boom(*args, **kwargs):
         raise ValueError("bad candle")

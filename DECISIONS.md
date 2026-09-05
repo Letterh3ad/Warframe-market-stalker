@@ -1001,3 +1001,125 @@ behaviour by guessing). Leaving the gate in place as documentation of intent (re
 code that reads as enforcement but enforces nothing is worse than either shipping the
 clamp or shipping neither, because the next reader budgets their attention on the belief
 that the limit is guarded there).
+
+## 2026-09-05 - GroupAnalyzer's first implementation, and the two latent gaps it exposed
+
+**Context:** `GroupAnalyzer` shipped in phase 5 as a protocol only. Landing the first
+concrete one for phase 8 (`set_arbitrage`, parts-vs-set arbitrage) reached two paths in
+`analyze_group` that a protocol-only scope never exercised: its FeatureSets were built
+with no book snapshot at all, so any book-scoped GroupAnalyzer would always be skipped
+by `run_group`'s coverage gate; and its persisted group signals never passed through the
+dedup/cooldown check `analyze_item_records` applies to item signals.
+
+**Decision:** Fixed both. `analyze_group` now passes each member's latest stored
+order-book snapshot (`ctx.orders.latest`) when building its FeatureSets, and applies
+`_is_duplicate` to `group_signals` exactly like item-level signals.
+
+**Alternatives:** Leaving book data out (impossible: `set_arbitrage` requires it, so it
+would never fire, silently). Leaving dedup unapplied (an open arbitrage window holds
+until the market corrects; a GUI page re-requesting `/groups/{name}/analysis`, or a
+future daemon-side periodic group sweep, would otherwise re-alert on the same
+opportunity every time).
+
+## 2026-09-05 - The GUI server runs inside the daemon process, sharing one AppContext
+
+**Context:** Phase 8's GUI (`docs/design/2026-09-05-wfm-phase-8-gui-design.md`) needs
+`INTERACTIVE`-priority requests to share the same rate budget the daemon's
+`BACKGROUND`/`BULK` polling uses, per the 2026-08-27 "Request priority classes over one
+shared bucket" decision — that decision only holds if there is exactly one `Budget`
+instance for the whole running system.
+
+**Decision:** `wfm daemon start` runs both `Daemon.run()` and a `uvicorn.Server.serve()`
+as concurrent tasks on one event loop, against one `AppContext`. `serve_gui` defaults
+`False` at the `daemon_service.start()` layer (so every existing test and any
+programmatic caller is unaffected) and `True` at the CLI layer (`wfm daemon start`),
+with `--no-gui` to opt out — useful for a headless deployment (e.g. the phase 9 Pi).
+Stopping the daemon (CLI or, later, a GUI control) kills the GUI's own server; accepted,
+not worked around, per the design doc.
+
+**Alternatives:** A second standalone process for the GUI (reopens the double-rate-limit
+risk the phase 1 priority-class design exists to avoid). A supervisor process managing
+both (real added complexity, deferred until the current behavior proves annoying).
+
+## 2026-09-05 - `wfm validate`'s default analyzer set excludes GROUP-scoped analyzers
+
+**Context:** The validation harness (`wfm/validation/harness.py`) documents in its own
+docstring that `replay` only supports ITEM-scoped analyzers -- a GROUP analyzer's
+signals aren't a per-item time series a replay can score the same way. That limitation
+was unreachable until `set_arbitrage`, phase 8's first GROUP-scoped analyzer, existed:
+`validate()`'s default analyzer list (used whenever `--analyzer` is omitted) was every
+enabled analyzer, and iterating it now reached `set_arbitrage` and raised.
+
+**Decision:** `validate()`'s default analyzer list now filters to `Scope.ITEM`
+analyzers when no explicit `--analyzer` is passed. An explicit `wfm validate --analyzer
+set_arbitrage` still reaches the harness's own clear error unchanged; only the silent,
+implicit inclusion is removed.
+
+**Alternatives:** Teaching the harness to replay GROUP analyzers (out of scope: GROUP
+analyzers score a set of items together, not one item's time series, so there's no
+single-item replay to run). Leaving the default list unfiltered and letting `wfm
+validate` always raise once any GROUP analyzer is registered (the bug this fix
+corrected).
+
+## 2026-09-05 - The phase 8 frontend is a single vanilla HTML file, not Svelte
+
+**Context:** The phase 8 GUI design (2026-09-05) specified Svelte + Vite + a
+`svelte-check` gate, chosen to buy reactive client state for filter/sort/compare and
+live-updating charts. The backend shipped without any frontend, so the only way to use
+the tool was Swagger at `/docs`. Building the Svelte toolchain (npm, a build step, a
+static-output wiring) is real work before anything renders, for a personal single-user
+dashboard whose whole frontend fits in one file.
+
+**Decision:** The frontend is one self-contained `wfm/gui/static/index.html` served as a
+static asset, with no build step and no npm dependency. `lightweight-charts` is kept but
+vendored into `wfm/gui/static/` as a single file rather than pulled from a CDN, so the
+dashboard also works with no internet, which matters for a tool monitoring a local
+daemon. The deviation carries an explicit exit condition recorded in the frontend design
+doc: revisit Svelte if the page outgrows roughly 1500 lines, or the first time shared
+state has to sync across three or more tabs and the manual wiring starts producing bugs.
+
+**Alternatives:** Following the approved Svelte design as written (correct if this GUI
+keeps growing, but front-loads a toolchain the current six tabs do not need). A CDN
+`lightweight-charts` (one less vendored file, but makes a local monitoring dashboard
+depend on internet access to draw a chart).
+
+## 2026-09-05 - The GUI caches one MarketContext rather than rebuilding it per item view
+
+**Context:** `report_service.report()` calls `feature_service.market_context()` on every
+invocation, and that is a sampled pass across the whole catalog. `report_group` already
+avoids paying it per member by building one context for the group (phase 4 review
+finding). The item detail panel has the same problem in a worse shape: browsing the
+catalog means one full sampled pass per click, which directly contradicts the "snappy"
+requirement the GUI exists to satisfy.
+
+**Decision:** The GUI holds one `MarketContext` on `app.state`, rebuilt when older than
+15 minutes, and passes it through `report()`'s existing `market` parameter, which exists
+for exactly this purpose. The cache is GUI-local; the daemon's poll loop keeps its own,
+unchanged. A market-wide figure that moves slowly is the same justification already
+recorded for `report_group`.
+
+**Alternatives:** Rebuilding per request (correct but slow, and the cost is paid on every
+click). Sharing one cache between the GUI and the poll loop (couples two components with
+different freshness needs for no measured gain).
+
+## 2026-09-05 - The frontend's Svelte exit condition is tripped, but stay vanilla for now
+
+**Context:** The phase 8 frontend design doc set an exit condition on the vanilla-HTML
+deviation: revisit Svelte at roughly 1500 lines OR the first time shared state must sync
+across three or more tabs and the manual wiring produces a bug. Both halves are now met.
+`wfm/gui/static/index.html` is ~1600 lines, and `selectItem` plus the shared persistent
+`#detail-pane` are driven from four tabs (Catalog, Watchlist, Signals, Groups). That
+shared ownership produced one real async bug: an in-flight `/items/{slug}` or
+`/groups/{name}/analysis` response resolving after a tab switch painted into the wrong
+tab, because `selectTab` cleared the panes but never invalidated the in-flight sequence.
+
+**Decision:** Stay vanilla for now. The bug is fixed in this review wave (seq bumps in
+`selectTab`, seq guards on the detail button handlers and the list loaders). Porting a
+green 1600-line file to Svelte with no test framework on either side trades a known-good
+artifact for an unknown one. Reconsider at the next substantive feature: a seventh tab, a
+second chart, or client state that must survive a tab switch.
+
+**Alternatives:** Port to Svelte now (rejected: real cost and risk with no safety net,
+and the file is currently working). Do nothing and leave the trip unrecorded (rejected:
+the exit condition existing means the trip has to be on the record even if the call is to
+stay).

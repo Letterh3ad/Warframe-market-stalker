@@ -14,7 +14,7 @@ _INFRASTRUCTURE = {"registry", "runner", "base"}
 
 # Analyzers that ship with the tool. A broken one is a bug, not a skippable scratch
 # file, so discovery failing to load any of these is fatal.
-_CORE = {"flip", "revert", "selltime"}
+_CORE = {"flip", "revert", "selltime", "set_arbitrage"}
 
 _REGISTERED: dict[str, object] = {}
 

@@ -19,6 +19,8 @@ _ENV_PREFIX = "WFM_"
 class Config:
     db_path: Path = Path("wfm_market.db")
     pid_file: Path = Path("wfm.pid")
+    gui_host: str = "127.0.0.1"
+    gui_port: int = 8420
     requests_per_second: float = 2.8
     concurrency: int = 1
     request_timeout_s: float = 20.0
@@ -96,7 +98,7 @@ class Config:
                 out[name] = float(raw)
             elif name in ("crossplay", "persist_features"):
                 out[name] = raw.strip().lower() in ("1", "true", "yes")
-            elif name in ("platform", "language", "discord_webhook_url"):
+            elif name in ("platform", "language", "discord_webhook_url", "gui_host"):
                 out[name] = raw
             else:
                 out[name] = int(raw)

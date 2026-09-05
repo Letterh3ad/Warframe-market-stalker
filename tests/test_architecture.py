@@ -7,6 +7,7 @@ SOURCE_ROOT = Path(__file__).resolve().parents[1] / "wfm"
 FORBIDDEN_FOR_FRONTENDS = ("wfm.store", "wfm.api", "wfm.analyzers")
 FORBIDDEN_FOR_ANALYZERS = ("wfm.api", "wfm.store")
 FORBIDDEN_FOR_FEATURES = ("wfm.api", "wfm.store", "wfm.services")
+FORBIDDEN_FOR_SERVICES = ("wfm.gui",)
 
 
 def _imports(path: Path) -> set[str]:
@@ -24,7 +25,7 @@ def _modules(package: str) -> list[Path]:
     return sorted((SOURCE_ROOT / package).rglob("*.py"))
 
 
-@pytest.mark.parametrize("path", _modules("cli"), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", _modules("cli") + _modules("gui"), ids=lambda p: p.name)
 def test_frontend_modules_only_reach_services(path):
     offenders = {
         name
@@ -70,3 +71,21 @@ def test_analyzer_modules_touch_neither_api_nor_store(path):
         if any(name == f or name.startswith(f + ".") for f in FORBIDDEN_FOR_ANALYZERS)
     }
     assert offenders == set()
+
+
+@pytest.mark.parametrize(
+    "path", _modules("services") or [SOURCE_ROOT / "cli" / "main.py"], ids=lambda p: p.name
+)
+def test_service_modules_never_import_the_gui(path):
+    if "services" not in str(path):
+        pytest.skip("services package does not exist yet")
+    offenders = {
+        name
+        for name in _imports(path)
+        if any(name == f or name.startswith(f + ".") for f in FORBIDDEN_FOR_SERVICES)
+    }
+    assert offenders == set(), (
+        f"{path.name} imports {offenders}. Services must be usable without wfm.gui "
+        "existing at all; wfm.cli is the composition root that is allowed to import "
+        "both, and builds the app to hand to services that need it."
+    )

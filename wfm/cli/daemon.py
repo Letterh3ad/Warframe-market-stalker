@@ -13,16 +13,30 @@ def register(parser) -> None:
         action="store_true",
         help="clear an orphaned pid file before the single-instance guard",
     )
+    start.add_argument(
+        "--no-gui",
+        action="store_false",
+        dest="serve_gui",
+        help="do not start the embedded web GUI alongside the daemon",
+    )
     for name in ("stop", "status"):
         sub.add_parser(name)
-    parser.set_defaults(handler=run, force=False)
+    parser.set_defaults(handler=run, force=False, serve_gui=True)
 
 
 async def run(args) -> int:
     ctx = context_factory.build(args)
     try:
         if args.daemon_command == "start":
-            emit(await daemon_service.start(ctx, force=args.force), args.json)
+            from wfm.gui.app import build_app
+
+            app = build_app(ctx) if args.serve_gui else None
+            emit(
+                await daemon_service.start(
+                    ctx, force=args.force, serve_gui=args.serve_gui, app=app
+                ),
+                args.json,
+            )
         elif args.daemon_command == "stop":
             emit(daemon_service.stop(ctx), args.json)
         else:

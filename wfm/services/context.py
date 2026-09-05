@@ -5,6 +5,7 @@ import sqlite3
 from wfm.api.breaker import CircuitBreaker
 from wfm.api.client import WFMClient
 from wfm.api.ratelimit import TokenBucket
+from wfm.services.broadcaster import SignalBroadcaster
 from wfm.clock import Clock, SystemClock
 from wfm.config import Config
 from wfm.store.daemon_state import DaemonStateRepo
@@ -43,6 +44,7 @@ class AppContext:
         self.conn = conn if conn is not None else connect(config.db_path)
         migrate(self.conn)
         self.breaker = CircuitBreaker(clock=self.clock)
+        self.broadcaster = SignalBroadcaster()
         self.budget = Budget(
             TokenBucket(config.requests_per_second, self.clock),
             self.clock,

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from wfm.analyzers import registry
+from wfm.models import Scope
 from wfm.services.context import AppContext
 from wfm.validation.harness import replay, sweep_thresholds
 
@@ -16,7 +17,9 @@ def validate(
     sweep_key: str | None = None,
     sweep_values: list | None = None,
 ) -> list[dict]:
-    names = [analyzer] if analyzer else [a.name for a in registry.enabled(ctx.config)]
+    names = [analyzer] if analyzer else [
+        a.name for a in registry.enabled(ctx.config) if a.scope is Scope.ITEM
+    ]
     if sweep_key and sweep_values:
         rows: list[dict] = []
         for name in names:
