@@ -80,7 +80,7 @@ def analyze_item_records(
     payload = {
         "slug": slug,
         "rank": rank,
-        "signals": [_as_dict(s) for s in kept],
+        "signals": [signal_payload(s) for s in kept],
         "skipped": skipped,
         "suppressed": suppressed,
     }
@@ -111,24 +111,30 @@ def analyze_group(ctx: AppContext, name: str, persist: bool = True) -> dict:
         for slug, rank in members
     ]
     feature_sets = [
-        feature_service.build_for(ctx, slug, rank, market=market, now=now)
+        feature_service.build_for(
+            ctx, slug, rank, snapshot=ctx.orders.latest(slug, rank), market=market, now=now
+        )
         for slug, rank in members
     ]
     group_signals, skipped = run_group(
         registry.enabled(ctx.config), feature_sets, build_context(ctx, now=now)
     )
-    if persist:
-        for signal in group_signals:
-            ctx.signals.insert(signal)
+    kept: list[Signal] = []
+    for signal in group_signals:
+        if _is_duplicate(ctx, signal, now):
+            continue
+        if persist:
+            signal = replace(signal, id=ctx.signals.insert(signal))
+        kept.append(signal)
     return {
         "name": name,
         "items": per_item,
-        "group_signals": [_as_dict(s) for s in group_signals],
+        "group_signals": [signal_payload(s) for s in kept],
         "skipped": skipped,
     }
 
 
-def _as_dict(signal: Signal) -> dict:
+def signal_payload(signal: Signal) -> dict:
     return {
         "slug": signal.slug,
         "rank": signal.rank,

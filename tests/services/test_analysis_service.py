@@ -5,7 +5,7 @@ import pytest
 
 from tests.fakes.clock import FakeClock
 from wfm.config import Config
-from wfm.models import DailyCandle, Direction, Horizon, Item, Side, Signal, Trade
+from wfm.models import BookSnapshot, DailyCandle, Direction, Horizon, Item, Side, Signal, Trade
 from wfm.services import analysis_service
 from wfm.services.context import AppContext
 
@@ -148,3 +148,47 @@ def test_analyze_group_covers_every_member(ctx):
     result = analysis_service.analyze_group(ctx, "mods")
     assert result["name"] == "mods"
     assert len(result["items"]) == 1
+
+
+def test_analyze_group_feature_sets_carry_book_data(ctx, monkeypatch):
+    ctx.groups.create("mods", NOW)
+    ctx.groups.add_member("mods", "x", 0)
+    ctx.orders.insert(
+        BookSnapshot(slug="x", rank=0, ts=NOW, online_best_ask=30, online_best_bid=40)
+    )
+    seen_books = []
+
+    def fake_run_group(analyzers, feature_sets, analyzer_ctx):
+        seen_books.extend(fs.book for fs in feature_sets)
+        return [], []
+
+    monkeypatch.setattr("wfm.services.analysis_service.run_group", fake_run_group)
+    analysis_service.analyze_group(ctx, "mods")
+    assert seen_books == [seen_books[0]]
+    assert seen_books[0] is not None
+    assert seen_books[0].online_best_ask == 30
+
+
+def test_analyze_group_signals_are_deduplicated_like_item_signals(ctx, monkeypatch):
+    ctx.groups.create("mods", NOW)
+    ctx.groups.add_member("mods", "x", 0)
+
+    def fake_run_group(analyzers, feature_sets, analyzer_ctx):
+        return (
+            [
+                Signal(
+                    slug="x", rank=0, analyzer="set_arbitrage", ts=analyzer_ctx.now,
+                    direction=Direction.BUY, magnitude=5.0, confidence=0.8,
+                    horizon=Horizon.URGENT,
+                    expires_at=analyzer_ctx.now + timedelta(minutes=20), evidence={},
+                )
+            ],
+            [],
+        )
+
+    monkeypatch.setattr("wfm.services.analysis_service.run_group", fake_run_group)
+    first = analysis_service.analyze_group(ctx, "mods")
+    assert len(first["group_signals"]) == 1
+    second = analysis_service.analyze_group(ctx, "mods")
+    assert second["group_signals"] == []
+    assert len(ctx.signals.query()) == 1
