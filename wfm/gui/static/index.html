@@ -69,10 +69,10 @@ body {
 .daemon-dot.faint { background: var(--text-faint); }
 
 #list-pane {
-  overflow: auto; min-width: 0; padding: 18px 20px;
+  overflow: auto; min-width: 0; padding: 18px 20px 62px;
 }
 #detail-pane {
-  overflow: auto; min-width: 0; padding: 18px 20px;
+  overflow: auto; min-width: 0; padding: 18px 20px 62px;
   background: var(--bg-raised);
   border-left: 1px solid var(--border);
 }
@@ -189,12 +189,16 @@ function el(tag, attrs, ...children) {
 
 // --- null-honest formatter -------------------------------------------------
 // CONTRACT: fmt ALWAYS returns a STRING (never an Element).
-//   null / undefined -> '<span class="na">unavailable</span>'  (an HTML string)
-//   number           -> String(value) + (unit || "")           ('0' for 0, '105p')
-// Because the null branch is HTML, fmt output is meant for innerHTML / template
-// literals, never textContent. 0 is a real value and renders as '0'.
+//   null / undefined      -> '<span class="na">unavailable</span>'  (HTML string)
+//   non-number (any type)  -> '<span class="na">unavailable</span>'  (HTML string)
+//   number                 -> String(value) + (unit || "")          ('0' for 0)
+// Output is HTML for innerHTML / template-literal use ONLY, never textContent:
+// the unavailable branches return a literal <span> tag. The non-number guard
+// keeps a later task's stray server string from becoming an injection vector.
+// 0 is a real value and renders as '0' (typeof 0 === "number").
 function fmt(value, unit) {
   if (value == null) return '<span class="na">unavailable</span>';
+  if (typeof value !== "number") return '<span class="na">unavailable</span>';
   return `${value}${unit || ""}`;
 }
 
@@ -253,10 +257,10 @@ async function pollDaemon() {
     if (s.status === "running") {
       if (s.stale) setDaemon("warn", "stale");
       else setDaemon("up", "running");
-    } else if (s.stale) {
-      setDaemon("warn", "stale");
     } else if (s.status === "halted" || s.status === "stopping") {
       setDaemon("down", s.status);
+    } else if (s.stale) {
+      setDaemon("warn", "stale");
     } else if (s.status === "not running") {
       setDaemon("faint", "not running");
     } else {
