@@ -66,10 +66,12 @@ class ItemsRepo:
         self, query: str | None = None, limit: int = 100, offset: int = 0
     ) -> list[Item]:
         if query:
+            like = f"%{_escape_like(query)}%"
             rows = self._conn.execute(
-                f"SELECT {_COLUMNS} FROM items WHERE name LIKE ? ESCAPE '\\' "
+                f"SELECT {_COLUMNS} FROM items "
+                "WHERE name LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\' "
                 "ORDER BY name LIMIT ? OFFSET ?",
-                (f"%{_escape_like(query)}%", limit, offset),
+                (like, like, limit, offset),
             )
         else:
             rows = self._conn.execute(
@@ -89,9 +91,11 @@ class ItemsRepo:
 
     def count(self, query: str | None = None) -> int:
         if query:
+            like = f"%{_escape_like(query)}%"
             row = self._conn.execute(
-                "SELECT COUNT(*) FROM items WHERE name LIKE ? ESCAPE '\\'",
-                (f"%{_escape_like(query)}%",),
+                "SELECT COUNT(*) FROM items "
+                "WHERE name LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\'",
+                (like, like),
             ).fetchone()
         else:
             row = self._conn.execute("SELECT COUNT(*) FROM items").fetchone()

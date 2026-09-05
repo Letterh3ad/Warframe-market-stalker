@@ -93,3 +93,20 @@ def test_page_escapes_like_wildcards_in_the_query(conn):
     # A bare % would match every row; escaped, it matches only the literal one.
     assert [i.slug for i in repo.page("%")] == ["pct"]
     assert repo.count("%") == 1
+
+
+def test_page_and_count_match_on_tags_as_well_as_name(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many([
+        Item(slug="mp", name="Mirage Prime Set", url_name="mp", tags=("warframe", "prime", "set")),
+        Item(slug="tb", name="Tigris Prime Barrel", url_name="tb", tags=("weapon", "prime", "component")),
+        Item(slug="sc", name="Sortie Cache Scene", url_name="sc", tags=("scene",)),
+    ])
+    # "component" appears in no name, only in tb's tags.
+    assert [i.slug for i in repo.page("component")] == ["tb"]
+    assert repo.count("component") == 1
+    # "prime" is in both names and tags; still one hit each, no duplication.
+    assert {i.slug for i in repo.page("prime")} == {"mp", "tb"}
+    assert repo.count("prime") == 2
+    # A wildcard in a tag search is escaped too.
+    assert repo.count("we%pon") == 0

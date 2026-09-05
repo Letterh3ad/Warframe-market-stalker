@@ -21,6 +21,7 @@
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { overflow-x: hidden; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
@@ -637,7 +638,7 @@ function renderCatalog() {
   const pane = document.getElementById("list-pane");
   const input = el("input", {
     type: "search",
-    placeholder: "search catalog by name...",
+    placeholder: "search by name or tag...",
     value: state.catalog.q,
     oninput: (e) => {
       const q = e.target.value;
