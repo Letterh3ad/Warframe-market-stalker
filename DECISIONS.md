@@ -1141,3 +1141,78 @@ migration and a sync-path change for a feature that works fine as substring). SQ
 over name+tags (heavier; the catalog is 3839 rows and every query is already sub-ms).
 `json_each` on the tags column (exact tag match without a schema change, but more complex
 SQL and still no real gain over LIKE at this scale).
+
+## 2026-09-05 - News bias applies as a post-pass, not a fifth feature block
+
+**Context:** Warframe prices move on announced supply/demand shocks (Prime Vault
+rotations, Prime Access, reworks, mod nerfs). Adding news to the analysis could plug in
+at several depths: a `NewsFeatures` block on `FeatureSet` alongside price/book/
+seasonality/market, a standalone news analyzer, advisory display only, or a re-weighting
+pass over signals the existing analyzers already produced.
+
+**Decision:** A bias post-pass in `analysis_service`. Analyzers run unchanged, then their
+signals are re-weighted from a `NewsIndex`. `wfm/analyzers/` is never touched, its
+architecture test stays green, and the whole news layer stays deletable in one commit.
+The GUI gets an opt-in toggle (default off) so the unbiased numbers are always visible.
+Bias power is deliberately limited: confidence is scaled, magnitude may only grow, and
+`1 + k·alignment` with `k < 1` makes direction-flipping arithmetically impossible rather
+than guard-checked. Items with strong news and no signal surface as `NewsWatch` rows, not
+`Signal` rows, so "signal" keeps meaning "a market analyzer fired".
+
+**Alternatives:** A fifth `NewsFeatures` block (most architecturally native, rejected:
+changes the `FeatureSet` contract that every analyzer and 781 tests depend on, for a
+feature not yet shown to work). A standalone news analyzer (clean, rejected: no
+interaction between news and market evidence, which is the whole point). Advisory display
+only (smallest, rejected: makes the user do the combining in their head). Full symmetric
+multiplier that can invert a signal (most responsive, rejected: a single misclassified
+article inverting a correct market call is the maximum-damage failure mode, and small
+models do misclassify).
+
+## 2026-09-05 - Pluggable classifier, small local Ollama model by default
+
+**Context:** Extracting event type, direction and strength from news text needs a
+classifier. Options ranged from hand-written rules over a curated lexicon, through local
+embeddings, to a hosted LLM. Ollama 0.32.3 is already installed on the dev machine; the
+GPU is an RTX 5060 Laptop with 8GB VRAM. The project's entire dependency list is `httpx`,
+`fastapi`, `uvicorn`, and it has no build step anywhere.
+
+**Decision:** A `Classifier` protocol with `OllamaClassifier` (default), `ClaudeClassifier`
+(alternate) and `FakeClassifier` (tests). Ollama serves HTTP on localhost and `httpx` is
+already a dependency, so the local backend adds **no new Python package**. One JSON schema
+in `wfm/news/schema.py` is handed to both backends (Ollama `format`, Claude
+`output_config.format`), so constrained decoding makes parse failures structurally
+impossible. Prompting is per-candidate rather than whole-article: the fuzzy gate supplies
+one subject plus its surrounding sentences, converting hard extraction into constrained
+classification, which is what small models are good at. Slug expansion is **not** the
+model's job; `link.py` derives affected slugs from catalog set membership and a static
+event-type × item-role table. `classifier_name`/`classifier_version` are stored per
+article so backends can be swapped without corrupting history.
+
+**Alternatives:** Rules plus a curated lexicon (free and deterministic, rejected: a
+hand-maintained ontology forever, and weak on anything phrased unusually). Local
+embeddings via sentence-transformers (free at runtime, rejected: drags torch into a
+three-dependency project, and embeddings give neither direction nor blast radius).
+Claude-only (simplest, rejected: makes the multi-thousand-article historical backfill a
+recurring bill, which in practice means the backtest never gets re-run). Sending whole
+articles to a 4B model (rejected: unreliable list extraction, the failure mode small
+models are worst at).
+
+## 2026-09-05 - Frontend splits to native ES modules, still not Svelte
+
+**Context:** The 2026-09-05 vanilla-vs-Svelte entry recorded an exit condition: reconsider
+at "a seventh tab, a second chart, or client state that must survive a tab switch". The
+news feature adds a tab, and `wfm/gui/static/index.html` is now 1655 lines. The condition
+is tripped.
+
+**Decision:** Stay vanilla, but stop treating one file as acceptable. Move to native ES
+modules (`<script type="module" src="/static/app.js">`), which browsers support with **no
+build step** and which the existing `/static` mount already serves. Tabs migrate one at a
+time instead of in a single rewrite, and the news tab lands as a new module rather than
+300 more lines. The Svelte question moves to the next substantive feature after this one,
+with "modules are not holding" as the new trigger.
+
+**Alternatives:** Port to Svelte now (rejected again, and for the same reason as before:
+a rewrite with no test framework on either side, now made worse by also being coupled to
+a new feature). Add the news tab to `index.html` and say nothing (rejected: the exit
+condition existing means the trip has to be on the record, and 1655 going on 2000 lines is
+the problem the condition was written to catch).
