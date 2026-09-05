@@ -138,6 +138,16 @@ table.stat-table td { font-family: var(--mono); }
 .kv .k { width: 46%; color: var(--text-dim); }
 .kv .v { font-family: var(--mono); }
 
+/* --- price history chart (Task 8) --- */
+.price-chart {
+  width: 100%; max-width: 100%; height: 260px;
+  border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg-inset); overflow: hidden;
+}
+.price-chart .chart-note {
+  margin: 0; padding: 12px; font-size: 12px; color: var(--text-dim);
+}
+
 input, select {
   font: inherit; background: var(--bg-inset); color: var(--text);
   border: 1px solid var(--border); border-radius: 5px; padding: 5px 8px;
@@ -157,6 +167,7 @@ input, select {
   padding: 2px 8px; font: inherit;
 }
 </style>
+<script src="/static/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
   <nav id="rail">
@@ -306,22 +317,134 @@ function statTable(pairs) {
   return el("table", { class: "stat-table" }, tbody);
 }
 
+// --- price history chart (Task 8) ------------------------------------------
+// The history fetch is fired alongside GET /items/{slug} (not after it) and its
+// result cached in historyState keyed by detailSeq. Whichever of the two
+// resolves last triggers the draw: renderDetail calls drawPriceChart() once the
+// #price-chart container exists, and the history promise calls it again when the
+// rows arrive. Stale responses (seq !== detailSeq) are dropped.
+let priceChart = null;
+let detailSeq = 0;
+const historyState = { seq: -1, status: "pending", rows: null };
+
+function disposePriceChart() {
+  if (priceChart) {
+    try { priceChart.remove(); } catch (_) { /* container already gone */ }
+    priceChart = null;
+  }
+}
+
+// Draws (or redraws) into #price-chart from historyState. No-op when the
+// container is absent (detail pane not rendered yet). Always disposes the prior
+// chart first so click-through does not leak an instance per selection.
+function drawPriceChart() {
+  const box = document.getElementById("price-chart");
+  if (!box) return;
+  disposePriceChart();
+  box.replaceChildren();
+
+  if (historyState.status === "pending") {
+    box.append(el("p", { class: "chart-note" }, "loading chart…"));
+    return;
+  }
+  if (historyState.status === "error") {
+    box.append(el("p", { class: "chart-note" }, "chart unavailable"));
+    return;
+  }
+
+  const rows = (historyState.rows || []).filter(
+    (r) => r && r.open != null && r.high != null && r.low != null && r.close != null
+  );
+  if (rows.length < 2) {
+    box.append(el("p", { class: "chart-note" },
+      rows.length === 0
+        ? "no history to chart"
+        : `not enough history to chart (${rows.length} candle${rows.length === 1 ? "" : "s"})`));
+    return;
+  }
+  if (!window.LightweightCharts) {
+    box.append(el("p", { class: "chart-note" }, "chart unavailable"));
+    return;
+  }
+
+  const css = getComputedStyle(document.documentElement);
+  const c = (name) => css.getPropertyValue(name).trim();
+  const chart = window.LightweightCharts.createChart(box, {
+    width: box.clientWidth,
+    height: 260,
+    layout: { background: { color: c("--bg-inset") }, textColor: c("--text-dim") },
+    grid: {
+      vertLines: { color: c("--border") },
+      horzLines: { color: c("--border") },
+    },
+    timeScale: { borderColor: c("--border") },
+    rightPriceScale: { borderColor: c("--border") },
+  });
+  const series = chart.addCandlestickSeries({
+    upColor: c("--up"), downColor: c("--down"),
+    wickUpColor: c("--up"), wickDownColor: c("--down"),
+    borderVisible: false,
+  });
+  series.setData(rows.map((r) => ({
+    time: r.date, open: r.open, high: r.high, low: r.low, close: r.close,
+  })));
+  chart.timeScale().fitContent();
+  priceChart = chart;
+}
+
 async function selectItem(slug, rank, meta) {
+  const seq = ++detailSeq;
+  disposePriceChart();
+  historyState.seq = seq;
+  historyState.status = "pending";
+  historyState.rows = null;
+
   const pane = document.getElementById("detail-pane");
   pane.replaceChildren(el("p", { class: "muted" }, "loading..."));
+  const ref = { slug, rank, meta: meta || {} };
+
+  // Fire both requests now; render each as it resolves so a slow one does not
+  // block the other.
+  const itemP = api(`/items/${encodeURIComponent(slug)}?rank=${encodeURIComponent(rank)}`);
+  const historyP = api(
+    `/items/${encodeURIComponent(slug)}/history?rank=${encodeURIComponent(rank)}&days=90`
+  );
+
+  historyP.then(
+    (rows) => {
+      if (seq !== detailSeq) return;
+      historyState.status = "ok";
+      historyState.rows = Array.isArray(rows) ? rows : [];
+      drawPriceChart();
+    },
+    (e) => {
+      if (seq !== detailSeq) return;
+      historyState.status = "error";
+      historyState.rows = null;
+      showError(e.message);
+      drawPriceChart();
+    },
+  );
+
   let body;
   try {
-    body = await api(`/items/${encodeURIComponent(slug)}?rank=${encodeURIComponent(rank)}`);
+    body = await itemP;
   } catch (e) {
+    if (seq !== detailSeq) return;
+    disposePriceChart();
     pane.replaceChildren(el("p", { class: "muted" }, "could not load item."));
     showError(e.message);
     return;
   }
-  renderDetail(body, { slug, rank, meta: meta || {} });
+  if (seq !== detailSeq) return;
+  renderDetail(body, ref);
 }
 
 function renderDetail(body, ref) {
   const pane = document.getElementById("detail-pane");
+  // Refresh / watchlist re-renders replace the whole pane; drop the old chart
+  // before its container node is discarded, then redraw from cached history.
+  disposePriceChart();
   const price = body.price || {};
   const market = body.market || {};
   const book = body.book || {};
@@ -394,6 +517,12 @@ function renderDetail(body, ref) {
   });
 
   const actions = el("div", { class: "detail-actions" }, refreshBtn, watchBtn);
+
+  // --- Price history chart (filled by drawPriceChart once history resolves) ---
+  const chartBlock = el("div", { class: "stat-block" },
+    el("h2", null, "Price history"),
+    el("div", { id: "price-chart", class: "price-chart" }),
+  );
 
   // --- Statistics (price) ---
   const statsBlock = el("div", { class: "stat-block" }, el("h2", null, "Statistics"));
@@ -473,7 +602,8 @@ function renderDetail(body, ref) {
     el("div", { class: "age-line" }, `book age: ${humanAge(body.book_age_seconds)}`)
   );
 
-  pane.replaceChildren(header, actions, statsBlock, marketBlock, seasonBlock, bookBlock);
+  pane.replaceChildren(header, actions, chartBlock, statsBlock, marketBlock, seasonBlock, bookBlock);
+  drawPriceChart();
 }
 
 let catalogDebounce = null;
@@ -603,6 +733,7 @@ function selectTab(id) {
   for (const btn of document.querySelectorAll(".tab-btn")) {
     btn.classList.toggle("active", btn.dataset.tab === id);
   }
+  disposePriceChart();
   document.getElementById("list-pane").replaceChildren();
   document.getElementById("detail-pane").replaceChildren();
   tab.render();
@@ -654,6 +785,10 @@ document.addEventListener("DOMContentLoaded", () => {
   selectTab("catalog");
   pollDaemon();
   setInterval(pollDaemon, 10000);
+  window.addEventListener("resize", () => {
+    const box = document.getElementById("price-chart");
+    if (priceChart && box) priceChart.applyOptions({ width: box.clientWidth });
+  });
 });
 </script>
 </body>
