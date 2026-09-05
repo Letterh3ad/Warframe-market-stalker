@@ -11,17 +11,17 @@ router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
 
 @router.get("")
-def list_watchlist(ctx: AppContext = Depends(get_ctx)) -> list[dict]:
+async def list_watchlist(ctx: AppContext = Depends(get_ctx)) -> list[dict]:
     return watch_service.list_(ctx)
 
 
 @router.post("")
-def add_to_watchlist(
+async def add_to_watchlist(
     body: WatchlistAddRequest, ctx: AppContext = Depends(get_ctx)
 ) -> dict:
     return watch_service.add(ctx, body.query, rank=body.rank, pin=body.pin, alert=body.alert)
 
 
 @router.delete("/{slug}/{rank}")
-def remove_from_watchlist(slug: str, rank: int, ctx: AppContext = Depends(get_ctx)) -> dict:
+async def remove_from_watchlist(slug: str, rank: int, ctx: AppContext = Depends(get_ctx)) -> dict:
     return watch_service.remove(ctx, slug, rank=rank)

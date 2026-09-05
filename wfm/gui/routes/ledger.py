@@ -12,12 +12,12 @@ router = APIRouter(prefix="/ledger", tags=["ledger"])
 
 
 @router.get("/holdings")
-def get_holdings(ctx: AppContext = Depends(get_ctx)) -> list[dict]:
+async def get_holdings(ctx: AppContext = Depends(get_ctx)) -> list[dict]:
     return ledger_service.holdings(ctx)
 
 
 @router.get("/pnl")
-def get_pnl(
+async def get_pnl(
     since: str | None = None, realized_only: bool = False,
     ctx: AppContext = Depends(get_ctx),
 ) -> dict:
