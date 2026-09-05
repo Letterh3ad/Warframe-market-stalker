@@ -36,3 +36,17 @@ def test_get_item_reports_price_history(conn):
 def test_get_item_with_an_unresolvable_slug_is_a_404(conn):
     response = _client(conn).get("/items/does-not-exist")
     assert response.status_code == 404
+
+
+def test_get_item_history_returns_candles(conn):
+    response = _client(conn).get("/items/x/history", params={"days": 30})
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 28
+    assert body[0]["date"] == "2026-08-01"
+    assert body[0]["close"] == 50
+
+
+def test_get_item_history_for_an_unknown_slug_is_a_404(conn):
+    response = _client(conn).get("/items/does-not-exist/history")
+    assert response.status_code == 404

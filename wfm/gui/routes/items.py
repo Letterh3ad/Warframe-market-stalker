@@ -15,3 +15,13 @@ async def get_item(
     ctx: AppContext = Depends(get_ctx),
 ) -> dict:
     return await report_service.report(ctx, slug, rank=rank, refresh=refresh)
+
+
+@router.get("/{slug}/history")
+async def get_item_history(
+    slug: str,
+    rank: str | int | None = None,
+    days: int = 90,
+    ctx: AppContext = Depends(get_ctx),
+) -> list[dict]:
+    return report_service.history(ctx, slug, rank=rank, days=days)

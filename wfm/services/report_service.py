@@ -68,6 +68,35 @@ async def report(
     return payload
 
 
+MAX_HISTORY_DAYS = 365
+
+
+def history(
+    ctx: AppContext,
+    slug_query: str,
+    rank: str | int | None = None,
+    days: int = 90,
+) -> list[dict]:
+    days = max(1, min(int(days), MAX_HISTORY_DAYS))
+    slug, ranks = catalog_service.resolve(ctx, slug_query, rank)
+    if len(ranks) > 1:
+        raise ValueError(
+            f"{slug_query!r} resolves to {len(ranks)} ranks. history covers one rank at "
+            "a time, so give a rank."
+        )
+    # end= the newest complete day, not today: these candles come from the API's
+    # statistics_closed and never include the current day, so anchoring on today
+    # silently drops one day off the requested window.
+    anchor = feature_service.anchor_date(ctx, ctx.clock.utcnow())
+    return [
+        {
+            "date": c.date, "open": c.open, "high": c.high,
+            "low": c.low, "close": c.close, "volume": c.volume,
+        }
+        for c in ctx.daily.window(slug, ranks[0], days, end=anchor)
+    ]
+
+
 async def report_group(ctx: AppContext, name: str, refresh: bool = False) -> dict:
     # Built once for the whole group: it is a market-wide figure that moves slowly, and
     # rebuilding it per member costs a full sampled catalog pass each time.

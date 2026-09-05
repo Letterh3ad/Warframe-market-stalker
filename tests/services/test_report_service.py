@@ -127,3 +127,27 @@ async def test_report_refuses_rank_all_rather_than_silently_reporting_one_rank(c
     )
     with pytest.raises(ValueError, match="rank"):
         await report_service.report(ctx, "modded", rank="all")
+
+
+def test_history_anchors_on_the_newest_complete_day_not_today(ctx):
+    # history() must pass end=anchor_date, not end=None. end=None falls back to real
+    # wall-clock datetime.now(timezone.utc) (~Sept 2026), which against the fixture's
+    # August candles returns []. So this asserts the anchor is wired.
+    rows = report_service.history(ctx, "x", days=5)
+    assert [r["date"] for r in rows] == [
+        "2026-08-23", "2026-08-24", "2026-08-25", "2026-08-26", "2026-08-27",
+    ]
+
+
+def test_history_clamps_days_and_carries_ohlc(ctx):
+    rows = report_service.history(ctx, "x", days=99999)  # clamped to MAX_HISTORY_DAYS=365
+    assert len(rows) == 27
+    assert rows[-1] == {
+        "date": "2026-08-27", "open": None, "high": 46, "low": 36,
+        "close": 42, "volume": 20,
+    }
+
+
+def test_history_on_an_unknown_slug_raises_rather_than_returning_empty(ctx):
+    with pytest.raises(LookupError):
+        report_service.history(ctx, "no-such-item")
