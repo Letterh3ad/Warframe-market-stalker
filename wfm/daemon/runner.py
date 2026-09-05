@@ -9,7 +9,7 @@ from datetime import date, datetime
 from wfm.api.errors import ApiError, CircuitOpen
 from wfm.features import price as price_features
 from wfm.services.alert_service import deliver, operational, run_digest
-from wfm.services.analysis_service import analyze_item_records
+from wfm.services.analysis_service import analyze_item_records, signal_payload
 from wfm.services.context import AppContext
 from wfm.services.feature_service import anchor_date, market_context
 from wfm.services.report_service import poll_book
@@ -206,6 +206,8 @@ class Daemon:
             )
             if signals:
                 await deliver(ctx, signals)
+                for signal in signals:
+                    ctx.broadcaster.publish(signal_payload(signal))
 
             changed = previous is None or (
                 previous.best_ask,
