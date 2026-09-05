@@ -1060,3 +1060,44 @@ analyzers score a set of items together, not one item's time series, so there's 
 single-item replay to run). Leaving the default list unfiltered and letting `wfm
 validate` always raise once any GROUP analyzer is registered (the bug this fix
 corrected).
+
+## 2026-09-05 - The phase 8 frontend is a single vanilla HTML file, not Svelte
+
+**Context:** The phase 8 GUI design (2026-09-05) specified Svelte + Vite + a
+`svelte-check` gate, chosen to buy reactive client state for filter/sort/compare and
+live-updating charts. The backend shipped without any frontend, so the only way to use
+the tool was Swagger at `/docs`. Building the Svelte toolchain (npm, a build step, a
+static-output wiring) is real work before anything renders, for a personal single-user
+dashboard whose whole frontend fits in one file.
+
+**Decision:** The frontend is one self-contained `wfm/gui/static/index.html` served as a
+static asset, with no build step and no npm dependency. `lightweight-charts` is kept but
+vendored into `wfm/gui/static/` as a single file rather than pulled from a CDN, so the
+dashboard also works with no internet, which matters for a tool monitoring a local
+daemon. The deviation carries an explicit exit condition recorded in the frontend design
+doc: revisit Svelte if the page outgrows roughly 1500 lines, or the first time shared
+state has to sync across three or more tabs and the manual wiring starts producing bugs.
+
+**Alternatives:** Following the approved Svelte design as written (correct if this GUI
+keeps growing, but front-loads a toolchain the current six tabs do not need). A CDN
+`lightweight-charts` (one less vendored file, but makes a local monitoring dashboard
+depend on internet access to draw a chart).
+
+## 2026-09-05 - The GUI caches one MarketContext rather than rebuilding it per item view
+
+**Context:** `report_service.report()` calls `feature_service.market_context()` on every
+invocation, and that is a sampled pass across the whole catalog. `report_group` already
+avoids paying it per member by building one context for the group (phase 4 review
+finding). The item detail panel has the same problem in a worse shape: browsing the
+catalog means one full sampled pass per click, which directly contradicts the "snappy"
+requirement the GUI exists to satisfy.
+
+**Decision:** The GUI holds one `MarketContext` on `app.state`, rebuilt when older than
+15 minutes, and passes it through `report()`'s existing `market` parameter, which exists
+for exactly this purpose. The cache is GUI-local; the daemon's poll loop keeps its own,
+unchanged. A market-wide figure that moves slowly is the same justification already
+recorded for `report_group`.
+
+**Alternatives:** Rebuilding per request (correct but slow, and the cost is paid on every
+click). Sharing one cache between the GUI and the poll loop (couples two components with
+different freshness needs for no measured gain).
