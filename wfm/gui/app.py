@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from wfm.gui.errors import install_error_handlers
-from wfm.gui.routes import daemon, groups, items, ledger, watchlist
+from wfm.gui.routes import daemon, groups, items, ledger, signals_ws, watchlist
 from wfm.services.context import AppContext
 
 
@@ -16,4 +16,5 @@ def build_app(ctx: AppContext) -> FastAPI:
     app.include_router(groups.router)
     app.include_router(daemon.router)
     app.include_router(ledger.router)
+    app.include_router(signals_ws.router)
     return app

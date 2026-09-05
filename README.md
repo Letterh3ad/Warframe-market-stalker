@@ -114,6 +114,25 @@ than all at once.
 `wfm scan` is the stateless alternative for a manual, one-off poll; it never claims the
 daemon's identity or its day, so it's safe to run alongside a live daemon.
 
+## GUI (phase 8, backend only)
+
+`wfm daemon start` also starts an embedded web API (FastAPI + WebSocket) alongside the
+poll loop, sharing its rate budget and circuit breaker — pass `--no-gui` to disable it.
+Configure the bind address with `gui_host`/`gui_port` in `wfm.toml` (default
+`127.0.0.1:8420`, local-only).
+
+Endpoints: `GET/POST /watchlist`, `DELETE /watchlist/{slug}/{rank}`, `GET /items/{slug}`,
+`GET/POST /groups`, `DELETE /groups/{name}`, `GET /groups/{name}`,
+`POST/DELETE /groups/{name}/members`, `GET /groups/{name}/analysis` (includes the
+per-member signal roll-up and, where a group is one Set plus its parts, the
+`set_arbitrage` mispricing signal), `GET /daemon/status`, `POST /daemon/stop`,
+`GET /ledger/holdings`, `GET /ledger/pnl`, and a `/ws/signals` WebSocket pushing every
+signal the poll loop finds live.
+
+There is no frontend yet — this is the API a Svelte frontend (a separate, later plan)
+will consume. Every endpoint above is directly testable today with any HTTP/WebSocket
+client.
+
 ## Development
 
 ```bash

@@ -1001,3 +1001,42 @@ behaviour by guessing). Leaving the gate in place as documentation of intent (re
 code that reads as enforcement but enforces nothing is worse than either shipping the
 clamp or shipping neither, because the next reader budgets their attention on the belief
 that the limit is guarded there).
+
+## 2026-09-05 - GroupAnalyzer's first implementation, and the two latent gaps it exposed
+
+**Context:** `GroupAnalyzer` shipped in phase 5 as a protocol only. Landing the first
+concrete one for phase 8 (`set_arbitrage`, parts-vs-set arbitrage) reached two paths in
+`analyze_group` that a protocol-only scope never exercised: its FeatureSets were built
+with no book snapshot at all, so any book-scoped GroupAnalyzer would always be skipped
+by `run_group`'s coverage gate; and its persisted group signals never passed through the
+dedup/cooldown check `analyze_item_records` applies to item signals.
+
+**Decision:** Fixed both. `analyze_group` now passes each member's latest stored
+order-book snapshot (`ctx.orders.latest`) when building its FeatureSets, and applies
+`_is_duplicate` to `group_signals` exactly like item-level signals.
+
+**Alternatives:** Leaving book data out (impossible: `set_arbitrage` requires it, so it
+would never fire, silently). Leaving dedup unapplied (an open arbitrage window holds
+until the market corrects; a GUI page re-requesting `/groups/{name}/analysis`, or a
+future daemon-side periodic group sweep, would otherwise re-alert on the same
+opportunity every time).
+
+## 2026-09-05 - The GUI server runs inside the daemon process, sharing one AppContext
+
+**Context:** Phase 8's GUI (`docs/design/2026-09-05-wfm-phase-8-gui-design.md`) needs
+`INTERACTIVE`-priority requests to share the same rate budget the daemon's
+`BACKGROUND`/`BULK` polling uses, per the 2026-08-27 "Request priority classes over one
+shared bucket" decision — that decision only holds if there is exactly one `Budget`
+instance for the whole running system.
+
+**Decision:** `wfm daemon start` runs both `Daemon.run()` and a `uvicorn.Server.serve()`
+as concurrent tasks on one event loop, against one `AppContext`. `serve_gui` defaults
+`False` at the `daemon_service.start()` layer (so every existing test and any
+programmatic caller is unaffected) and `True` at the CLI layer (`wfm daemon start`),
+with `--no-gui` to opt out — useful for a headless deployment (e.g. the phase 9 Pi).
+Stopping the daemon (CLI or, later, a GUI control) kills the GUI's own server; accepted,
+not worked around, per the design doc.
+
+**Alternatives:** A second standalone process for the GUI (reopens the double-rate-limit
+risk the phase 1 priority-class design exists to avoid). A supervisor process managing
+both (real added complexity, deferred until the current behavior proves annoying).
