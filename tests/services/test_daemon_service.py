@@ -198,23 +198,33 @@ class _FakeServer:
         self.config = config
         self.should_exit = False
         self.served = False
+        self.started = False
 
     async def serve(self):
         self.served = True
+        self.started = True
         while not self.should_exit:
             await asyncio.sleep(0)
+
+
+class _FakeServerThatFailsToStart:
+    """Simulates a bind failure: uvicorn.Server.serve() raises SystemExit before
+    ever setting started=True."""
+
+    def __init__(self, config):
+        self.config = config
+        self.should_exit = False
+        self.started = False
+
+    async def serve(self):
+        raise SystemExit(1)
 
 
 async def test_start_with_serve_gui_runs_a_uvicorn_server_alongside_the_daemon(ctx, monkeypatch):
     _daily_work_already_done(ctx)
     _bounded_daemon(monkeypatch)
-    built_apps = []
     fake_servers = []
-
-    monkeypatch.setattr(
-        "wfm.gui.app.build_app",
-        lambda context: built_apps.append(context) or object(),
-    )
+    fake_app = object()
 
     def fake_server(config):
         server = _FakeServer(config)
@@ -223,12 +233,13 @@ async def test_start_with_serve_gui_runs_a_uvicorn_server_alongside_the_daemon(c
 
     monkeypatch.setattr("wfm.services.daemon_service.uvicorn.Server", fake_server)
 
-    result = await daemon_service.start(ctx, serve_gui=True)
+    result = await daemon_service.start(ctx, serve_gui=True, app=fake_app)
 
     assert result["started"] is True
-    assert built_apps == [ctx]
+    assert fake_servers[0].config.app is fake_app
     assert fake_servers[0].served is True
     assert fake_servers[0].should_exit is True
+    assert "gui_error" not in result
 
 
 async def test_start_without_serve_gui_never_touches_uvicorn(ctx, monkeypatch):
@@ -243,3 +254,25 @@ async def test_start_without_serve_gui_never_touches_uvicorn(ctx, monkeypatch):
     result = await daemon_service.start(ctx)
 
     assert result["started"] is True
+
+
+async def test_start_with_serve_gui_requires_an_app(ctx, monkeypatch):
+    _daily_work_already_done(ctx)
+    _bounded_daemon(monkeypatch)
+
+    with pytest.raises(ValueError):
+        await daemon_service.start(ctx, serve_gui=True)
+
+
+async def test_start_surfaces_a_gui_bind_failure_instead_of_crashing(ctx, monkeypatch):
+    _daily_work_already_done(ctx)
+    _bounded_daemon(monkeypatch)
+    monkeypatch.setattr(
+        "wfm.services.daemon_service.uvicorn.Server", _FakeServerThatFailsToStart
+    )
+
+    result = await daemon_service.start(ctx, serve_gui=True, app=object())
+
+    assert result["started"] is True
+    assert "gui_error" in result
+    assert "1" in result["gui_error"]

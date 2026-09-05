@@ -18,7 +18,29 @@ from wfm.sync.budget import Priority
 STALE_AFTER_S = 15 * 60
 
 
-async def start(ctx: AppContext, force: bool = False, serve_gui: bool = False) -> dict:
+GUI_START_TIMEOUT_S = 3.0
+GUI_START_POLL_INTERVAL_S = 0.01
+
+
+async def _serve_gui(server: uvicorn.Server) -> None:
+    """uvicorn.Server.serve() calls sys.exit() on a bind failure. SystemExit is a
+    BaseException, which asyncio's event loop deliberately re-raises out of a
+    task's step instead of storing it as that task's result (see
+    asyncio.events.Handle._run) -- so left uncaught here, a bind failure would
+    crash the whole event loop (taking the daemon's own poll loop down with it)
+    the instant this task is next scheduled, not "later" at any particular await.
+    Catching it and re-raising as a plain exception lets asyncio treat it as a
+    normal task failure, retrievable via server_task.exception() without dying.
+    """
+    try:
+        await server.serve()
+    except SystemExit as exc:
+        raise RuntimeError(f"GUI server failed to start: {exc}") from exc
+
+
+async def start(
+    ctx: AppContext, force: bool = False, serve_gui: bool = False, app=None
+) -> dict:
     if force:
         # PID recycling (routine on Windows) can make an orphaned pid file point at
         # an unrelated live process, which the guard below then reads as "already
@@ -52,14 +74,29 @@ async def start(ctx: AppContext, force: bool = False, serve_gui: bool = False) -
 
     server = None
     server_task = None
+    gui_error = None
     if serve_gui:
-        from wfm.gui.app import build_app
-        app = build_app(ctx)
+        if app is None:
+            raise ValueError("serve_gui=True requires an app (build one with wfm.gui.app.build_app)")
         uvicorn_config = uvicorn.Config(
             app, host=ctx.config.gui_host, port=ctx.config.gui_port, log_level="warning"
         )
         server = uvicorn.Server(uvicorn_config)
-        server_task = asyncio.create_task(server.serve())
+        server_task = asyncio.create_task(_serve_gui(server))
+        # Wait briefly for either a successful start (server.started) or the task
+        # dying first, and surface the latter into the returned dict now instead
+        # of letting it surface only later at `await server_task` in the finally
+        # block below, where it would also shadow whatever exception the daemon
+        # loop itself produced.
+        elapsed = 0.0
+        while not server.started and not server_task.done() and elapsed < GUI_START_TIMEOUT_S:
+            await asyncio.sleep(GUI_START_POLL_INTERVAL_S)
+            elapsed += GUI_START_POLL_INTERVAL_S
+        if server_task.done():
+            exc = server_task.exception()
+            if exc is not None:
+                gui_error = str(exc) or repr(exc)
+                server = None  # already finished; nothing left to shut down
 
     try:
         report = await daemon.run()
@@ -68,7 +105,10 @@ async def start(ctx: AppContext, force: bool = False, serve_gui: bool = False) -
         if server is not None:
             server.should_exit = True
             await server_task
-    return {"started": True, **asdict(report)}
+    result = {"started": True, **asdict(report)}
+    if gui_error is not None:
+        result["gui_error"] = gui_error
+    return result
 
 
 def stop(ctx: AppContext) -> dict:

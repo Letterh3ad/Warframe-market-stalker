@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from wfm.cli import context_factory
 from wfm.cli.output import emit
+from wfm.gui.app import build_app
 from wfm.services import daemon_service
 
 
@@ -28,8 +29,11 @@ async def run(args) -> int:
     ctx = context_factory.build(args)
     try:
         if args.daemon_command == "start":
+            app = build_app(ctx) if args.serve_gui else None
             emit(
-                await daemon_service.start(ctx, force=args.force, serve_gui=args.serve_gui),
+                await daemon_service.start(
+                    ctx, force=args.force, serve_gui=args.serve_gui, app=app
+                ),
                 args.json,
             )
         elif args.daemon_command == "stop":
