@@ -64,6 +64,8 @@ async def test_every_router_answers_over_a_real_server_not_500(tmp_path):
         base_url = f"http://127.0.0.1:{port}"
         async with httpx.AsyncClient(base_url=base_url) as client:
             checks = [
+                ("GET", "/"),
+                ("GET", "/catalog"),
                 ("GET", "/watchlist"),
                 ("GET", "/items/x"),
                 ("GET", "/groups"),
