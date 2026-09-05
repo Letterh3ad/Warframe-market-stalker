@@ -114,24 +114,37 @@ than all at once.
 `wfm scan` is the stateless alternative for a manual, one-off poll; it never claims the
 daemon's identity or its day, so it's safe to run alongside a live daemon.
 
-## GUI (phase 8, backend only)
+## Web dashboard
 
-`wfm daemon start` also starts an embedded web API (FastAPI + WebSocket) alongside the
-poll loop, sharing its rate budget and circuit breaker — pass `--no-gui` to disable it.
-Configure the bind address with `gui_host`/`gui_port` in `wfm.toml` (default
-`127.0.0.1:8420`, local-only).
+`wfm daemon start` serves a single-page dashboard at `http://127.0.0.1:8420` (embedded
+FastAPI + WebSocket, sharing the poll loop's rate budget and circuit breaker). Configure
+the bind with `gui_host`/`gui_port` in `wfm.toml` (local-only by default); pass
+`--no-gui` to run the poll loop with no web server.
 
-Endpoints: `GET/POST /watchlist`, `DELETE /watchlist/{slug}/{rank}`, `GET /items/{slug}`,
+Six tabs:
+
+- **Catalog**: browse and search every catalog item; click through to the item detail.
+- **Watchlist**: what the daemon polls; add and remove items.
+- **Signals**: analyzer output: stored history plus a live WebSocket feed of signals
+  the poll loop finds.
+- **Groups**: group CRUD and membership, plus the set-arbitrage roll-up (for a group
+  that is one Set plus its parts).
+- **Daemon**: status (pid, heartbeat, staleness); a Stop button.
+- **Ledger**: holdings and FIFO P&L, read-only (the dashboard records no trades).
+
+Item detail shows a price-history candlestick chart, the current statistics and the
+order book. `[Refresh live book]` is the **only** control anywhere in the dashboard
+that contacts warframe.market.
+
+Stopping the daemon from the Daemon tab disconnects the dashboard, by design: the daemon
+is the process serving the page. Restart it with `wfm daemon start` from a terminal.
+
+Endpoints behind it: `GET /catalog`, `GET/POST /watchlist`,
+`DELETE /watchlist/{slug}/{rank}`, `GET /items/{slug}`, `GET /items/{slug}/history`,
 `GET/POST /groups`, `DELETE /groups/{name}`, `GET /groups/{name}`,
-`POST/DELETE /groups/{name}/members`, `GET /groups/{name}/analysis` (includes the
-per-member signal roll-up and, where a group is one Set plus its parts, the
-`set_arbitrage` mispricing signal), `GET /daemon/status`, `POST /daemon/stop`,
-`GET /ledger/holdings`, `GET /ledger/pnl`, and a `/ws/signals` WebSocket pushing every
-signal the poll loop finds live.
-
-There is no frontend yet — this is the API a Svelte frontend (a separate, later plan)
-will consume. Every endpoint above is directly testable today with any HTTP/WebSocket
-client.
+`POST/DELETE /groups/{name}/members`, `GET /groups/{name}/analysis`,
+`GET /daemon/status`, `POST /daemon/stop`, `GET /ledger/holdings`, `GET /ledger/pnl`,
+`GET /signals`, and the `/ws/signals` WebSocket.
 
 ## Development
 
