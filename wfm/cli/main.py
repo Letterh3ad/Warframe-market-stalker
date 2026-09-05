@@ -8,11 +8,13 @@ from collections.abc import Callable
 
 from wfm.cli import (
     backfill,
+    daemon,
     digest,
     group,
     holdings,
     pnl,
     report,
+    scan,
     search,
     signals,
     sync,
@@ -34,6 +36,8 @@ SUBCOMMANDS: list[tuple[str, Callable]] = [
     ("trade", trade.register),
     ("holdings", holdings.register),
     ("pnl", pnl.register),
+    ("daemon", daemon.register),
+    ("scan", scan.register),
 ]
 
 

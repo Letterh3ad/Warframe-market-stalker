@@ -4,6 +4,7 @@ import pytest
 
 from wfm.features.price import (
     atr,
+    in_window,
     window,
     build,
     donchian_position,
@@ -206,6 +207,21 @@ def test_a_flat_item_reports_zero_volatility_not_unmeasurable_volatility():
     features, _ = build(flat)
     assert features.atr_14d == 0.0
     assert features.atr_pct == 0.0, "0.0 is a real volatility reading, None means unknown"
+
+
+def test_in_window_gives_an_unsorted_input_the_same_window_as_a_sorted_one():
+    """build() now parses and sorts a series once and slices it many times; in_window
+    is still the public entry point that must not trust the caller's ordering.
+
+    No `end` is passed, so the anchor itself comes from the newest dated candle and the
+    anchor line must read the sorted list. The comparison is order-sensitive (a list, not
+    a set): the filter is order-independent, so only the returned order distinguishes a
+    caller that sorted from one that didn't, and order is observable downstream (last
+    close, ATR's consecutive pairs).
+    """
+    dense = _series([40 + (i % 5) for i in range(40)])
+    shuffled = list(reversed(dense[:20])) + dense[20:]
+    assert [c.date for c in in_window(shuffled, 30)] == [c.date for c in in_window(dense, 30)]
 
 
 def test_a_window_does_not_depend_on_the_caller_having_sorted_the_candles():

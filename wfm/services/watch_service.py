@@ -4,6 +4,7 @@ import statistics
 
 from wfm.services import catalog_service
 from wfm.services.context import AppContext
+from wfm.services.feature_service import anchor_date
 
 SUGGEST_WINDOW_DAYS = 30
 
@@ -47,13 +48,14 @@ def list_(ctx: AppContext) -> list[dict]:
 def suggest(ctx: AppContext, top: int = 20) -> list[dict]:
     """Ranks catalog items by tradeability. Never adds anything: the user confirms."""
     watched = {(e.slug, e.rank) for e in ctx.watchlist.all()}
+    anchor = anchor_date(ctx, ctx.clock.utcnow())
     scored: list[dict] = []
     for slug in ctx.items.all_slugs():
         item = ctx.items.get(slug)
         rank = item.canonical_rank if item else 0
         if (slug, rank) in watched:
             continue
-        candles = ctx.daily.window(slug, rank, days=SUGGEST_WINDOW_DAYS)
+        candles = ctx.daily.window(slug, rank, days=SUGGEST_WINDOW_DAYS, end=anchor)
         closes = [c.close for c in candles if c.close is not None]
         volumes = [c.volume for c in candles if c.volume is not None]
         if len(closes) < 7 or not volumes:

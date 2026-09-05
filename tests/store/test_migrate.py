@@ -2,6 +2,7 @@ import pytest
 
 from wfm.store.db import connect
 from wfm.store.migrations import m0001_initial as m0001
+from wfm.store.migrations import m0002_online_depth, m0003_daemon_state
 from wfm.store.migrate import SCHEMA_VERSION, current_version, migrate
 
 
@@ -64,3 +65,23 @@ def test_ddl_ending_mid_statement_is_rejected(conn, monkeypatch):
     monkeypatch.setattr(m0001, "DDL", "CREATE TABLE ok(a);\nCREATE TABLE broken(a)\n")
     with pytest.raises(ValueError):
         m0001.up(conn)
+
+
+def test_migrating_from_an_earlier_version_does_not_rerun_applied_steps(tmp_path, monkeypatch):
+    conn = connect(tmp_path / "t.db")
+    monkeypatch.setattr("wfm.store.migrate.MIGRATIONS", [m0001, m0002_online_depth])
+    migrate(conn)
+    assert current_version(conn) == 2
+
+    def _boom(_conn):
+        raise AssertionError("must not re-run an already-applied migration")
+
+    monkeypatch.setattr(m0001, "up", _boom)
+    monkeypatch.setattr(m0002_online_depth, "up", _boom)
+    monkeypatch.setattr(
+        "wfm.store.migrate.MIGRATIONS", [m0001, m0002_online_depth, m0003_daemon_state]
+    )
+
+    migrate(conn)
+    assert current_version(conn) == 3
+    assert "daemon_state" in _tables(conn)

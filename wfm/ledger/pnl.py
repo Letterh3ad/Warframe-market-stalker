@@ -5,11 +5,9 @@ from collections import deque
 from wfm.models import Side, Trade
 
 
-def realized(trades: list[Trade]) -> list[dict]:
-    """FIFO lot matching, per (slug, rank).
-
-    Average cost would be simpler but would hide the thing the ledger exists to show:
-    which specific buys a sale actually closed out.
+def _match(trades: list[Trade]) -> tuple[list[dict], dict[tuple[str, int], deque]]:
+    """FIFO lot matching, per (slug, rank). Returns the closed lots and, per position,
+    the queue of buy lots left unmatched (the FIFO remainder still held).
     """
     lots: list[dict] = []
     open_buys: dict[tuple[str, int], deque] = {}
@@ -39,7 +37,31 @@ def realized(trades: list[Trade]) -> list[dict]:
                 queue.popleft()
             else:
                 queue[0][0] -= matched
+    return lots, open_buys
+
+
+def realized(trades: list[Trade]) -> list[dict]:
+    """FIFO lot matching, per (slug, rank).
+
+    Average cost would be simpler but would hide the thing the ledger exists to show:
+    which specific buys a sale actually closed out.
+    """
+    lots, _ = _match(trades)
     return lots
+
+
+def cost_basis(trades: list[Trade]) -> dict[tuple[str, int], float]:
+    """Average cost of the FIFO remainder: the buy lots a position's sells have not yet
+    matched away. Unlike a blended average over every buy, this excludes closed-out lots
+    and reflects what is actually still held.
+    """
+    _, open_buys = _match(trades)
+    basis: dict[tuple[str, int], float] = {}
+    for key, queue in open_buys.items():
+        quantity = sum(q for q, _ in queue)
+        if quantity > 0:
+            basis[key] = sum(q * p for q, p in queue) / quantity
+    return basis
 
 
 def summary(trades: list[Trade]) -> dict:

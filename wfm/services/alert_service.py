@@ -14,10 +14,12 @@ from wfm.services.context import AppContext
 
 def _names(ctx: AppContext, signals: list[Signal]) -> dict[str, str]:
     out: dict[str, str] = {}
-    for signal in signals:
-        item = ctx.items.get(signal.slug)
+    # A batch of signals routinely repeats slugs (multiple analyzers, multiple
+    # horizons), so dedupe before the lookups rather than issuing one per signal.
+    for slug in dict.fromkeys(signal.slug for signal in signals):
+        item = ctx.items.get(slug)
         if item is not None:
-            out[signal.slug] = item.name
+            out[slug] = item.name
     return out
 
 

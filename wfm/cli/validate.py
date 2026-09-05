@@ -51,10 +51,13 @@ def _print_human(rows: list[dict]) -> None:
         )
         for direction, stats in sorted(row.get("by_direction", {}).items()):
             print(f"    {direction}: {stats['hits']}/{stats['signals']}")
+        if row.get("failures"):
+            print(f"    failed: {row['failures']} ({', '.join(row['failed_slugs'])})")
 
 
 _RESULT_KEYS = {
     "analyzer", "signals", "hits", "hit_rate", "median_forward_return", "by_direction",
+    "failures", "failed_slugs",
 }
 
 

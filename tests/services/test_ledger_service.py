@@ -66,6 +66,17 @@ def test_holdings_are_derived_not_stored(ctx):
     assert holdings[0]["name"] == "Ex Item"
 
 
+def test_holdings_avg_cost_is_the_fifo_remainder_not_the_blended_average(ctx):
+    ledger_service.record(ctx, "buy", "x", quantity=2, platinum=30)
+    ledger_service.record(ctx, "buy", "x", quantity=2, platinum=50)
+    ledger_service.record(ctx, "sell", "x", quantity=1, platinum=90)
+    holdings = ledger_service.holdings(ctx)
+    assert holdings[0]["quantity"] == 3
+    # Blended over all buys would be 40.0. FIFO closes 1 unit of the 30-cost lot first,
+    # leaving 1@30 and 2@50 still held.
+    assert holdings[0]["avg_cost"] == pytest.approx((30 + 100) / 3)
+
+
 def test_holdings_are_marked_to_the_last_stored_book(ctx):
     ledger_service.record(ctx, "buy", "x", quantity=2, platinum=40)
     ctx.orders.insert(BookSnapshot(slug="x", rank=10, ts=NOW, online_best_bid=55, best_bid=55))

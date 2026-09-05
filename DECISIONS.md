@@ -759,3 +759,245 @@ the render cap is lost; the terminal is a sufficient sink of record). Deriving h
 `avg_cost` from the FIFO remainder now (deferred: no behavioural difference for
 single-lot positions, and it belongs with the phase 7 P&L work). An entry-point plugin
 system for analyzers (rejected: package-dir scan is enough for a single-repo tool).
+
+## 2026-09-03 - Validation harness: per-item isolation and canonical_rank threading
+
+**Context:** Two phase 5 deferrals tagged for phase 7 (2026-09-02 entry, point 5, and the
+harness's own module docstring). `replay` called `analyzer.evaluate` directly, so one
+item's exception aborted a multi-thousand-item replay with nothing salvaged. It also
+hardcoded rank 0 for every item, while production `feature_service.market_context` reads
+`item.canonical_rank`; about 38% of a 500-item market sample carries a non-zero rank, so
+the harness was tuning a different series than the one that ships for those items.
+
+**Decision:** Route per-item evaluation through `wfm/analyzers/runner.py::run_item`,
+which already isolates analyzer exceptions. `run_item`'s `skipped` return also fires when
+a feature set lacks required features (e.g. `flip` needs book data the harness never
+builds); that is expected, not a failure, so the harness only counts a skip as a failure
+when the feature set was covered and the analyzer still didn't run. `ReplayResult` gained
+`failures` and `failed_slugs` (additive, existing keys unchanged). Rank is now read from
+`Item.canonical_rank` per slug, matching `market_context`, and threaded through the
+target/sample series load, the `FeatureSet`, and the synthetic `Holding`. No analyzer
+threshold was retuned; a changed replay number for a ranked item is expected and belongs
+to the phase 7 live watch, not this task.
+
+**Alternatives:** Reporting failures as a plain exception count with no slugs (rejected:
+the brief requires seeing which items failed, not just how many). Adding a `rank`
+override parameter to `replay` (rejected: no existing signature slot for it and no
+caller needs to override per-item rank; `canonical_rank` is the single source of truth
+production also uses).
+
+## 2026-09-03 - watch_service anchors on ctx.clock; holdings avg_cost is the FIFO remainder
+
+**Context:** Two deferred defects flagged as phase 7 opening cleanup (2026-09-02 entry,
+point 6; task-0b brief).
+
+**Decision:** `watch_service.suggest` called `DailyStatsRepo.window` without `end=`, so it
+anchored on real wall-clock time rather than `ctx.clock`, the same defect phase 4 fixed in
+`feature_service`. `feature_service._anchor_date` is promoted to `anchor_date` (module-
+level, no longer private) and `watch_service.suggest` now anchors its window on it.
+
+The `holdings` SQL view's `avg_cost` blends every buy including lots a sale has already
+closed out. `wfm/ledger/pnl.py::_match` (the existing FIFO matcher, refactored to also
+return the unmatched buy queues) backs a new `cost_basis(trades)` that averages only the
+FIFO remainder. `ledger_service.cost_basis` wraps it; both `ledger_service.holdings` and
+`analysis_service.build_context` now override the view's `avg_cost` with it, keeping
+`quantity` from the view (already correct) unchanged. `build_context` needed the same
+fix, not just `ledger_service.holdings`, because it queries `ctx.trades.holdings()`
+directly rather than through the ledger service; without it `Holding.avg_cost` reaching
+`selltime` through `build_context` would have stayed on the blended figure. This does
+move `selltime`'s inputs for any item with a closed-out lot; no analyzer threshold was
+retuned to compensate, per the brief.
+
+**Alternatives:** Computing the corrected `avg_cost` inside `TradesRepo.holdings()`
+itself (rejected: pulls FIFO matching, a business rule, into the store layer, which
+elsewhere only depends on `wfm.store` and `wfm.models`). Leaving `analysis_service`
+unfixed since the brief's file list didn't name it (rejected: the brief's own note says
+the fix must reach `selltime` through `build_context`, and `build_context` bypasses
+`ledger_service.holdings` entirely, so the fix has to be duplicated at its call site or
+shared via a service-level helper; chose the shared helper).
+
+## 2026-09-03 - Daemon runner: max_iterations exhaustion is not a stop, and a pending stop is honoured before mark_started
+
+**Context:** Task 4 (phase 7), the single-loop daemon (`wfm/daemon/runner.py`) wiring the
+adaptive poll queue, the daily sweep, and the digest onto one `asyncio` loop, per the
+task-4 brief and its binding addendum.
+
+Two behaviors the brief's sketch did not get right once `daemon_state` (task 1) entered
+the picture. First, `Daemon.run(max_iterations=N)` returning because the budget ran out
+is not the same event as a real stop: only `stop_event.is_set()` or
+`daemon_state.stop_requested()` calls `mark_stopped()`. A bounded run (used by tests and
+by `wfm scan --once`) leaves `status="running"` so a caller can start another bounded run
+right after, and the per-iteration `heartbeat()` write stays the one place status flips
+back to "running" after a poll. Second, `run()` checks `stop_requested()` before calling
+`mark_started()`, not after: `mark_started()` unconditionally resets `status` to
+`"running"` (by design, to clear a stale flag from a crashed process), so checking after
+would silently clear a stop request nobody has acted on yet. A pending stop now short
+circuits straight to `mark_stopped()` without ever claiming the daemon started.
+
+Also split `analysis_service.analyze_item` into a dict-only wrapper around a new
+`analyze_item_records(...) -> tuple[dict, list[Signal]]`, per the addendum: the daemon
+needs the persisted `Signal` objects (with their DB-assigned `id`) to pass straight to
+`alert_service.deliver`, and re-querying `ctx.signals.query(slug=...)` for them (the
+brief's original approach) can return signals from a different rank or an earlier poll.
+
+**Alternatives:** Calling `mark_stopped()` unconditionally at loop exit, matching the
+brief literally (rejected: fails the brief's own heartbeat test once `daemon_state` is
+real, since two bounded `run()` calls in the same test would otherwise show "stopped"
+between them). Checking `stop_requested()` only inside the loop body, after
+`mark_started()` (rejected: a stop requested between process start and the first
+`Daemon(ctx).run()` call would be silently cleared).
+
+## 2026-09-03 - Phase 7 tasks 3 and 4: the pin decay bound, the poll loop's own budget reservation, and the stop flag
+
+**Context:** Three decisions taken on the user's behalf while reviewing the due queue
+(task 3) and the daemon runner (task 4), each one against what the plan and its task
+briefs actually said.
+
+The first: the unchanged-poll decay lengthens an item's interval every time its book comes
+back identical, and it did so without reference to `pin_weight`. A pinned item whose book
+goes quiet was therefore dragged all the way to the 30 minute floor, so the first move on
+it would be seen up to 30 minutes late. That is the exact case a pin exists for. It is
+inherited from tasks 2 and 3, but task 4 is the first task that can observe it.
+
+The second: the plan's rate constraint reads "the scheduler shortens intervals only with
+budget the sweep has not reserved". Task 4 shipped `reserve`/`release`/`remaining_for` with
+the sweep as the only production caller, so `remaining_for` never saw poll pressure and the
+sweep's slack gate reduced to a constant that is always true.
+
+The third: the per-iteration heartbeat added in a fix round wrote `status="running"`
+unconditionally, erasing a pending `status='stopping'` before the loop top could read it.
+The DB flag is the only stop mechanism on Windows, where `os.kill` calls
+`TerminateProcess`, so `wfm daemon stop` silently stopped working. The fix round's suite
+stayed green because no test set the flag mid-run.
+
+**Decision:** Bound the decay by pin weight in `scheduler.py` (a
+`PIN_DECAY_CAP_MULTIPLIER`, currently 4.0), leaving the unpinned branch byte-identical and
+the 2 minute ceiling untouched, rather than deferring it to the live soak. Make the poll
+loop reserve and release its own budget so the slack gate reflects real pressure. Fix the
+stop flag at the repo layer, `status=CASE WHEN status='stopping' THEN status ELSE ? END`
+on the `running` branch only, so every future heartbeat caller inherits the guard, with a
+mid-run flag-stop regression test on both the idle and the poll path.
+
+The pin multiplier is a judgement call, not derived from the spec, and is a candidate for
+calibration in the phase 7 live soak. The reservation is advisory: the single `TokenBucket`
+is what actually enforces the rate, so a too-permissive gate costs poll latency, not
+compliance. At real catalog magnitudes (3839 items against 10080 requests/hour at the
+default 2.8 req/s) the gate is still effectively always true, and the scheduler still never
+consults `remaining_for`; closing that is left to task 5.
+
+**Alternatives:** Deferring the pin decay to the live soak (rejected: task 6's simulated
+day and the task 7 soak both read pin behaviour, so deferring means calibrating against a
+curve already known to be wrong). Leaving the budget reservation with only the sweep as a
+caller (rejected: a rate constraint that never constrains is decoration, and task 5 wires
+the CLI on top of it). A blanket stop-preserving guard across the whole `heartbeat` method
+(rejected: `mark_stopped` routes through `heartbeat`, so a blanket guard breaks it; a
+`halted` transition overriding a pending `stopping` loses the label, not the stop).
+
+## 2026-09-04 - Phase 7: daemon and adaptive scheduler
+
+**Context:** Phase 7 replaces the phase 3 idea of a scheduled `wfm sync` invocation with a
+long-running process that owns the poll loop, the daily sweep and the digest send, and
+that has to survive being killed, sleeping overnight, and running on Windows where POSIX
+signals are not a reliable stop mechanism.
+
+**Decision:** One `asyncio` event loop (`wfm/daemon/runner.py::Daemon.run`) carries the
+poll loop, the daily sweep and the 09:00 digest, rather than three concurrent `asyncio`
+tasks each owning a slice of the work. At `concurrency = 1` nothing in this process is
+ever genuinely parallel, so three tasks would buy nothing but a second layer of locking
+around the queue, the budget and the circuit breaker, all of which a single loop body can
+touch directly in sequence. The loop body checks each piece of daily work in a fixed order
+every iteration: digest, then sweep (gated on budget slack via `_queue_has_slack`), then
+the poll queue.
+
+The sweep and digest each fire once per day under an "hour arrived and not run today"
+rule rather than a fixed-offset timer: `_sweep_due`/`_digest_due` check `now.hour >=
+config.sweep_hour` (or `digest_hour`) and that `daemon_state.daily_done(name)` is not
+already today's date. `daemon_state.last_sweep_date`/`last_digest_date` persist which day
+each last ran, so a restart mid-morning does not re-fire a sweep that already completed
+today, and a daemon that was offline through its configured hour still catches up the
+moment it comes back up, rather than waiting for the exact hour to roll around again on a
+clock that may have moved past it. `mark_daily_done` writes the date only, never touching
+`heartbeat_at`: liveness has exactly one source, the per-iteration heartbeat, so a wedged
+loop cannot look alive just because the daily sweep wrote a row hours ago.
+
+An item whose order book comes back byte-identical to its last poll doubles its interval
+each further unchanged poll (`PollQueue.reschedule`, `decayed = interval * (2 **
+decay_steps)`, capped at the floor), so a quiet book is polled less and less often rather
+than at its full earned cadence forever. A pinned item's decay is capped at
+`PIN_DECAY_CAP_MULTIPLIER` (4.0) times its own scored interval instead of running all the
+way to the 30 minute floor: a pin means "tell me the moment this moves", and decaying it
+like an unpinned item would detect the first move on it up to a floor interval late,
+which is the exact case a pin exists for.
+
+The priority score's volume term is `log1p(volume) / 10.0`, not volume itself. Raw
+median-30d volume spans orders of magnitude across the catalog (a handful of trades a day
+for a niche mod, hundreds for a meta one), so a linear term would let volume alone
+saturate the score and drown out volatility, spread and pin for anything even moderately
+liquid. The log compresses that range so all four weighted terms stay comparable in
+practice, at the plan's chosen constant.
+
+`poll_state` persists `(slug, rank) -> last_polled_at, due_at, interval_minutes,
+unchanged_polls` (task 1's `m0003`), and `PollQueue.rebuild()` restores wall-clock
+`due_at` from it on every start rather than treating a fresh process as a blank schedule.
+A sleep or crash can leave hundreds of items simultaneously overdue; rebuild sorts the
+restored overdue set oldest-due-first, releases up to `catchup_max_items` (25) of them as
+due immediately, and spreads the remainder across the floor interval instead of firing
+them all in the same iteration. The budget would serialize a full release anyway, so
+letting it all through as "due now" would only make the loop look wedged rather than
+actually catching up any faster.
+
+`wfm daemon stop` requests a stop by writing `daemon_state.status = 'stopping'` rather
+than calling `os.kill`. On Windows, anything short of `CTRL_C_EVENT`/`CTRL_BREAK_EVENT`
+calls `TerminateProcess`, which has no graceful path: the in-flight poll is lost, the pid
+file is orphaned, and status is stuck reading "running" forever. The database flag is
+read identically by the loop on Windows and POSIX (`Daemon.run` checks it every
+iteration, and `_sleep_until_next` checks it every chunk of an idle wait so a stop is
+noticed within `MAX_SLEEP_CHUNK_S`, not after a full 30 minute sleep), so the same
+mechanism works everywhere with no platform branch in the stop path itself. POSIX signal
+handlers stay wired in `daemon_service.start` as a second path (useful for `Ctrl+C` on a
+foreground run), and Windows falls back to `signal.signal` for a real `SIGTERM` where the
+event loop's own handler registration is unavailable, but the flag is what every restart-
+survivable stop actually goes through.
+
+**Alternatives:** Three `asyncio` tasks coordinating over shared queue/budget/breaker
+state (rejected: real concurrency risk for zero real parallelism at `concurrency = 1`,
+and the phase 2 `FakeClock` cannot model true concurrency anyway, so tests of ordering
+between tasks would not be trustworthy). A fixed-offset timer for the sweep and digest,
+firing exactly at `sweep_hour`/`digest_hour` with no "already ran today" check (rejected:
+loses catch-up after downtime and cannot tell a restart from a fresh day). Decaying every
+unchanged item straight to the floor regardless of pin (rejected: defeats the purpose of
+pinning). A linear volume term in the score (rejected: lets one input dominate and drown
+out the other three). Releasing every overdue item as due-now after a restart (rejected:
+the budget serializes it anyway, so the only effect is a loop that looks stalled).
+`os.kill`/`SIGTERM` as the sole stop mechanism (rejected: not graceful on Windows, which
+is this project's primary platform).
+
+## 2026-09-04 - The TokenBucket is the sole rate enforcement; reservation-based admission control removed
+
+**Context:** The final phase 7 review found the daemon's budget-slack gate
+(`_queue_has_slack`, `_reserve_poll_budget`, `POLL_RESERVATION_NAME`) enforced nothing at
+this project's real magnitudes. `remaining_for(BACKGROUND, 3600)` is
+`10080 - (2 + 3839) - |watchlist|`, positive for any watchlist under roughly 6,000 items,
+so the gate was unconditionally open in production and only its test could close it, with
+a synthetic 1,000,000 slot reservation. `interval_minutes` never consulted `remaining_for`
+at all, so the companion constraint ("the scheduler shortens intervals only with budget
+the sweep has not reserved") existed in prose only. None of this could ever breach the
+rate ceiling: reservations are pure bookkeeping.
+
+**Decision:** Delete the admission control rather than implement the clamp. Every request
+reaches the wire through `client._wait_for_clearance` to `Budget.acquire` to the single
+`TokenBucket`, breaker-checked on both sides of the wait, at concurrency 1. That bucket is
+the only thing that enforces the 2.8 req/s default and the 3.0 hard ceiling, and it is
+sufficient. The daily sweep is now gated on the daily rule, the breaker and the stop flag
+only. `Budget.reserve`/`release_reservation`/`remaining_for` stay (tested in
+`tests/sync/test_budget.py`) as the primitive a future multi-node scheduler will need.
+Admission control returns as an open question for phase 9's multi-node work, where several
+processes really do contend for one quota and the gate can actually bind.
+
+**Alternatives:** Implementing the interval clamp for real (rejected: at this user's scale
+it can never bind, so it would ship unvalidated scheduling behaviour to solve a problem
+that does not exist yet, against this project's standing rule not to tune scheduler
+behaviour by guessing). Leaving the gate in place as documentation of intent (rejected:
+code that reads as enforcement but enforces nothing is worse than either shipping the
+clamp or shipping neither, because the next reader budgets their attention on the belief
+that the limit is guarded there).

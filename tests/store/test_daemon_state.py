@@ -1,0 +1,163 @@
+from datetime import date, datetime, timedelta, timezone
+
+import pytest
+
+from wfm.store.daemon_state import DaemonStateRepo
+from wfm.store.db import connect
+from wfm.store.migrate import SCHEMA_VERSION, current_version, migrate
+
+NOW = datetime(2026, 8, 27, 4, 0, tzinfo=timezone.utc)
+
+
+def test_the_third_migration_applied(conn):
+    assert current_version(conn) == SCHEMA_VERSION == 3
+
+
+def test_start_heartbeat_stop(conn):
+    repo = DaemonStateRepo(conn)
+    assert repo.get() is None
+    repo.mark_started(pid=4321, when=NOW)
+    assert repo.get()["pid"] == 4321
+    assert repo.get()["status"] == "running"
+
+    repo.heartbeat(when=NOW + timedelta(minutes=1), status="running", detail="polled 12 items")
+    state = repo.get()
+    assert state["detail"] == "polled 12 items"
+    assert state["heartbeat_at"] > state["started_at"]
+
+    repo.mark_stopped(when=NOW + timedelta(hours=2), detail="sigterm")
+    assert repo.get()["status"] == "stopped"
+
+
+def test_there_is_only_ever_one_row(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.mark_started(pid=2, when=NOW + timedelta(seconds=1))
+    assert conn.execute("SELECT COUNT(*) FROM daemon_state").fetchone()[0] == 1
+    assert repo.get()["pid"] == 2
+
+
+def test_a_running_heartbeat_does_not_clear_a_pending_stop(conn):
+    """Round 2 regression (task 4 review N1): a per-iteration liveness heartbeat with
+    status="running" must not silently erase a "stopping" flag another process wrote,
+    since that flag is the only mechanism `wfm daemon stop` has on Windows."""
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.request_stop(when=NOW + timedelta(seconds=1))
+    assert repo.get()["status"] == "stopping"
+
+    repo.heartbeat(when=NOW + timedelta(seconds=2), status="running", detail="polled a")
+    state = repo.get()
+    assert state["status"] == "stopping"
+    # Liveness still advances; only the status column is protected.
+    assert state["heartbeat_at"] == NOW + timedelta(seconds=2)
+    assert state["detail"] == "polled a"
+
+
+def test_a_non_running_heartbeat_status_still_overrides_a_pending_stop(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.request_stop(when=NOW + timedelta(seconds=1))
+    repo.heartbeat(when=NOW + timedelta(seconds=2), status="halted", detail="breaker tripped")
+    assert repo.get()["status"] == "halted"
+
+
+def test_a_halted_status_records_its_reason(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.heartbeat(when=NOW, status="halted", detail="circuit breaker: 3 consecutive 429s")
+    assert "429" in repo.get()["detail"]
+
+
+def test_request_stop_on_a_fresh_database_returns_false_and_writes_nothing(conn):
+    repo = DaemonStateRepo(conn)
+    assert repo.request_stop(when=NOW) is False
+    assert repo.get() is None
+
+
+def test_request_stop_on_a_running_daemon_flips_status_and_is_observed(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    assert repo.stop_requested() is False
+    assert repo.request_stop(when=NOW + timedelta(seconds=1)) is True
+    assert repo.get()["status"] == "stopping"
+    assert repo.stop_requested() is True
+
+
+def test_request_stop_on_an_already_stopped_daemon_returns_false(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.mark_stopped(when=NOW + timedelta(minutes=1))
+    assert repo.request_stop(when=NOW + timedelta(minutes=2)) is False
+
+
+def test_mark_started_clears_a_stale_stopping_flag(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.request_stop(when=NOW + timedelta(seconds=1))
+    assert repo.stop_requested() is True
+
+    repo.mark_started(pid=2, when=NOW + timedelta(seconds=2))
+    assert repo.stop_requested() is False
+
+
+def test_mark_daily_done_rejects_an_unknown_kind(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    with pytest.raises(ValueError):
+        repo.mark_daily_done("brunch", date(2026, 8, 27))
+
+
+def test_daily_done_rejects_an_unknown_kind(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    with pytest.raises(ValueError):
+        repo.daily_done("brunch")
+
+
+def test_daily_done_is_none_until_marked(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    assert repo.daily_done("sweep") is None
+    assert repo.daily_done("digest") is None
+
+
+def test_mark_daily_done_does_not_touch_the_heartbeat(conn):
+    # Liveness has exactly one source: the poll loop's per-iteration heartbeat().
+    # A sweep/digest write must not make a wedged-polling daemon look alive.
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.mark_daily_done("digest", date(2026, 8, 27))
+    assert repo.get()["heartbeat_at"] == NOW
+
+
+def test_daily_done_survives_a_restart(conn):
+    repo = DaemonStateRepo(conn)
+    repo.mark_started(pid=1, when=NOW)
+    repo.mark_daily_done("sweep", date(2026, 8, 27))
+    assert repo.daily_done("sweep") == date(2026, 8, 27)
+    assert repo.daily_done("digest") is None
+
+    repo.mark_started(pid=1, when=NOW + timedelta(hours=1))
+    assert repo.daily_done("sweep") == date(2026, 8, 27)
+
+
+def test_stop_request_on_one_connection_is_visible_on_another(tmp_path):
+    """wfm daemon stop and the running daemon process open separate sqlite
+    connections to the same file. A stop flag written on one must be readable
+    from the other without either process restarting."""
+    db_path = tmp_path / "shared.db"
+    writer = connect(db_path)
+    migrate(writer)
+    reader = connect(db_path)
+
+    writer_repo = DaemonStateRepo(writer)
+    reader_repo = DaemonStateRepo(reader)
+    writer_repo.mark_started(pid=1, when=NOW)
+    assert reader_repo.stop_requested() is False
+
+    assert writer_repo.request_stop(when=NOW + timedelta(minutes=1)) is True
+    assert reader_repo.stop_requested() is True
+
+    writer.close()
+    reader.close()

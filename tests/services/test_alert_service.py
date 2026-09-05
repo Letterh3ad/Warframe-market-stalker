@@ -162,3 +162,18 @@ def test_list_signals_returns_plain_dicts_for_json(ctx):
     rows = alert_service.list_signals(ctx)
     assert rows[0]["analyzer"] == "revert"
     assert rows[0]["evidence"]["robust_z"] == -2.0
+
+
+def test_names_dedupes_repeated_slugs_before_looking_them_up(ctx, monkeypatch):
+    signals = [_store(ctx, analyzer="revert"), _store(ctx, analyzer="flip")]
+    calls = []
+    real_get = ctx.items.get
+
+    def counting_get(slug):
+        calls.append(slug)
+        return real_get(slug)
+
+    monkeypatch.setattr(ctx.items, "get", counting_get)
+    names = alert_service._names(ctx, signals)
+    assert names == {"x": "Ex Item"}
+    assert calls == ["x"], "two signals share slug x, so only one lookup should fire"

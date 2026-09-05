@@ -5,7 +5,7 @@ import pytest
 
 from tests.fakes.clock import FakeClock
 from wfm.config import Config
-from wfm.models import DailyCandle, Direction, Horizon, Item, Signal, Trade
+from wfm.models import DailyCandle, Direction, Horizon, Item, Side, Signal, Trade
 from wfm.services import analysis_service
 from wfm.services.context import AppContext
 
@@ -31,6 +31,16 @@ def test_context_carries_holdings_from_the_ledger(ctx):
     analyzer_ctx = analysis_service.build_context(ctx)
     assert analyzer_ctx.holding_for("x", 0).quantity == 3
     assert analyzer_ctx.holding_for("x", 0).avg_cost == 40.0
+
+
+def test_context_holdings_avg_cost_is_the_fifo_remainder(ctx):
+    ctx.trades.record(Trade(slug="x", rank=0, ts=NOW, side=Side.BUY, quantity=2, platinum=30))
+    ctx.trades.record(Trade(slug="x", rank=0, ts=NOW, side=Side.BUY, quantity=2, platinum=50))
+    ctx.trades.record(Trade(slug="x", rank=0, ts=NOW, side=Side.SELL, quantity=1, platinum=90))
+    analyzer_ctx = analysis_service.build_context(ctx)
+    holding = analyzer_ctx.holding_for("x", 0)
+    assert holding.quantity == 3
+    assert holding.avg_cost == pytest.approx((30 + 100) / 3)
 
 
 def test_context_carries_merged_thresholds(ctx):
