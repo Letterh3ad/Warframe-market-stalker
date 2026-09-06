@@ -266,26 +266,41 @@ only relationships confident enough to trade on, and everything else abstains.
 The table lives in `link.py` as data, not as branching logic, so correcting a row after
 the backtest is a one-line change.
 
-**`vault_in` pre-effective behaviour: resolved 2026-09-06, design confirmed correct.**
+### `vault_in` pre-effective behaviour: WORKING HYPOTHESIS, not established
 
-The review hypothesised that `vault_in` was sign-inverted where decay is 1.0, reasoning
+**Status: unverified. Do not treat the current `vault_in` row as validated.** This is the
+single most important thing for the 9b event study to test, and it is explicitly flagged
+for review after roughly six months of data collection.
+
+The review hypothesised that `vault_in` is sign-inverted where decay is 1.0, reasoning
 that players mass-farm relics before a vault closes, so supply spikes and prices dip
-before rising. The user, who trades this market, says the opposite happens: prices
-**jump up on the announcement**, because buyers accumulate during the window
-specifically to resell at vault prices later.
+before rising.
 
-So the design is right as written. `vault_in` is `up`, at full undecayed strength from
-announcement through `effective_at`, and that window is genuinely the trade window: the
-move is driven by front-running demand, not by post-vault scarcity finally biting.
+The user, who trades this market, offers a different model and labels it a **hypothesis,
+not fact**. It has two regimes:
 
-This also makes `vault_in` the **highest-value event type in the taxonomy**, since it is
-the one where the price move begins at a publicly announced instant and runs for a known
-duration. Weight the 9b event study toward it.
+| Regime | Before `effective_at` | During the vault |
+|---|---|---|
+| **Vaulting is announced in advance** | Prices **jump up** on the announcement, as buyers accumulate specifically to resell at vault prices | Already elevated |
+| **Vaulting is not pre-announced** | Prices sit **far lower**, no anticipation | Prices **rise through** the vault period as supply dries up |
 
-Residual, smaller: the answer describes items being bought and held. Whether **relics
-specifically** diverge (farming supply rising against that demand) was not distinguished,
-so the per-item direction for relics under `vault_in` is less certain than for parts.
-The event study can split them.
+Two consequences the design should be tested against, neither implemented yet:
+
+1. **Selection effect.** The corpus only ever contains vaultings that were *announced*,
+   because news is the only input. So every `vault_in` the pipeline sees is regime one by
+   construction, which is the regime the current design models. That is convenient, but it
+   also means the pipeline is blind to regime two rather than handling it.
+2. **The decay curve may be backwards for regime two.** When announcement and effect
+   coincide (a vaulting revealed by the patch that performs it), `anchor == published_at`,
+   so the current model begins decaying immediately. The user's account says the move
+   *builds* through the vault period instead. If that holds, `vault_in` needs a rising
+   ramp after the anchor rather than exponential decay, which no other event type wants.
+
+**Review trigger:** after ~6 months of parallel news and price accumulation, before any
+bias is applied. Split the event study by whether announcement and effect were separated
+by more than a day, and check the sign and the shape independently in each regime. Also
+split relics from built parts, which the hypothesis does not distinguish and which the
+review's farming-supply argument suggests may diverge.
 
 ### Which rank a link attaches to
 
@@ -836,11 +851,13 @@ a test that can actually run.
 
 From the 2026-09-06 review, recorded rather than resolved.
 
-- ~~**`vault_in` may be sign-inverted pre-effective.**~~ **Resolved 2026-09-06, design
-  confirmed correct.** Prices jump up on announcement as buyers accumulate to resell at
-  vault prices. The review's dip hypothesis was wrong. `vault_in` is now the highest-value
-  event type in the taxonomy: an announced start instant and a known duration. Relics
-  specifically were not distinguished from parts; the event study can split them.
+- **`vault_in` direction and decay shape are an UNVERIFIED HYPOTHESIS.** Still the top
+  open question, not resolved. The user's model has two regimes (announced vaultings rise
+  on announcement; unannounced ones sit low and rise through the vault) and they label it
+  hypothesis, not fact. The corpus only ever sees announced vaultings, so the pipeline is
+  blind to regime two. The decay curve may also be backwards where announcement and effect
+  coincide, since the move builds rather than decays. **Explicit 6-month review trigger:**
+  see "vault_in pre-effective behaviour" above.
 - **`as_of` leaks revised content.** `content_hash` re-fetch means stored text is always
   the newest revision, and DE edits hotfix posts after publication. Timing does not leak;
   content does. Fixing it properly needs revision-versioned articles, which `m0004` does
