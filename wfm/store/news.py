@@ -9,9 +9,16 @@ from wfm.news.types import (
     Candidate,
     ExtractedEvent,
     ItemLink,
+    LinkMethod,
+    NewsDirection,
     NewsSource,
 )
 from wfm.store.db import to_utc_iso, transaction
+
+_ARTICLE_COLS = (
+    "id, source, external_id, url, title, published_at, fetched_at, content_hash, "
+    "excerpt, status, classifier_name, classifier_version, classified_at"
+)
 
 
 class NewsRepo:
@@ -217,6 +224,46 @@ class NewsRepo:
                 "DELETE FROM news_item_links WHERE event_id=?", (event_id,)
             )
             return self.insert_links(event_id, links)
+
+    def pending(self, limit: int = 50) -> list[Article]:
+        rows = self._conn.execute(
+            f"SELECT {_ARTICLE_COLS} FROM news_articles WHERE status=? "
+            "ORDER BY COALESCE(published_at, fetched_at) DESC, id DESC LIMIT ?",
+            (ArticleStatus.PENDING.value, limit),
+        )
+        return [_to_article(r) for r in rows]
+
+    def recent_articles(
+        self, limit: int = 50, offset: int = 0, source: NewsSource | None = None
+    ) -> list[Article]:
+        where = "WHERE source=?" if source is not None else ""
+        params: list = [source.value] if source is not None else []
+        params += [limit, offset]
+        rows = self._conn.execute(
+            f"SELECT {_ARTICLE_COLS} FROM news_articles {where} "
+            "ORDER BY COALESCE(published_at, fetched_at) DESC, id DESC LIMIT ? OFFSET ?",
+            params,
+        )
+        return [_to_article(r) for r in rows]
+
+    def links_for_event(self, event_id: int) -> list[ItemLink]:
+        rows = self._conn.execute(
+            'SELECT event_id, slug, "rank", link_method, link_score, direction, weight '
+            "FROM news_item_links WHERE event_id=? ORDER BY weight DESC, slug",
+            (event_id,),
+        )
+        return [
+            ItemLink(
+                event_id=r["event_id"],
+                slug=r["slug"],
+                rank=r["rank"],
+                link_method=LinkMethod(r["link_method"]),
+                link_score=r["link_score"],
+                direction=NewsDirection(r["direction"]),
+                weight=r["weight"],
+            )
+            for r in rows
+        ]
 
 
 def _to_article(row: sqlite3.Row) -> Article:

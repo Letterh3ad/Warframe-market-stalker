@@ -269,3 +269,55 @@ def test_reinserting_a_link_updates_in_place_without_churning_its_id(conn):
     assert row["id"] == before
     assert row["link_method"] == "fuzzy"
     assert row["weight"] == 0.5
+
+
+def test_pending_returns_only_unclassified_newest_first(conn):
+    repo = NewsRepo(conn)
+    first = repo.upsert_article(_article(external_id="a1"), NOW)
+    second = repo.upsert_article(_article(external_id="a2", body="Other"), NOW)
+    repo.mark(first, ArticleStatus.CLASSIFIED, "fake", "1", NOW)
+
+    pending = repo.pending()
+
+    assert [a.id for a in pending] == [second]
+    assert pending[0].external_id == "a2"
+
+
+def test_pending_respects_limit(conn):
+    repo = NewsRepo(conn)
+    for n in range(5):
+        repo.upsert_article(_article(external_id=f"a{n}", body=f"b{n}"), NOW)
+    assert len(repo.pending(limit=2)) == 2
+
+
+def test_recent_articles_filters_by_source(conn):
+    repo = NewsRepo(conn)
+    repo.upsert_article(_article(external_id="a1"), NOW)
+    reddit = Article(
+        source=NewsSource.REDDIT,
+        external_id="r1",
+        url="https://example.test/r1",
+        title="Reddit post",
+        body="text",
+        published_at=datetime(2026, 9, 6, tzinfo=timezone.utc),
+    )
+    repo.upsert_article(reddit, NOW)
+
+    assert len(repo.recent_articles()) == 2
+    only = repo.recent_articles(source=NewsSource.REDDIT)
+    assert [a.external_id for a in only] == ["r1"]
+
+
+def test_links_for_event_roundtrips(conn):
+    repo = NewsRepo(conn)
+    article_id = repo.upsert_article(_article(), NOW)
+    (event_id,) = repo.insert_events(article_id, [_event()])
+    repo.insert_links(event_id, [_link("mesa_prime_set", LinkMethod.EXACT, 1.0)])
+
+    (link,) = repo.links_for_event(event_id)
+
+    assert link.slug == "mesa_prime_set"
+    assert link.link_method is LinkMethod.EXACT
+    assert link.direction is NewsDirection.DOWN
+    assert link.weight == 1.0
+    assert link.event_id == event_id
