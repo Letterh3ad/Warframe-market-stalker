@@ -1,8 +1,55 @@
 # WFM News Bias: design
 
-**Date:** 2026-09-05
-**Status:** approved in brainstorm, not yet planned or built
-**Phase:** 9a (independent of the Pi/distributed phase 9)
+**Date:** 2026-09-05, rescoped 2026-09-06 after adversarial review
+**Status:** approved; **v1 scope reduced, see "What v1 actually ships"**
+**Phase:** 9a (corpus + classifier), 9b (bias + validation). Independent of the
+Pi/distributed phase 9.
+
+## What v1 actually ships
+
+An adversarial review on 2026-09-06 found a blocking fact this design had assumed rather
+than checked. **`daily_stats` holds 93 distinct dates and no series has the 97 days
+`replay()` requires** (`PRICE_WINDOW_DAYS = 90` plus a 7-day forward horizon).
+warframe.market serves a 90-day rolling window, so history only grows forward at one day
+per day. The step-8 backtest gate, which steps 9 and 10 were gated on, cannot run today
+and will not for roughly six months.
+
+Both datasets this feature needs are time-limited: price history grows a day at a time,
+and the news corpus is empty. So v1 collects both in parallel and defers all judgement.
+
+| | Phase 9a (v1, build now) | Phase 9b (later, gated) |
+|---|---|---|
+| Sources, fuzzy gate, `news_candidates` | yes | |
+| Classifier, events, links | yes | |
+| Read-only News tab | yes | |
+| `NewsIndex`, bias post-pass | | yes |
+| News-only surfacing, bias toggle | | yes |
+| Validation | | **event study**, not analyzer replay |
+
+**Nothing in 9a touches a Signal**, so nothing can degrade `discord_min_confidence` or
+any existing behaviour. Everything below describes the full design; the table above says
+which half is being built first. The bias math, `NewsIndex` and GUI-toggle sections are
+retained as the 9b specification, not deleted.
+
+### Why the classifier is in v1 rather than deferred
+
+Labelled events also have to accumulate, and months of eyeballing real classifications on
+real articles is the only honest way to earn trust in a 4B model before anything depends
+on it. Deferring the classifier would mean starting the eventual event study from zero
+with an untested model at exactly the moment it first mattered.
+
+### The 9b gate is an event study, not analyzer replay
+
+Replacing the original step-8 gate. For each vault or Prime Access event in the
+accumulated corpus: **did the linked slugs move in the predicted direction over 14 days,
+against a matched control basket?** Sign test over the events available.
+
+This needs no 90-day feature warmup, no analyzer, no signals table and no `harness.py`.
+It tests the direction table directly, on the data that will actually exist. The original
+analyzer hit-rate replay also had a statistical power problem the review named: Prime
+Vault and Prime Access occur 4-6 times a year, so splitting hit rate by `event_type` **and**
+`source` gives a per-cell n near 1 against 15+ free parameters. `sweep_thresholds()` being
+cheap makes overfitting faster, not the gate stronger.
 
 ## Problem
 
@@ -66,7 +113,7 @@ uses (3), and honest measurement per source and per event type (4).
 
 ```
 sources ──▶ fuzzy gate ──▶ classifier ──▶ linker ──▶ SQLite
- (http)      (local,        (Ollama |     (local,     (3 tables)
+ (http)      (local,        (Ollama |     (local,     (4 tables)
              free, drops     Claude |     catalog          │
              non-matches)    Fake)        expansion)       │
                                                            ▼
@@ -83,7 +130,7 @@ sources ──▶ fuzzy gate ──▶ classifier ──▶ linker ──▶ SQL
 
 ```
 wfm/news/
-  types.py          Article, ExtractedEvent, ItemLink, EventType
+  types.py          Article, Candidate, ExtractedEvent, ItemLink, EventType
   schema.py         ONE JSON schema, shared by both backends
   sources/          base.py (Source protocol), warframe_news.py, forums.py, reddit.py
   match.py          fuzzy gate                        pure
@@ -123,6 +170,34 @@ classifier_name, classifier_version, classified_at
 `external_id` deduplicates on fetch. `content_hash` catches an edited hotfix note and
 re-queues it. `excerpt` lets the GUI show the actual sentence behind any bias. Full
 bodies are not stored by default.
+
+### `news_candidates`
+
+Added 2026-09-06. The review found a hole: article bodies are deliberately never
+persisted, but the pipeline is asynchronous (`status='pending'` then `pending()` then
+classify), so by the time the classifier ran there was **no text left to classify**.
+Re-fetching is forbidden and storing bodies contradicts the design.
+
+The gate's own output is the answer. It already produces exactly what the classifier
+needs, and nothing more:
+
+```
+id, article_id FK,
+slug, name,       -- the catalog item the gate matched
+score,            -- fuzzy match score
+context           -- the surrounding sentences, which IS the classifier prompt
+UNIQUE (article_id, slug)
+```
+
+Written at gate time, before the article is queued. Bodies still never hit the database,
+the async queue survives, and re-classification (a better model, a changed prompt) reads
+stored contexts instead of re-fetching. This is what makes the per-candidate prompting
+design actually implementable rather than merely described.
+
+A consequence for `Article`: `content_hash` is a **stored field**, not a property
+computed from `body`. An article loaded back from the database has `body=""`, so a
+computed property could never match the stored hash and every re-fetch would look like an
+edit.
 
 ### `news_events`
 
@@ -191,6 +266,35 @@ only relationships confident enough to trade on, and everything else abstains.
 The table lives in `link.py` as data, not as branching logic, so correcting a row after
 the backtest is a one-line change.
 
+**`vault_in` pre-effective behaviour: resolved 2026-09-06, design confirmed correct.**
+
+The review hypothesised that `vault_in` was sign-inverted where decay is 1.0, reasoning
+that players mass-farm relics before a vault closes, so supply spikes and prices dip
+before rising. The user, who trades this market, says the opposite happens: prices
+**jump up on the announcement**, because buyers accumulate during the window
+specifically to resell at vault prices later.
+
+So the design is right as written. `vault_in` is `up`, at full undecayed strength from
+announcement through `effective_at`, and that window is genuinely the trade window: the
+move is driven by front-running demand, not by post-vault scarcity finally biting.
+
+This also makes `vault_in` the **highest-value event type in the taxonomy**, since it is
+the one where the price move begins at a publicly announced instant and runs for a known
+duration. Weight the 9b event study toward it.
+
+Residual, smaller: the answer describes items being bought and held. Whether **relics
+specifically** diverge (farming supply rising against that demand) was not distinguished,
+so the per-item direction for relics under `vault_in` is less certain than for parts.
+The event study can split them.
+
+### Which rank a link attaches to
+
+`items.canonical_rank`, one link per item. Mods trade at ranks 0 through 10 and nothing
+in an announcement identifies a rank, so news is treated as rank-agnostic and resolved
+through the same field `feature_service.market_context` and `validation/harness.py`
+already use. Rank 0 would starve maxed-mod signals; fanning across every rank would
+multiply links and corrupt dedupe for no information gain.
+
 ### Indexes
 
 ```
@@ -243,6 +347,41 @@ it directly and stays database-free.
 **`as_of` is what buys the backtest.** It filters `published_at <= as_of`, yielding
 exactly what the system knew on that date, through the same builder production uses. The
 backtest therefore exercises real logic instead of a parallel reimplementation.
+
+## Fuzzy gate
+
+Pure, stdlib only, in `wfm/news/match.py`. Scans article text left to right against a
+lexicon built from the catalog, longest match wins and consumes its tokens. Set items
+also register a base alias, so "Mesa Prime" reaches `mesa_prime_set` even though the
+catalog name is "Mesa Prime Set".
+
+### The single-token discriminator is ambiguity, not length
+
+The first attempt required one-word item names to be four characters or longer. Querying
+the catalog showed that drops 24 items, split almost evenly:
+
+```
+ordinary English:  Bite Bore Dig Flow Fury Howl Hunt Hush Jolt Maim Maul Rage Rush
+Requiem mods:      Fass Haav Jahu Khra Lohk Norg Oull Ris Tink Vome Xata
+```
+
+The Requiem mods are distinctive nonsense syllables that should always match. The English
+words are hopeless at any length. Length measured the wrong thing.
+
+The rule instead: **a single-token match must be capitalised in the source text**, and a
+token on the curated `_AMBIGUOUS_SINGLE_TOKENS` list must additionally **not be
+sentence-initial**, because mid-sentence capitalisation is a strong proper-noun signal.
+So `Xata` matches; `Rage` matches in "the Rage mod was buffed" but not in "Rage was the
+theme of this update". The ambiguous list is data derived from the catalog once, not a
+heuristic.
+
+### Recall is measured, not assumed
+
+The original design eyeballed precision during build step 2 and never measured recall,
+which is worse: a false positive is visible in the output, a missed mention is invisible
+by construction, and a 55%-recall gate silently makes every downstream number wrong. A
+fixture test asserts a known set of mentions is found, and ingest reports per-run
+candidate counts so a sudden drop is noticeable.
 
 ## Classifier
 
@@ -431,7 +570,15 @@ Triple coverage is guaranteed: warframe.com, the forums and Reddit all report th
 vaulting. Summing would let repetition masquerade as evidence.
 
 Dedupe on `(event_type, normalised subject, effective_at to the day)`, keeping the highest
-`confidence · weight` per group. Then:
+`confidence · weight` per group.
+
+**Two details the review found underspecified, now pinned down.** Dedupe runs on the
+**resolved slug**, not `subject_raw`, because "Mesa Prime" and "Prime Vault: Mesa Prime
+Returns" are the same event across two sources and only linkage makes them comparable.
+And a NULL `effective_at` groups with other NULLs for the same slug and event type rather
+than forming its own singleton, since one source resolving a date and another not is the
+common case, and treating them as distinct events is exactly the triple-counting `tanh`
+would then hide rather than prevent.
 
 ```
 score = tanh( Σ s_i / news_saturation )     -> (-1, 1)
@@ -650,37 +797,76 @@ the backtest from an intention into a habit.
 Caveat already noted: Reddit's listings reach back only about 1000 posts, so its history is
 thin.
 
-## Suggested build order
+## Build order
 
-Each step ships green and is independently useful.
+### Phase 9a, build now
 
-1. `m0004` + `NewsRepo` + types. Storage first, nothing reads it yet.
-2. Sources + fixtures + `match.py` fuzzy gate. Ingest raw articles, classify nothing.
-   Verifiable by eye: is the gate finding real items and rejecting noise?
+Each step ships green and is independently useful. **Nothing here touches a Signal.**
+
+1. `m0004` (four tables) + `NewsRepo` + types. Storage first, nothing reads it yet.
+2. Sources + captured fixtures + `match.py` fuzzy gate, writing `news_candidates`.
+   Ingest raw articles, classify nothing. Measure gate precision AND recall.
 3. `Classifier` protocol + `FakeClassifier` + `OllamaClassifier` + `schema.py` + the
-   label-to-number mapping. Then the 50-article benchmark to pick the model, with the
+   label-to-number mapping. Then the 50-article benchmark to pick the model, with
    `ClaudeClassifier` brought forward if it is needed to produce the gold labels.
-4. `link.py` set expansion + `news_item_links`. Now events resolve to slugs.
-5. `features/news.py` (decay, dedupe, saturation) + `NewsIndex`. Pure, heavily tested.
-6. `news_service` ingest orchestration + daemon tick.
-7. Bias post-pass in `analysis_service` + the sign-preservation property test.
-8. Backfill + backtest. **Gate: does it actually help?** Tune or cut here.
-9. Frontend ES module split, then the News tab and the bias toggle.
-10. `ClaudeClassifier` as the alternate backend.
+4. `link.py` set expansion + `news_item_links`, resolving rank via `items.canonical_rank`.
+5. `news_service` ingest orchestration + daemon tick.
+6. Frontend ES module split, then a **read-only** News tab: articles, their extracted
+   events, and the items each event links to, with `link_method` badges.
 
-Step 8 before step 9 is deliberate. Do not build the UI for a bias that has not been shown
-to work.
+At the end of 9a the corpus is accumulating, classifications are visible for inspection,
+and nothing depends on them.
+
+### Phase 9b, gated
+
+Do not start until the event study has data, which is roughly six months of parallel
+price and news accumulation.
+
+7. **Event study.** For each vault / Prime Access event: did linked slugs move in the
+   predicted direction over 14 days versus a matched control basket? Sign test.
+   **This is the gate.** Tune the direction table and half-lives here, or cut.
+8. `features/news.py` (decay, dedupe, saturation) + `NewsIndex`. Pure, heavily tested.
+9. Bias post-pass in `analysis_service` + the sign-preservation property test.
+10. News-only surfacing, the bias toggle, the evidence chips.
+
+Step 7 before steps 8 to 10 is the same discipline as the original step-8 gate, moved to
+a test that can actually run.
+
+## Known holes carried into implementation
+
+From the 2026-09-06 review, recorded rather than resolved.
+
+- ~~**`vault_in` may be sign-inverted pre-effective.**~~ **Resolved 2026-09-06, design
+  confirmed correct.** Prices jump up on announcement as buyers accumulate to resell at
+  vault prices. The review's dip hypothesis was wrong. `vault_in` is now the highest-value
+  event type in the taxonomy: an announced start instant and a known duration. Relics
+  specifically were not distinguished from parts; the event study can split them.
+- **`as_of` leaks revised content.** `content_hash` re-fetch means stored text is always
+  the newest revision, and DE edits hotfix posts after publication. Timing does not leak;
+  content does. Fixing it properly needs revision-versioned articles, which `m0004` does
+  not have. Acceptable for 9a (nothing replays yet); reassess before the event study.
+- **The design names the second-order edge and does not build it.** "Which part of a
+  vaulted set is the bottleneck" is called the fatter edge, then every set sibling gets a
+  flat ~0.8 weight, which is the opposite of bottleneck detection. 9b should either build
+  bottleneck detection (per-part volume and depth at announcement time) or stop claiming
+  that edge.
+- **Confidence-only caps the ceiling.** With `k_mag = 0` and no direction flip, the
+  entire output is a dimmed confidence number, and the most valuable thing news can say
+  ("this technical BUY is wrong, supply just flooded") is structurally forbidden. This
+  was a deliberate choice, not an oversight, but it is worth revisiting once the event
+  study says how trustworthy the classifications actually are.
 
 ## Open questions for implementation
 
 - Exact Ollama model tag. Starting recommendation is Qwen3-4B-Instruct-2507 at Q8;
-  confirm the tag with a `pull` and settle the choice with the 50-article benchmark in
-  "Choosing the model empirically" rather than by argument.
-- Whether the three-label `strength` and `confidence` scales are granular enough, or
-  whether a five-label scale helps once there is backtest data. Start at three.
-- Whether the curated frame-to-signature-weapon table is needed for v1, or whether direct
-  match plus set expansion is good enough. Decide after step 4 on real data.
+  confirm with a `pull` and settle the choice with the 50-article benchmark rather than
+  by argument. Note the quantisation rationale in "Ollama backend" is overstated:
+  distinguishing `vault_in` from `vault_out` from `prime_access` in DE's prose does need
+  comprehension and domain knowledge, so let the benchmark decide, not the argument.
+- Whether the three-label `strength` and `confidence` scales are granular enough. Start
+  at three.
+- Whether the curated frame-to-signature-weapon table is needed, or whether direct match
+  plus set expansion is good enough. Decide after step 4 on real data.
 - Forum HTML parsing may need a fallback if the markup shifts. Consider whether the forum
-  source is worth its maintenance cost versus warframe.com alone.
-- Whether `news_enabled` should stay off by default permanently, or flip on after the
-  backtest passes.
+  source earns its maintenance cost versus warframe.com alone.
+- Whether `news_enabled` stays off by default permanently.

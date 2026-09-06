@@ -1216,3 +1216,78 @@ a rewrite with no test framework on either side, now made worse by also being co
 a new feature). Add the news tab to `index.html` and say nothing (rejected: the exit
 condition existing means the trip has to be on the record, and 1655 going on 2000 lines is
 the problem the condition was written to catch).
+
+## 2026-09-06 - News bias v1 ships as corpus + classifier only, no bias applied
+
+**Context:** An adversarial review of the phase 9a design surfaced a blocking fact that
+was assumed rather than checked. `daily_stats` holds **93 distinct dates**
+(2026-06-04..2026-09-04) and **no series has the 97 days** that `replay()` needs
+(`PRICE_WINDOW_DAYS = 90` plus a 7-day forward horizon). warframe.market serves a 90-day
+rolling window, so history never extends backwards, only forward at one day per day. The
+design's step-8 backtest gate, which steps 9 and 10 were explicitly gated on, therefore
+cannot run today and will not for roughly six months. Compounding it: Prime Vault and
+Prime Access events occur 4-6 times a year, so even a full year of history yields a
+per-cell n of about 1 against 15+ free parameters (nine half-lives, six label mappings,
+`k_conf`, `k_mag`, saturation, thresholds, model choice).
+
+**Decision:** Ship v1 as ingestion, fuzzy gate, classifier and stored events, with a
+**read-only News tab**. No bias is applied to any signal, no `NewsIndex`, no post-pass,
+no backtest gate. Both datasets this feature needs are time-limited: price history grows
+one day per day, and the news corpus is currently empty. So collect both in parallel now
+and defer every judgement until there is enough of each. The classifier is included
+rather than deferred because labelled events also have to accumulate, and because months
+of eyeballing real classifications is the only honest way to earn trust in a 4B model
+before anything depends on it. The bias post-pass, `NewsIndex` and validation become
+phase 9b, gated on an **event study** (did linked slugs move in the predicted direction
+over 14 days versus a matched control basket, sign-tested over the accumulated events)
+rather than on analyzer hit-rate replay. The event study needs no 90-day warmup, no
+analyzer, and no `harness.py`, and it tests the direction table directly.
+
+**Alternatives:** Build as designed and re-run the gate in six months (rejected: ships
+unvalidated confidence mutation into a path that feeds `discord_min_confidence`, and the
+review's M1 notes the design names a second-order edge then assigns flat set-sibling
+weights that cannot capture it). Corpus only, no classifier (rejected: labelled events
+would not accumulate, so the eventual event study would start from zero and the model
+would be untested when it finally mattered). Shelve phase 9a entirely (rejected: the
+corpus is the scarce, time-gated asset, and not collecting it now costs six months later).
+
+## 2026-09-06 - Gate discriminator is ambiguity, not name length
+
+**Context:** The fuzzy gate needed a rule to stop one-word item names matching ordinary
+prose. The first attempt required single-token names to be at least four characters.
+Querying the catalog showed what that actually drops: 24 single-word items, split almost
+evenly between ordinary English words (Flow, Fury, Rage, Rush, Hunt, Bite, Maim, Howl,
+Hush, Dig, Bore) and Requiem mods (Fass, Jahu, Khra, Lohk, Oull, Vome, Xata, Ris, Haav).
+The Requiem mods are distinctive nonsense syllables that should always match; the English
+words are hopeless at any length. Length was measuring the wrong thing.
+
+**Decision:** Drop the length rule. A single-token match requires the token to be
+capitalised in the source text, and a token on a curated `_AMBIGUOUS_SINGLE_TOKENS` list
+additionally requires that it not be sentence-initial, since mid-sentence capitalisation
+is a strong proper-noun signal. `Xata` matches; `Rage` matches in "the Rage mod was
+buffed" but not in "Rage was the theme of the update". The ambiguous list is data derived
+from the catalog once, not a heuristic. Gate **recall** also becomes a measured quantity
+with its own fixture test, since the previous design only ever eyeballed precision and a
+missed mention is invisible by construction.
+
+**Alternatives:** Keep the length rule (rejected: silently drops nine real Requiem mods).
+Drop single-token matching entirely (rejected: loses every mod and Warframe mentioned by
+bare name, which is most of them). A general English dictionary (rejected: a dependency
+or a large data file to solve a 24-item problem that a curated list solves exactly).
+
+## 2026-09-06 - News item links resolve rank via items.canonical_rank
+
+**Context:** `news_item_links.rank` is NOT NULL and `NewsIndex` keys on `(slug, rank)`,
+but nothing in the design said which rank a "Condition Overload nerf" attaches to. Mods
+trade at ranks 0 through 10. Defaulting to 0 starves maxed-rank signals; fanning across
+every rank multiplies both links and dedupe groups.
+
+**Decision:** One link per item at `items.canonical_rank`, the same field
+`feature_service.market_context` and `validation/harness.py` already key on. News is not
+rank-specific: an announcement about a mod is about the mod, and the canonical rank is
+already this codebase's answer to "which rank represents this item".
+
+**Alternatives:** Rank 0 always (rejected: wrong for maxed mods, which are the traded
+ones). Fan out across all ranks (rejected: multiplies rows and corrupts dedupe for no
+information gain). Let the classifier decide (rejected: the design's whole premise is
+that the model names subjects and code resolves items).
