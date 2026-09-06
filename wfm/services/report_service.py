@@ -65,6 +65,10 @@ async def report(
         int((now - snapshot.ts).total_seconds()) if snapshot is not None else None
     )
     payload["watched"] = ctx.watchlist.get(slug, target_rank) is not None
+    # Ranks that actually have candles, not range(0, max_rank+1). Only rank 0 and each
+    # item's max see real trade volume, so offering the intermediates would open empty
+    # panels. The GUI builds its rank selector from this.
+    payload["ranks"] = ctx.daily.ranks_for(slug)
     return payload
 
 

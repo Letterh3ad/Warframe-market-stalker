@@ -451,6 +451,48 @@ async function selectItem(slug, rank, meta) {
   renderDetail(body, ref);
 }
 
+// Rank selector for mods, arcanes and anything else with a rank range.
+//
+// Built from body.ranks (the ranks that actually have candles), NOT from
+// range(0, max_rank+1): in practice only rank 0 and each item's max see trade volume, so
+// offering the intermediates would open panels with no data in them. The current rank is
+// unioned in so the selector always shows where you are, even for a rank the catalog
+// knows about but that has never traded.
+//
+// Falls back to the plain text it replaced when there is nothing to choose between, so
+// single-rank items look exactly as before.
+//
+// Caveat worth knowing: switching rank re-renders price history and stats correctly, but
+// the ORDER BOOK will read unavailable on any rank that is not polled. Book polling is
+// watchlist-driven at canonical_rank only, so non-canonical ranks have no snapshot.
+function rankPicker(body, ref) {
+  const current = body.rank;
+  const ranks = (Array.isArray(body.ranks) ? body.ranks : []).filter(
+    (r) => typeof r === "number",
+  );
+  if (!ranks.includes(current)) ranks.push(current);
+  ranks.sort((a, b) => a - b);
+
+  if (ranks.length < 2) return el("span", null, `rank ${current}`);
+
+  const top = ranks[ranks.length - 1];
+  const label = (r) => (r === 0 ? "unranked" : r === top ? `rank ${r} (max)` : `rank ${r}`);
+
+  const select = el("select", {
+    class: "rank-select",
+    "aria-label": "rank",
+    // ref.meta carries tags and is_set, which GET /items/{slug} does not return, so it
+    // must be passed through or the header loses them on every rank change.
+    onchange: (e) => selectItem(ref.slug, Number(e.target.value), ref.meta),
+  });
+  for (const r of ranks) {
+    const option = el("option", { value: String(r) }, label(r));
+    if (r === current) option.selected = true;
+    select.append(option);
+  }
+  return select;
+}
+
 function renderDetail(body, ref) {
   const pane = document.getElementById("detail-pane");
   // Refresh / watchlist re-renders replace the whole pane; drop the old chart
@@ -473,7 +515,7 @@ function renderDetail(body, ref) {
       body.name || body.slug,
       isSet ? el("span", { class: "set-marker" }, "set") : null,
     ),
-    el("div", { class: "slug-line mono" }, `${body.slug}  ·  rank ${body.rank}`),
+    el("div", { class: "slug-line mono" }, `${body.slug}  ·  `, rankPicker(body, ref)),
     tags.length
       ? el("div", { class: "tags" }, ...tags.map((t) => el("span", { class: "tag-pill" }, t)))
       : null,

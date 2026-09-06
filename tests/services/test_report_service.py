@@ -151,3 +151,27 @@ def test_history_clamps_days_and_carries_ohlc(ctx):
 def test_history_on_an_unknown_slug_raises_rather_than_returning_empty(ctx):
     with pytest.raises(LookupError):
         report_service.history(ctx, "no-such-item")
+
+
+def test_report_payload_advertises_the_ranks_that_have_history(ctx):
+    """The rank dropdown is built from this, so it must reflect stored data rather than
+    range(0, max_rank+1): only ranks that actually trade have candles."""
+    import asyncio
+
+    from wfm.models import DailyCandle, Item
+    from wfm.services import report_service
+
+    ctx.items.upsert_many(
+        [Item(slug="m", name="M", url_name="m", max_rank=5, canonical_rank=5)]
+    )
+    ctx.daily.upsert_many(
+        [
+            DailyCandle(slug="m", rank=0, date="2026-09-01", close=10.0),
+            DailyCandle(slug="m", rank=5, date="2026-09-01", close=30.0),
+        ]
+    )
+
+    payload = asyncio.run(report_service.report(ctx, "m"))
+
+    assert payload["ranks"] == [0, 5]
+    assert payload["rank"] == 5

@@ -65,3 +65,9 @@ def test_hourly_upsert_collapses_the_same_instant_across_offsets(conn):
     rows = repo.window("x", 0, hours=24)
     assert len(rows) == 1
     assert rows[0].close == 41
+
+
+def test_ranks_for_is_empty_for_an_unknown_slug(conn):
+    from wfm.store.stats import DailyStatsRepo
+
+    assert DailyStatsRepo(conn).ranks_for("nope") == []

@@ -50,7 +50,16 @@ def resolve(ctx: AppContext, query: str, rank: str | int | None = None) -> tuple
             raise LookupError(f"no catalog item matches {query!r}. Try wfm search.")
         item = matches[0]
     if rank == "all":
-        return item.slug, list(range(0, item.max_rank + 1))
+        # Ranks that have actually traded, not range(0, max_rank + 1). Across the whole
+        # catalog, zero candles exist at any rank other than 0 and the item's max: a
+        # part-levelled mod is worth no more than an unranked one to a buyer who will max
+        # it themselves. The literal range meant `watch add --rank all` on a primed mod
+        # subscribed to nine ranks that can never produce a book or a candle.
+        #
+        # Falls back to the literal range for an item with no history, so an unsynced
+        # item still resolves to something rather than silently to nothing.
+        traded = ctx.daily.ranks_for(item.slug)
+        return item.slug, traded or list(range(0, item.max_rank + 1))
     if rank is None:
         return item.slug, [item.canonical_rank]
     return item.slug, [int(rank)]

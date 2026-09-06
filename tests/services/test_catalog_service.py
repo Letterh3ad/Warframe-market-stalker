@@ -78,3 +78,28 @@ def test_browse_clamps_the_limit_and_floors_a_negative_offset(bare_ctx):
     assert catalog_service.browse(bare_ctx, limit=99999)["limit"] == catalog_service.MAX_BROWSE_LIMIT
     assert catalog_service.browse(bare_ctx, limit=0)["limit"] == 1
     assert catalog_service.browse(bare_ctx, offset=-5)["offset"] == 0
+
+
+def test_resolve_all_returns_only_ranks_that_have_traded(ctx):
+    """`--rank all` on a primed mod used to mean eleven ranks, nine of which can never
+    produce a candle or a book. Only rank 0 and the item max ever see volume."""
+    from wfm.models import DailyCandle
+
+    ctx.daily.upsert_many(
+        [
+            DailyCandle(slug="primed_continuity", rank=0, date="2026-09-01", close=5.0),
+            DailyCandle(slug="primed_continuity", rank=10, date="2026-09-01", close=58.0),
+        ]
+    )
+    assert catalog_service.resolve(ctx, "primed_continuity", rank="all") == (
+        "primed_continuity",
+        [0, 10],
+    )
+
+
+def test_resolve_all_falls_back_to_the_full_range_without_history(ctx):
+    """An unsynced item must still resolve to something. Silently resolving to no ranks
+    would make `watch add --rank all` a no-op that reports success."""
+    slug, ranks = catalog_service.resolve(ctx, "primed_continuity", rank="all")
+    assert slug == "primed_continuity"
+    assert ranks == list(range(0, 11))
