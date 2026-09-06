@@ -63,11 +63,17 @@ async def test_every_request_carries_the_user_agent():
 # never touches warframe.market; test_the_discord_sink_* below pins that down.
 DISCORD_SINK = SOURCE_ROOT / "alerts" / "discord.py"
 
+# The news fetcher has its own per-host budget, deliberately not reusing WFMClient
+# (which stamps warframe.market's platform/language/crossplay parameters and unwraps
+# a data envelope) or TokenBucket (clamped to warframe.market's rate limit). One
+# budget per upstream prevents the market budget from being corrupted.
+NEWS_FETCHER = SOURCE_ROOT / "news" / "fetch.py"
+
 
 def test_only_the_client_and_discord_sink_construct_an_http_transport():
     offenders = []
     for path in SOURCE_ROOT.rglob("*.py"):
-        if path.name == "client.py" or path == DISCORD_SINK:
+        if path.name == "client.py" or path == DISCORD_SINK or path == NEWS_FETCHER:
             continue
         text = path.read_text(encoding="utf-8")
         if "httpx.AsyncClient(" in text or "requests." in text:
