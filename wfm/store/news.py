@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from wfm.news.types import (
     Article,
     ArticleStatus,
     Candidate,
+    EventType,
     ExtractedEvent,
     ItemLink,
+    LinkedEvent,
     LinkMethod,
     NewsDirection,
     NewsSource,
@@ -265,6 +267,45 @@ class NewsRepo:
             for r in rows
         ]
 
+    def active_links(
+        self,
+        now: datetime,
+        horizon_days: int,
+        as_of: datetime | None = None,
+    ) -> list[LinkedEvent]:
+        """Every link whose event is still inside the decay horizon, fully joined.
+
+        There is deliberately no upper bound on the anchor: an event announced today and
+        effective in two weeks must be included, because that gap is the window in which
+        acting on it is still possible.
+
+        `as_of` restricts the result to articles published by that instant, which is how
+        the backtest replays the past through this exact query rather than a copy of it.
+        """
+        floor = to_utc_iso(now - timedelta(days=horizon_days))
+        clauses = [
+            "a.status = ?",
+            "COALESCE(e.effective_at, a.published_at) >= ?",
+        ]
+        params: list = [ArticleStatus.CLASSIFIED.value, floor]
+        if as_of is not None:
+            clauses.append("a.published_at <= ?")
+            params.append(to_utc_iso(as_of))
+
+        rows = self._conn.execute(
+            'SELECT l.slug, l."rank", l.link_method, l.link_score, l.direction, '
+            "l.weight, e.event_type, e.strength, e.confidence, e.subject_raw, "
+            "e.effective_at, a.id AS article_id, a.published_at, a.title, a.url, "
+            "a.excerpt "
+            "FROM news_item_links l "
+            "JOIN news_events e ON e.id = l.event_id "
+            "JOIN news_articles a ON a.id = e.article_id "
+            f"WHERE {' AND '.join(clauses)} "
+            "ORDER BY COALESCE(e.effective_at, a.published_at) DESC, l.slug",
+            params,
+        )
+        return [_to_linked_event(r) for r in rows]
+
 
 def _to_article(row: sqlite3.Row) -> Article:
     return Article(
@@ -279,4 +320,28 @@ def _to_article(row: sqlite3.Row) -> Article:
         excerpt=row["excerpt"],
         status=ArticleStatus(row["status"]),
         content_hash=row["content_hash"],
+    )
+
+
+def _to_linked_event(row: sqlite3.Row) -> LinkedEvent:
+    return LinkedEvent(
+        slug=row["slug"],
+        rank=row["rank"],
+        event_type=EventType(row["event_type"]),
+        direction=NewsDirection(row["direction"]),
+        strength=row["strength"],
+        confidence=row["confidence"],
+        weight=row["weight"],
+        link_method=LinkMethod(row["link_method"]),
+        subject_raw=row["subject_raw"],
+        effective_at=(
+            datetime.fromisoformat(row["effective_at"]) if row["effective_at"] else None
+        ),
+        published_at=(
+            datetime.fromisoformat(row["published_at"]) if row["published_at"] else None
+        ),
+        article_id=row["article_id"],
+        article_title=row["title"],
+        article_url=row["url"],
+        excerpt=row["excerpt"],
     )

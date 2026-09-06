@@ -321,3 +321,86 @@ def test_links_for_event_roundtrips(conn):
     assert link.direction is NewsDirection.DOWN
     assert link.weight == 1.0
     assert link.event_id == event_id
+
+
+from datetime import timedelta
+
+from wfm.news.types import LinkedEvent
+
+
+def _classified(conn, external_id, published, effective, slug="mesa_prime_set"):
+    """Store one classified article carrying one event and one link."""
+    repo = NewsRepo(conn)
+    article = Article(
+        source=NewsSource.WARFRAME_NEWS,
+        external_id=external_id,
+        url=f"https://example.test/{external_id}",
+        title=f"Article {external_id}",
+        body=external_id,
+        published_at=published,
+        excerpt="excerpt text",
+    )
+    article_id = repo.upsert_article(article, NOW)
+    repo.mark(article_id, ArticleStatus.CLASSIFIED, "fake", "1", NOW)
+    (event_id,) = repo.insert_events(
+        article_id,
+        [
+            ExtractedEvent(
+                event_type=EventType.VAULT_OUT,
+                subject_raw="Mesa Prime",
+                direction=NewsDirection.DOWN,
+                strength=0.8,
+                confidence=0.9,
+                effective_at=effective,
+            )
+        ],
+    )
+    repo.insert_links(event_id, [_link(slug)])
+    return article_id
+
+
+def test_active_links_returns_a_fully_joined_row(conn):
+    _classified(conn, "a1", NOW - timedelta(days=1), NOW)
+    (row,) = NewsRepo(conn).active_links(NOW, horizon_days=60)
+    assert isinstance(row, LinkedEvent)
+    assert row.slug == "mesa_prime_set"
+    assert row.event_type is EventType.VAULT_OUT
+    assert row.direction is NewsDirection.DOWN
+    assert row.strength == 0.8
+    assert row.weight == 1.0
+    assert row.article_title == "Article a1"
+    assert row.excerpt == "excerpt text"
+
+
+def test_active_links_includes_events_effective_in_the_future(conn):
+    _classified(conn, "future", NOW, NOW + timedelta(days=14))
+    assert len(NewsRepo(conn).active_links(NOW, horizon_days=60)) == 1
+
+
+def test_active_links_drops_events_older_than_the_horizon(conn):
+    _classified(conn, "old", NOW - timedelta(days=200), NOW - timedelta(days=200))
+    assert NewsRepo(conn).active_links(NOW, horizon_days=60) == []
+
+
+def test_active_links_ignores_unclassified_articles(conn):
+    repo = NewsRepo(conn)
+    article_id = repo.upsert_article(_article(), NOW)
+    (event_id,) = repo.insert_events(article_id, [_event()])
+    repo.insert_links(event_id, [_link()])
+    assert repo.active_links(NOW, horizon_days=60) == []
+
+
+def test_as_of_hides_articles_published_after_that_date(conn):
+    _classified(conn, "early", NOW - timedelta(days=10), NOW - timedelta(days=10))
+    _classified(conn, "late", NOW - timedelta(days=1), NOW - timedelta(days=1))
+    repo = NewsRepo(conn)
+
+    assert len(repo.active_links(NOW, horizon_days=60)) == 2
+    as_of = repo.active_links(NOW, horizon_days=60, as_of=NOW - timedelta(days=5))
+    assert [r.article_title for r in as_of] == ["Article early"]
+
+
+def test_active_links_falls_back_to_published_at_when_effective_is_null(conn):
+    _classified(conn, "noeff", NOW - timedelta(days=5), None)
+    assert len(NewsRepo(conn).active_links(NOW, horizon_days=60)) == 1
+    assert NewsRepo(conn).active_links(NOW, horizon_days=2) == []
