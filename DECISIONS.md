@@ -1291,3 +1291,38 @@ already this codebase's answer to "which rank represents this item".
 ones). Fan out across all ranks (rejected: multiplies rows and corrupts dedupe for no
 information gain). Let the classifier decide (rejected: the design's whole premise is
 that the model names subjects and code resolves items).
+
+## 2026-09-06 - News sources are read through structured feeds, not HTML
+
+**Context:** Plan 1 Task 11 gated the parser work on looking at real markup. Capturing
+live payloads changed the premise: `forums.warframe.com` returns 403 to every non-browser
+client, `reddit.com/*.json` returns 403 regardless of User-Agent, and warframe.com's own
+listing page is backed by a paginated JSON endpoint its load-more button already calls.
+
+**Decision:** Read warframe.com through `/en/news/search_posts_json`, the forums through
+their per-forum Invision RSS, and reddit through its Atom feed. HTML parsing survives only
+as a fallback for warframe.com's listing. Article bodies come inline from the two feeds;
+only warframe.com needs a second request per article.
+
+**Alternatives:** Parse HTML for all three (rejected: two of three are unreachable as
+HTML). Browser-impersonating headers or a headless browser to defeat the 403s (rejected:
+the feeds are the sanctioned path, and evading a block is both fragile and rude to hosts
+this project has no relationship with). Drop the forums (rejected: they turned out to be
+the cheapest source, one request for full bodies).
+
+## 2026-09-06 - warframe.com publish dates are America/Toronto
+
+**Context:** `to_utc_iso` raises on naive datetimes, and warframe.com stamps posts
+`"2026-09-04 07:54:00"` with no offset. The article page's `ld+json` carries a second,
+different naive timestamp for the same article.
+
+**Decision:** Treat the listing date as `America/Toronto` via `zoneinfo`, and ignore the
+`ld+json` date. Evidence: the Citrine Prime Access post is stamped 07:54:00 and the first
+three r/Warframe threads reacting to it are stamped 11:56:53, 12:00:13 and 12:00:21 UTC,
+which puts the announcement two minutes before the first reaction at UTC-4. DE is in
+London, Ontario.
+
+**Alternatives:** Assume UTC (rejected: puts the reactions four hours late). A fixed
+`-04:00` offset (rejected: the corpus crosses a DST boundary within weeks). Use the
+`ld+json` `datePublished` (rejected: reads 10:08:58 for that article, consistent with
+neither reading of the listing date, so it is a different clock).
