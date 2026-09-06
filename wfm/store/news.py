@@ -3,7 +3,14 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
-from wfm.news.types import Article, ArticleStatus, NewsSource
+from wfm.news.types import (
+    Article,
+    ArticleStatus,
+    Candidate,
+    ExtractedEvent,
+    ItemLink,
+    NewsSource,
+)
 from wfm.store.db import to_utc_iso, transaction
 
 
@@ -95,6 +102,121 @@ class NewsRepo:
                     article_id,
                 ),
             )
+
+    def insert_candidates(self, article_id: int, candidates: list[Candidate]) -> int:
+        """The gate's output: which catalog items this article mentions, and the text
+        around each. This is the classifier's input, stored so the pipeline can stay
+        asynchronous without ever persisting an article body or re-fetching one.
+        """
+        unique: dict[str, Candidate] = {c.slug: c for c in candidates}
+        if not unique:
+            return 0
+        with transaction(self._conn):
+            self._conn.executemany(
+                "INSERT INTO news_candidates (article_id, slug, name, score, context) "
+                "VALUES (?,?,?,?,?) "
+                "ON CONFLICT(article_id, slug) DO UPDATE SET "
+                "name=excluded.name, score=excluded.score, context=excluded.context",
+                [
+                    (article_id, c.slug, c.name, c.score, c.context)
+                    for c in unique.values()
+                ],
+            )
+        return len(unique)
+
+    def candidates_for(self, article_id: int) -> list[Candidate]:
+        rows = self._conn.execute(
+            "SELECT slug, name, score, context FROM news_candidates "
+            "WHERE article_id=? ORDER BY score DESC, slug",
+            (article_id,),
+        )
+        # start/end are match offsets into an article body that is not persisted, so a
+        # candidate read back from the database reports 0 for both. Nothing downstream
+        # of the gate uses them; the stored context is what the classifier sees.
+        return [
+            Candidate(
+                slug=r["slug"],
+                name=r["name"],
+                score=r["score"],
+                context=r["context"],
+                start=0,
+                end=0,
+            )
+            for r in rows
+        ]
+
+    def insert_events(self, article_id: int, events: list[ExtractedEvent]) -> list[int]:
+        """Ids come back in the same order as `events`, so the caller can pair each
+        returned id with the links it derived from that event.
+        """
+        ids: list[int] = []
+        with transaction(self._conn):
+            for event in events:
+                cur = self._conn.execute(
+                    "INSERT INTO news_events (article_id, event_type, subject_raw, "
+                    "direction, strength, confidence, rationale, effective_at, raw_json) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
+                    (
+                        article_id,
+                        event.event_type.value,
+                        event.subject_raw,
+                        event.direction.value,
+                        event.strength,
+                        event.confidence,
+                        event.rationale,
+                        to_utc_iso(event.effective_at) if event.effective_at else None,
+                        event.raw_json,
+                    ),
+                )
+                ids.append(int(cur.lastrowid))
+        return ids
+
+    def insert_links(self, event_id: int, links: list[ItemLink]) -> int:
+        """Returns the number of distinct (slug, rank) links written.
+
+        Input is deduplicated first, so the return value means "rows written" rather than
+        "rows attempted". Counting the table afterwards would report every link on the
+        event, which equals the write count only while the event is fresh.
+
+        ON CONFLICT DO UPDATE rather than INSERT OR REPLACE: the latter deletes and
+        reinserts, churning the surrogate primary key on every re-link.
+        """
+        unique: dict[tuple[str, int], ItemLink] = {}
+        for link in links:
+            unique[(link.slug, link.rank)] = link
+        if not unique:
+            return 0
+        with transaction(self._conn):
+            self._conn.executemany(
+                'INSERT INTO news_item_links (event_id, slug, "rank", link_method, '
+                "link_score, direction, weight) VALUES (?,?,?,?,?,?,?) "
+                'ON CONFLICT(event_id, slug, "rank") DO UPDATE SET '
+                "link_method=excluded.link_method, link_score=excluded.link_score, "
+                "direction=excluded.direction, weight=excluded.weight",
+                [
+                    (
+                        event_id,
+                        link.slug,
+                        link.rank,
+                        link.link_method.value,
+                        link.link_score,
+                        link.direction.value,
+                        link.weight,
+                    )
+                    for link in unique.values()
+                ],
+            )
+        return len(unique)
+
+    def replace_links_for(self, event_id: int, links: list[ItemLink]) -> int:
+        """Re-link a stored event without re-invoking the classifier: used when the
+        catalog grows or the fuzzy threshold changes.
+        """
+        with transaction(self._conn):
+            self._conn.execute(
+                "DELETE FROM news_item_links WHERE event_id=?", (event_id,)
+            )
+            return self.insert_links(event_id, links)
 
 
 def _to_article(row: sqlite3.Row) -> Article:
