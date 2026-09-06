@@ -10,7 +10,7 @@ NOW = datetime(2026, 8, 27, 4, 0, tzinfo=timezone.utc)
 
 
 def test_the_third_migration_applied(conn):
-    assert current_version(conn) == SCHEMA_VERSION == 3
+    assert current_version(conn) == SCHEMA_VERSION == 4
 
 
 def test_start_heartbeat_stop(conn):
