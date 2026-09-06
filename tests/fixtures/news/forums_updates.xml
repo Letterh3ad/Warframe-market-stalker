@@ -1,0 +1,2181 @@
+<?xml version="1.0"?>
+<rss version="2.0"><channel><title>PC Update Notes Latest Topics</title><link>https://forums.warframe.com/forum/3-pc-update-notes/</link><description>PC Update Notes Latest Topics</description><language>en</language><item><title>Amir&#x2019;s Shockwave: Hotfix 43.5.3</title><link>https://forums.warframe.com/topic/1520640-amir%E2%80%99s-shockwave-hotfix-4353/</link><description><![CDATA[<p>
+	<strong>Changes:</strong>
+</p>
+
+<ul>
+	<li>
+		Nightwave Radio now plays from the Nightwave console in the Backrooms if the Nora Night Volume slider is not set to zero.
+	</li>
+	<li>
+		Updated the description of Athodai Prime's unique trait Overdrive to specify it triggers on weakpoint kills (previously said headshot).
+	</li>
+	<li>
+		Ally Gemini Skin voice lines are now affected by the Enemy &amp; Ally Combat Volume slider in the Advanced Sound Effects Mixer.
+	</li>
+	<li>
+		Improved handling of corrupt shader caches, which could result in crashing.
+	</li>
+</ul>
+
+<p>
+	<strong>Surge Eximus Changes &amp; Fixes:</strong>
+</p>
+
+<ul>
+	<li>
+		Surge Eximus' electricity ability now has a maximum casting range of 50m. 
+	</li>
+	<li>
+		Fixed additional cases of Surge Eximus units causing Clients to crash in Uranus Proxima and Deep Mines missions.
+	</li>
+	<li>
+		Fixed the Surge Eximus' electricity ability not being affected by Banshee's Silence.
+	</li>
+	<li>
+		Fixed the Surge Eximus' electricity ability dealing damage across two ticks instead of one.
+		<ul>
+			<li>
+				The actual damage output from the electric shocks is unchanged.
+			</li>
+		</ul>
+	</li>
+	<li>
+		Fixed Surge Eximus being able to target invisible players. 
+	</li>
+</ul>
+
+<p>
+	<strong>Top Fixes:</strong>
+</p>
+
+<ul>
+	<li>
+		Fixed Tempera Amp Skin causing Drifter Amps with an Alt-Fire to sometimes not respond to Alt-Fire inputs or the Fire Manual Trigger Weapons Continuously toggle.
+		<ul>
+			<li>
+				Also fixed misaligned VFX when firing.
+			</li>
+			<li>
+				<strong>Known Issue:</strong> This issue persists for Operators with the Tempera Amp Skin equipped. We recommend using a different Amp skin for the time being if you are affected.
+			</li>
+		</ul>
+	</li>
+	<li>
+		Fixed Hildryn being able to stack Void Relic opening Ability Strength buffs if it was triggered while she was in Aegis Storm. 
+	</li>
+	<li>
+		Fixed the Vectis (Prime) not having a fully reloaded magazine after exiting Incarnon Form.
+	</li>
+</ul>
+
+<p>
+	<strong>Fixes:</strong>
+</p>
+
+<ul>
+	<li>
+		Fixed being able to drag tints into a Signa's X and Y axis setting in the Appearance menu. 
+	</li>
+	<li>
+		Fixed metallic elements in the Backrooms appearing black for systems with low graphics settings.
+	</li>
+	<li>
+		Fixed various minor decoration issues in Höllvandeim, including a poster not displaying properly, and Lettie's seat missing her lumbar support pillow. 
+	</li>
+	<li>
+		Fixed being unable to place Dojo Decorations in the portal’s dissolve range of the Courtier's Bliss and Harbinger's Pass Dojo Rooms.
+	</li>
+	<li>
+		Fixed Kubrows and Kavats having a duplicate listing of their default fur pattern.
+	</li>
+	<li>
+		Fixed a crash when interacting with the KIM system.
+	</li>
+</ul>
+
+<p>
+	For list of known issues that are on our radar, visit our dedicated thread: <a href="https://forums.warframe.com/topic/1519687-known-issues-amirs-shockwave/" ipsnoembed="true" rel="">https://forums.warframe.com/topic/1519687-known-issues-amirs-shockwave/</a>
+</p>
+]]></description><guid isPermaLink="false">1520640</guid><pubDate>Tue, 18 Aug 2026 19:04:45 +0000</pubDate></item><item><title>Amir&#x2019;s Shockwave: Hotfix 43.5.4</title><link>https://forums.warframe.com/topic/1520771-amir%E2%80%99s-shockwave-hotfix-4354/</link><description><![CDATA[<p>
+	<strong>Fixes:</strong>
+</p>
+
+<ul>
+	<li>
+		Fixed lighting in the Backroom causing various metallic items to appear significantly darker than before.
+	</li>
+	<li>
+		Fixed Yareli being unable to initiate Last Gasp if Merulina had died before Last Gasp was triggered.
+	</li>
+	<li>
+		Fixed Surge Eximus becoming braindead after being Silenced mid-sprint.
+	</li>
+	<li>
+		Fixed Tempera Amp Skin causing Operator Amps with an Alt-Fire to sometimes not respond to Alt-Fire inputs or the Fire Manual Trigger Weapons Continuously toggle.
+	</li>
+	<li>
+		Fixed DJ Shockwave's transmissions and radio broadcasts being a little too loud.
+	</li>
+	<li>
+		Fixed performance issues caused by Arthur's Exalted Blade and Quincy's Neutralizer in the special Fables &amp; Frontiers mission.
+	</li>
+	<li>
+		Fixed performance issues related to Surge Eximus electricity attacks.
+	</li>
+	<li>
+		Fixed Daiku and Daiku Prime's animations being broken with certain bow skins equipped.
+	</li>
+	<li>
+		Fixed a script error when customizing loadouts.
+	</li>
+	<li>
+		Fixed a crash related to Baruuk's Elude.
+	</li>
+</ul>
+
+<p>
+	For list of known issues that are on our radar, visit our dedicated thread: <a href="https://forums.warframe.com/topic/1519687-known-issues-amirs-shockwave/" ipsnoembed="true" rel="">https://forums.warframe.com/topic/1519687-known-issues-amirs-shockwave/</a>
+</p>
+]]></description><guid isPermaLink="false">1520771</guid><pubDate>Wed, 19 Aug 2026 18:05:25 +0000</pubDate></item><item><title>Update 43.5: Amir's Shockwave</title><link>https://forums.warframe.com/topic/1519695-update-435-amirs-shockwave/</link><description><![CDATA[<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="b771648488ae052f7e6493bac8e455ef.png" class="ipsImage" src="https://www-static.warframe.com/uploads/b771648488ae052f7e6493bac8e455ef.png"></b><b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: A closeup of Amir’s face in front of an electrified microphone in the opposite orientation of Nora Night’s. A crackling border encloses the Amir’s Shockwave logo as blue and purple arcs of electricity frame the image and Amir’s headset.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">UPDATE 43.5: AMIR’S SHOCKWAVE </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Get ready for a shakeup like you've never heard before! Amir Beckett of The Hex is cutting through the airwaves (and across space and time) to bring you a double-dose of 1999-themed content. Not only has he hacked Nora’s airways by hosting his own remixed edition of a Nightwave Mix called </span><strong><span style="font-style:normal;text-decoration:none;">Amir’s Shockwave</span></strong><span style="font-style:normal;text-decoration:none;"> replete with never-before-seen Rewards, but he's also joining the rest of his Hex teammates for a unique KIM narrative adventure, </span><strong><span style="font-style:normal;text-decoration:none;">Fables &amp; Frontiers: Running Late.</span></strong><span style="font-style:normal;text-decoration:none;"> Read on to learn more! </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Transcend the chaos of battle, Tenno… This interim update also delivers the Baruuk Shaoshi Collection! Featuring the Baruuk Shaoshi Skin, Rathan Sword &amp; Shield Skin, Liania Signa and Neviti Ephemera. Get your hands on the new TennoGen: Fables &amp; Frontiers, featuring six new creations from community artists –  including the first TennoGen pieces for Kullervo and Oraxia, two brand new Signas, and more. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">This interim update also includes many changes and fixes (including code!). Some pesky issues such as frozen enemies despawning in Netracell missions, and Nokko’s Reroot Rampage not triggering Archon Continuity or having its first bounce dealing damage have been addressed. We have also added a plethora of quality of life changes for the Nightwave system to make Acts more engaging and removed some longstanding pain points. </span><span style="background-;font-style:normal;text-decoration:none;">We also have a dedicated </span><a href="https://forums.warframe.com/forum/2247-update-435-amirs-shockwave/" rel="" target="_blank"><span style="background-;font-style:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;">Amir’s Shockwave sub-forum</span></a><span style="background-;font-style:normal;text-decoration:none;"> to collect your feedback and bug reports to address in follow-up Hotfixes where we can. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="background-;font-style:normal;text-decoration:none;">If any of the terms above are new to you, visit </span><a href="https://forums.warframe.com/topic/1355354-the-warframe-lexicon-for-updates-patch-notes/" rel="" target="_blank"><span style="background-;font-style:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;">The Warframe Lexicon for Updates </span></a><span style="background-;font-style:normal;text-decoration:none;">to learn more about Warframe’s development cycle. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="background-;font-style:normal;text-decoration:none;">Download Sizes:</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="background-;font-style:normal;text-decoration:none;">PC DirectX 11: ~248.94 MB</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="background-;font-style:normal;text-decoration:none;">PC DirectX 12: ~250.68 MB</span></b>
+</p>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="3864ca89a2374035e586042e9033df21.png" class="ipsImage" src="https://www-static.warframe.com/uploads/3864ca89a2374035e586042e9033df21.png"></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: Amir smirks while looking at us as he juggles three different dice in his left hand. Behind him is a large tabletop game setup complete with game pieces, dice, maps, and sheets. In the foreground is the logo for Fables &amp; Frontiers.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">FABLES &amp; FRONTIERS: RUNNING LATE (MINI KIM ADVENTURE)</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Magic! Mayhem! Mystery! Play with Amir as your Fablemaster and the rest of the Hex in a six-day mini KIM text adventure of the popular table top roleplaying game! But be warned, all may not be well in Höllvandeim… Log into the KIM and join the Fables &amp; Frontiers: Running Late campaign! </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">NOTE:</span></strong><span style="font-style:normal;text-decoration:none;"> This is a </span><strong><span style="font-style:normal;text-decoration:none;">permanent </span></strong><span style="font-style:normal;text-decoration:none;">addition to the KIM system! It is not tied to Amir’s Shockwave Nightwave Mix rotation, meaning it can be experienced at any time once the prerequisites have been met. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">Prerequisites</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">In order to unlock Fables &amp; Frontiers group chat in the KIM, you must have the following:</span></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Complete The Hex Quest &amp; The Hex Finale </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Reach Rank 5 (Pizza Party) with The Hex Syndicate </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Reach Chemistry Rank 5 (Close) with Amir in the KIM system </span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">How to Begin</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Before embarking on the KIM Fables &amp; Frontiers: Running Late adventure, you must first create your character sheet! Here’s how:</span></b>
+</p>
+
+<ol style="margin-top:0;margin-bottom:0;padding-inline-start:48px;">
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Once you have completed all of the listed prerequisites, travel to Höllvania Central Mall from the POM-2 map. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Make your way up to the second floor of the mall to the “Höllvandeim” room (read dedicated section to learn more). </span></b>
+		<ul style="margin-top: 0px; margin-bottom: 0px; padding-inline-start: 48px;">
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">You can fast travel to Höllvandeim from the pause menu and from the quick access wheel. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Ring the bell on the table to call in Amir – he’ll appear with much speed and urgency! </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Interact with Amir to put together a character sheet via dialogue options. You’ll choose your character class and their weaponry/abilities!</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Return to the POM-2 to begin the campaign in the KIM! Once you have completed your character sheet and Amir has run off to prepare the campaign, you can return to your POM-2 to begin the campaign in the KIM system. </span></b>
+	</li>
+</ol>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="6de0e764b025bb19771dc295d8c1c031.png" class="ipsImage" src="https://www-static.warframe.com/uploads/6de0e764b025bb19771dc295d8c1c031.png"></b><b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: Höllvandeim - a decorated room evoking magic and mystery with desks set up for participants. From left to right we can see the fablemaster’s table with their screen, rule book and notes, then the main table complete with a large map, game pieces and seating for six people.</span></b>
+</p>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">Höllvandeim</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Located on the second floor of the Höllvania Central Mall you will find what was once the cafe has been taken over completely by Amir and rebranded it as “Höllvandeim” for his campaign. Gotta love a Fable Master that really prioritizes player immersion! Wonder where he got all the Höllars for these decorations… </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-size:13.999999999999998pt;font-weight:700;font-style:normal;text-decoration:none;">Ring the Bell to Summon Amir! </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A service bell sits on the table near the Fablemaster’s station – ring it to summon Amir to the table! The man will appear with great speed and urgency at your call.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="3185a44fd4bb312feb7dcf3724ddb519.jpg" class="ipsImage" src="https://www-static.warframe.com/uploads/3185a44fd4bb312feb7dcf3724ddb519.jpg"></b><b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: Amir stares off into the distance as he stands behind a desk with a pizza box used as his fablemaster screen. To the right in the foreground is a service bell placed atop an upside down popcorn bucket of sorts. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Interact with Amir to gain access to his wares and other things we won’t spoil at this time! </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">NOTE: </span></strong><span style="font-style:normal;text-decoration:none;">Amir leaves the Arcade downstairs when rung to Höllvandeim and returns once you leave the room. If he’s downstairs, simply ring the bell again to call him back up. Alternatively, you can jump to him upstairs (using the Höllvandeim option) or downstairs (using the Protoframe, Amir option) using the quick access wheel. Such speed! </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Amir’s Fables &amp; Frontiers Store</span></strong><strong><span style="font-size:13.999999999999998pt;background-;font-style:normal;text-decoration:none;"> </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Amir has many Fables &amp; Frontiers goodies and more available for Standing with the Hex in Höllvandeim! Ring the bell to summon him upstairs and peruse his wares. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">For the sake of not spilling all the beans on the kind of mayhem you may get yourself into in the campaign, we chose to not list out each and every unique item in the shop in detail. You’ll just have to complete the campaign to see for yourself! </span></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fables &amp; Frontiers character Glyphs, one for each Hex member, by community artist </span><a href="https://www.zlide.de/" rel="external nofollow" target="_blank"><span style="font-style:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;">ZliDe</span></a></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Character Sheet Posters, one for each Hex member, by community artist </span><a href="https://brighansocials.carrd.co/" rel="external nofollow" target="_blank"><span style="font-style:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;">Brighan</span></a></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fables &amp; Frontiers Character Posters, one for each Hex member, by community artist </span><a href="https://brighansocials.carrd.co/" rel="external nofollow" target="_blank"><span style="font-style:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;">Brighan</span></a></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Several decorations based on the Fables &amp; Frontiers adventure</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Several Glyphs featuring foes you may encounter in the Fables &amp; Frontiers adventure </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A new Somachord track by On-lyne titled “Running Late”</span><br>
+		<img alt="6b9c04f67615aedee66fce5996f3cfb5.png" class="ipsImage" src="https://www-static.warframe.com/uploads/6b9c04f67615aedee66fce5996f3cfb5.png"><br>
+		<span style="font-style:italic;text-decoration:none;">Image Description: Promotional poster for On-lyne’s new track Running Late with the members running. From left to right are: Harddrive, Packet, Zeke, Drillbit, and DJ RoM.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A Fables &amp; Frontiers-themed Somachord track titled “A Byte-sized Adventure” </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Running Late Album Cover Display and Promo Poster </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Dominion of Höllvandeim Captura Scene</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The following returned rewards from Nightwave Mix Vol. 8:</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Big Bytes Pizza Sigil</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Nightwave Livery</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Lillian Floof</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Jillian Floof</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Battlecry Ink</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Boltor Kubrow Armor</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Tammpet Sugatra</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Aoi Origami Glyph</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Liset Domestik Drone</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">And so much more!!</span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">What to Expect </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Amir is the Fablemaster, the man at the helm responsible for organizing the campaign and writing the story! He is hosting his latest campaign “Running Late” entirely from a new KIM group chat with you and the Hex, which is available to access from the new Fables &amp; Frontiers Batch tab. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="ad7ed46f6118d79edaf38736dc048ad1.jpg" class="ipsImage" src="https://www-static.warframe.com/uploads/ad7ed46f6118d79edaf38736dc048ad1.jpg"></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: Screenshot of the KIM UI with the Fables &amp; Frontiers Batch tab selected. An unread message from H16h V0l7463 reads “HEY HEY ALL!!”.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">You and the Hex will join the group chat and play as your Fables &amp; Frontiers characters:</span></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Arthur plays as Cedric Dawnsong </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Aoi plays as Morohime Ichigeki </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Eleanor plays as Sanguina Kallisti</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Lettie plays as Ixchel Balam</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Quincy plays as Lord Reyland Kingsacre</span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="1fb7e43db71a7f27dde6ca2d6469ed07.jpg" class="ipsImage" src="https://www-static.warframe.com/uploads/1fb7e43db71a7f27dde6ca2d6469ed07.jpg"></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: Screenshot of the Kinemantik Instant Messenger showing the initial conversation from the Fables &amp; Frontier campaign.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">There are six days of adventuring ahead of you, with one session available per day. Amir needs time to plan out what the adventurers will encounter next, so check back after the Daily Reset (0:00 UTC) to continue the story with the Hex! </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">This is intended to be a fun role-playing adventure, and for that reason there is no Chemistry earned from the conversations had in the Fables &amp; Frontiers group chat.  </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Somewhere along the way in your adventure with the Hex, you will encounter a new enemy… the </span><strong><span style="font-style:normal;text-decoration:none;">Surge Eximus</span></strong><span style="font-style:normal;text-decoration:none;">! This speedy Eximus unit targets foes with a triple strike of devastating Electric Damage. But where oh where did it come from… </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">Rewards </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Completing the Fables &amp; Frontiers campaign will reward you with the following: </span></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Fables &amp; Frontiers: Running Late Poster </span></strong><span style="font-style:normal;text-decoration:none;">(Inbox reward)</span><br>
+		<img alt="d42e92476656061bfe14d628d943a3b4.png" class="ipsImage" src="https://www-static.warframe.com/uploads/d42e92476656061bfe14d628d943a3b4.png"><br>
+		<span style="font-style:italic;text-decoration:none;">Image Description: Poster depicting members of The Hex as a party of fantastical characters such as a Warlock, Knight, and Sorcerer. Looming over them in an ominous manner appears to be Amir.</span></b>
+
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Cover art for the Fables &amp; Frontiers: Running Late adventure. Artwork by community artist </span><a href="https://nikkidawes.com/" rel="external nofollow" target="_blank"><span style="font-style:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;">Nikki Dawes</span></a><span style="font-style:normal;text-decoration:none;">. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Access to Replay KIM Campaign</span></strong></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Like all other KIM batches, you can reset your memories with Fables &amp; Frontiers from the Digital Grimoire to replay the adventure! You may also do this by talking to Amir. Doing so will erase all conversation history from the Fables &amp; Frontiers batch and allow you to take another stab at the campaign.</span><br>
+				<img alt="6d0394af5a44fa9d777c3616b1993b70.jpg" class="ipsImage" src="https://www-static.warframe.com/uploads/6d0394af5a44fa9d777c3616b1993b70.jpg"><br>
+				<span style="font-style:italic;text-decoration:none;">Image Description: Screenshot of the Digital Grimoire UI with Amir’s Shockwave Fables &amp; Frontiers selected. The option to reset your memories is shown with a yellow Commit button visible.</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">After resetting your memories you may choose to replay your experience by selecting the same character as before, or you can explore the campaign through the lens of a different character by choosing another one instead. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Please note that resetting your memories will temporarily remove access to Amir’s Fables &amp; Frontiers Store until you talk to him and create a character sheet.</span></b>
+			</li>
+		</ul>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="b771648488ae052f7e6493bac8e455ef.png" class="ipsImage" src="https://www-static.warframe.com/uploads/b771648488ae052f7e6493bac8e455ef.png"><span style="font-style:normal;text-decoration:none;">  </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: A closeup of Amir’s face in front of an electrified microphone in the opposite orientation of Nora Night’s. A crackling border encloses the Amir’s Shockwave logo as blue and purple arcs of electricity frame the image and Amir’s headset.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">NIGHTWAVE MIX: AMIR’S SHOCKWAVE </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-size:20pt;background-;font-weight:700;font-style:normal;text-decoration:none;">BEGINS TODAY @ 11:30 AM ET</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">New Nightwave Tier Rewards </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">With Amir’s Shockwave, complete Nightwave acts to net these new (and returning) tier rewards. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Like previous editions of Nightwave, we have duplicate protection for items you already own. You will be compensated with Amir’s Shockwave Creds instead of the previous unlocked reward.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Augment Mod Stats shown at Max Rank. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="2b42a3d83c94aaefee242748cbc4dfb6.jpg" class="ipsImage" src="https://www-static.warframe.com/uploads/2b42a3d83c94aaefee242748cbc4dfb6.jpg"></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: The Drifter poses next to an Atomicycle while wearing the Kaneshell Atomicycle Regalia. The orange and black biker suit is accentuated with a white trim on the helmet. Note:</span><span style="font-style:normal;text-decoration:none;"> </span><span style="font-style:italic;text-decoration:none;">The Barracuda Atomicycle Livery pictured is not included in the Regalia. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Kaneshell Atomicycle Regalia </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Slide into this biker outfit of the new millenium. Fitted for the Drifter and Operator. Includes the jacket, helmet, leggings and sleeves.</span><span style="background-;font-style:normal;text-decoration:none;">  </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Teisatz Oculus</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A stylish piece of new age tech with over 9000 different features.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Globakk Syandana</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Only the most highly trained - or highly reckless - Scaldra dare to wear this portable Efervon container.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Come Here Emote</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">An encouraging display for a beloved companion.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Equip this emote using the Gear Wheel tab in the Arsenal.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Entropic Color Palette</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A selection of colors for when the usual upbeat charm just won’t do.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Submeower Decoration</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Don’t ask where the power cord goes.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Prototype Shock Coils (EFV-8 MARS) </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Adds +90% Electric Damage, and shots have a 20% base chance to apply extra Electric status independent of modded damage types</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Overpressured Rounds (EFV-5 JUPITER)</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Rifle kills add 120% Falloff Distance and decrease Spread for next attack with Buckshot. Buckshot kills restore 50% of the current Magazine. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Drippy Floof</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">In case of waterworks, this cuddly Drippy Floof is here to help.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Drippy Keychain Sugatra</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Show off your drip with this drippy Drippy Sugatra.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Drippy Dog Days Glyph</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The K.O.L. Summer update includes this new Drippy to help you cool off and enjoy your summer.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">90’s Kid Honoria </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| 90’s Kid </span></b>
+</p>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">Cred Offerings Store Updates </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Amir’s takeover brings many updates to the Cred Offerings Store! Earn Amir’s Shockwave Creds from the reward tiers and trade them in for both new and returning items. Let’s take a look at some of the new revisions and adjustments below. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Permanent Cred Offerings</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The following rewards are now available at all times in the Cred Offerings Store – in other words, they are no longer part of the store rotations and are now permanent fixtures in the store. These are in addition to the existing permanent offerings, which remain unchanged. </span></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">New to Cred Offerings: </span></strong><span style="font-style:normal;text-decoration:none;">Nightwave Landing Craft Blueprint &amp; Components (Engines, Avionics &amp; Fuselage) </span><br>
+		<img alt="b1d9aa1fdf656f4ac9a244538161e974.jpg" class="ipsImage" src="https://www-static.warframe.com/uploads/b1d9aa1fdf656f4ac9a244538161e974.jpg"><br>
+		<span style="font-style:italic;text-decoration:none;">Image Description: A Landing Craft ship with winged components on each side and two small “tails” angled outwards at the back. It features a deep purple body, light green emissives, and orange energy with a high gloss shine. </span></b>
+
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">We first introduced the Nightwave Landing Craft in Nightwave Series 3: Glassmaker and from there was rotated back into various Nightwave Mixes tier rewards. Instead of continuing to add it as a tier reward, we have instead decided to add its Blueprint and Components as a permanent addition to the Cred Offerings shop. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Aura Mods </span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Corrosive Projection</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Dead Eye</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Dreamer's Bond</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">EMP Aura</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Enemy Radar</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Energy Siphon</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Holster Amp</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Infested Impedance</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Loot Detector</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Physique</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Pistol Scavenger</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Rejuvenation</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Rifle Amp</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Rifle Scavenger </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Shield Disruption</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Shotgun Scavenger</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Sniper Scavenger</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Sprint Boost</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Steel Charge</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Warframe Mods</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Deceptive Bond</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Power of Three</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Prism Guard </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Purifying Flames</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Purging Slash</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Recharge Barrier</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Rumbled</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Singularity</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Weapon Blueprints </span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Ceramic Dagger Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Dark Dagger Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Dark Sword Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Glaive Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Heat Dagger Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Heat Sword Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Jaw Sword Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Pangolin Sword Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Plasma Sword Blueprint</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Weapon Skins Blueprints</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Arca Plasmor Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Atomos Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Atterax Desert-Camo Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Burston Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Cedo Daybreak Skin</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Corinth Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Cycron Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Dual Keres Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Dual Zoren Dagger-Axe Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Exergis Shock-Camo Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Falcor Shock-Camo Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fragor Brokk Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fulmin Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Galatine Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Glaive Daybreak Skin</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Gram Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Grinlok Desert-Camo Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Guandao Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Guandao Synoid Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Hek Desert-Camo Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Heuris Polearm Skin</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Ignis Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Karak Desert-Camo Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Lenz Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Marelok Desert-Camo Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Nukor Daybreak Skin</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Plinx Shock-Camo Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Pyrana Synoid Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Rubico Synoid Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Scindo Dagger-Axe Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Scindo Manticore Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Scindo Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Tatsu Solstice Skin Blueprint</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Tonkor Desert-Camo Skin Blueprint</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Wolf Beacon</span></b>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">New Cred Offerings</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">We’ve added the following items into the Cred Offerings store rotations:</span></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">DJ Shockwave Sigil - A sigil commemorating when Amir took over the airwaves as DJ Shockwave.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">DJ Shockwave Glyph - A glyph awarded to those who tuned in to Amir’s takeover of the airwaves.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Frakta Shoulder Guard</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Drifter Keeler Suit</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Drifter Keeler Hood</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Drifter Keeler Pants</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Drifter Keeler Sleeves </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Daybreak Emote</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Daybreak Shoulder Plates</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Daybreak Chest Plate</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Daybreak Leg Plates</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Vile Discharge (Embolist)</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Sentient Surge (Ocucor)</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Leaded Gas (Vesper 77)</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Biotic Rounds (AX-52)</span></b>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">General Cred Offerings Changes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">6 Weapon Augment Mods are now guaranteed in each rotation. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Added the following new sorting tabs to the store UI:</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Recovered Artifacts </span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Contains permanent store resources (Kuva, Nitain Extract, Orokin Reactor/Catalyst, etc.) and blueprints (Nightwave Landing Craft &amp; Vauban). </span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Weapons &amp; Weapon Cosmetics </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Removed a duplicate Clip Delegation from the Cred Offerings rotation.</span></b>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">New Nightwave Acts</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Daily Acts:</span></strong></b>
+
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Whole Arsenal – Get a kill with your Primary, Secondary and Melee weapons within 10 seconds. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Artist – Customize a piece of equipment’s colours. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Weekly Acts:</span></strong></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">To Ashes – Dissolve an Arcane for Vosfor. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Bow Offense – Kill 150 enemies with a Primary Bow. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Rifle Offense – Kill 150 enemies with a Primary Rifle. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Sniper Offense – Kill 150 enemies with a Primary Sniper Rifle. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Shotgun Offense – Kill 150 enemies with a Primary Shotgun. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Void Net – Collect 30 Void Traces. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Elite Weekly Acts:</span></strong></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Elementary, My Dear – Complete 3 successful Conversions in the Alchemy game mode. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Going Down – Defeat Roathe in Descendia. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Hold the Mushrooms – Collect 6 mushrooms from the Deepmines. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Battle Hardened – Complete the Perita Rebellion with 6 or more orders completed. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Spider Hunt – Complete an Isleweaver Duviri Mission. </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Treasure from the Past – Complete a Netracell. </span></b>
+			</li>
+		</ul>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:20pt;font-style:normal;text-decoration:none;">Nightwave Act Updates</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Act Changes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The Hunt is On (Daily)</span></b>
+
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Find 5 Syndicate Medallions</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changes:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Increased required Syndicate Medallions from 5 to 10 </span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changed from Daily to Weekly</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Earth/Venus/Zariman Bounty Hunter (Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously:“Complete x/3 different Bounties…” on Earth/Venus or “Complete x/4 different Bounties in the Zariman”.</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changes:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">No longer requires different Bounties</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changed Zariman Act from Weekly to Elite Weekly</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Now Boarding (Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Complete 3 different K-Drive races in Orb Vallis on Venus or in Cambion Drift on Deimos</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Change: Reduced required K-Drive races from 3 to 1</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Eternal Guardian (Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Complete 2 Void Armageddon missions</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changes: </span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Progress counts 2 Armageddon round completions instead of mission completions</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changed from Weekly to Elite Weekly</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">High Ground (Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Complete 3 Void Flood Missions</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changes: </span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Progress counts 12 Ruptures Sealed rather than missions completions</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changed from Weekly to Elite Weekly</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Finely Tuned (Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Play 2 different Shawzin songs in Duviri</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changes: </span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Now only requires player to play 1 Shawzin song</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Updated the description to specify that it requires the Shawzin activity, not the Emote.</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Cache Hunter (Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Find 6 caches across any Sabotage missions</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changes: </span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Caches found in non-sabotage missions will count towards progress</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Updated description and tip to make locations of eligible Caches clearer to players</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Perplexed (Elite Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Complete 3 puzzles in Duviri</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changes: </span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Reduced puzzles from 3 to 1</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changed from Elite Weekly to Weekly</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Day Trader (Elite Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Win 3 wagers in a row without letting the enemy score in one match of The Index</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Changes: </span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Removed the “without letting the enemy score” stipulation</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">This Act is no longer locked behind The Glast Gambit quest as it is not required to access The Index</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Elite Explorer (Elite Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Complete 8 Railjack Missions</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Change: Reduced mission requirements from 8 to 6</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fallen Angel (Elite Weekly)</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously: Kill 5 Void Angels in The Zariman</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Change: Reduced Void Angels from 5 to 3</span></b>
+			</li>
+		</ul>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Act Removals </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Removed the following Railjack Acts: </span></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Confiscated - Hijack a Crewship from the Enemy</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Friendly Fire - While piloting Hijacked Crewship, destroy 3 enemy fighters</span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">These were removed as they were difficult to complete while playing in a Squad as it required you to essentially compete against your teammates to hijack a Crewship and kill enemies. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Quality of Life Changes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Recovering an Act now prioritizes Acts that are not locked. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Updated various Acts to be locked behind Quest/Junction/etc. requirements. </span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">The main reason for this effort is to play off of the Recovered Act change listed above. Prioritizing unlocked Acts means little if the Act recovered is still uncompletable. We’ve done our best to select minimum Lock criteria to access the content for the Act, to maintain flexibility where possible.</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Vox Solaris:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Conservationist</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Now Boarding</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Venus Bounty Hunter</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Venus Fisher</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Venus Miner</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Howl of the Kubrow:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Loyalty</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Duviri Paradox:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Beast Slayer</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Horsin’ Around</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Skeletons in the Closet</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">I Decree</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Stolen Dreams:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Animator</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The Archwing:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Explorer</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Flawless</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Elite Explorer</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The New Strange:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Test Subject</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Sanctuary Researcher</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Heart of Deimos:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Vault Raider</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Feed the Beast</span></b>
+					</li>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Mirror, Mirror (also requires MR 3)</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Mastery Rank 3:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Supporter</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Angels of the Zariman:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fallen Angel</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Mars Junction: </span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Unlock Relics (and Elite version)</span></b>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Eris Junction:</span></b>
+				<ul>
+					<li>
+						<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Vital Arbiter</span></b>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Updated various Act tips to help clarify how to complete them. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The Antiquarian Act now indicates what Relic types have already been unlocked. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Improved Weekly Act scheduling so there should be no more repeating Weekly Nightwave Acts (excluding the Permanent Weeklies) in a series.</span></b>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="7ac15b58a0d66a20ad7182fafd144357.png" class="ipsImage" src="https://www-static.warframe.com/uploads/7ac15b58a0d66a20ad7182fafd144357.png"></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: Baruuk Shaoshi poses with his Rathan Sword &amp; Shield, and Neviti Ephemera as if preparing to fight within the Sanctum Anatomica. Emanating from his morningstar-like sword, buckler-like shield, and stole-like ephemera is an almost spectral purple energy.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">BARUUK SHAOSHI COLLECTION</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Transcend the chaos of battle. Baruuk Shaoshi’s mystic runes show him the path to peace.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">This bundle contains the following items, which can all be purchased separately:</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Baruuk Shaoshi Skin </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fear the gaze of Baruuk Shaoshi’s mystic eye. His martial mastery, honed over long ages of defending sacred ground, is once again brought to bear against all enemies of peace.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Rathan Sword &amp; Shield Skin</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Baruuk Shaoshi’s signature Sword &amp; Shield skin evokes the ancient arms carried by sacred guardians, those who embraced the balance between defense and attack.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Liania Signa</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The dignified drape of Baruuk Shaoshi’s signature Signa is the mark of a warrior committed to defending peace - by any means necessary.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Neviti Ephemera</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Encircled by harmonious energy, the shifting balance of conflict reveals itself in Baruuk Shaoshi's signature ephemera.</span></b>
+</p>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">TENNOGEN: FABLES &amp; FRONTIERS </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Six new creations from community artists have arrived, including the first TennoGen pieces for Kullervo and Oraxia, two brand new Signas, and more! </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="4846b25ce1e748f59e81d6e04084cae4.png" class="ipsImage" src="https://www-static.warframe.com/uploads/4846b25ce1e748f59e81d6e04084cae4.png"></b><b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: From left to right are three new Tennogen items: Oraxia Agamva Helmet, Haemadys Mask, and the Kullervo Ascophilia Skin.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Kullervo Ascophilia Skin</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A brand new Skin &amp; Alt Helmet for Kullervo, designed by Erneix. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Oraxia Agamva Helmet</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A brand new Alt Helmet for Oraxia, designed by led2012. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Haemadys Mask (Operator/Drifter)</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">An Infested mask, designed by Vhynnz. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="1547060d79ca431094e216a01143e8d0.png" class="ipsImage" src="https://www-static.warframe.com/uploads/1547060d79ca431094e216a01143e8d0.png"></b><b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: Two new Tennogen items are shown - the Harrow Profitas Skin and the Centurio Signa.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Harrow Profitas Skin</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A Corpus inspired Skin &amp; Alt Helmet for Harrow, designed by malaya, Jadie and Noxxr. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Centurio Signa</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A TennoGen Signa, designed by Lubox. </span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:13.999999999999998pt;font-style:normal;text-decoration:none;">Acheta Signa </span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A TennoGen Signa, designed by blazingcobalt and Ritens.</span></b>
+</p>
+
+<p>
+	<br>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="11a3286b1210ccee165048f54be66d0f.png" class="ipsImage" src="https://www-static.warframe.com/uploads/11a3286b1210ccee165048f54be66d0f.png"></b><b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:italic;text-decoration:none;">Image Description: The Memetica Glyph Pack III glyphs are displayed across two rows and three columns. From left to right in the top row are Absolute Cinema, Arthur in the Fridge, and Chassis. While the second row shows Dump It, Kalymos Cone, and Lotus Change of Plans.</span></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">MEMETICA GLYPH PACK III</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">A bundle of glyphs highlighting the very serious history of Warframe, created by Community artist </span><a href="https://x.com/ibumuc" rel="external nofollow" target="_blank"><span style="font-style:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;">ibumuc</span></a><span style="font-style:normal;text-decoration:none;">.</span></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Absolute Cinema Glyph</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Arthur In The Fridge Glyph</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Chassis Glyph</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Dump It Glyph</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Kalymos Cone Glyph</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Lotus Change of Plans Glyph</span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">If you missed these glyphs during our </span><a href="https://forums.warframe.com/topic/1513630-tennocon-2026-memetica-twitch-drops-campaign-concluded/" rel="" target="_blank"><span style="font-style:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;">TennoCon 2026 Memetica Twitch Drops Campaign</span></a><span style="font-style:normal;text-decoration:none;"> in June &amp; July, they are now live in the market to grab! They can be purchased for 90 Platinum in the bundle, or 20 Platinum per Glyph.</span></b>
+</p>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">ADDITIONS</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">New Drippy UI Theme and Background are available to purchase from the “Customize UI Theme” options. </span><br>
+		<img alt="87d7e38be8a292ac37d7b3bc6267b725.jpg" class="ipsImage" src="https://www-static.warframe.com/uploads/87d7e38be8a292ac37d7b3bc6267b725.jpg"><br>
+		<span style="font-style:italic;text-decoration:none;">Image Description: Screenshot of the new Drippy UI theme and background with Baruuk Shaoshi kneeling. The theme evokes a wet feeling with a rainy background, blue ripples that have a Drippy submerged near the center, and a splash of light red graffiti and two Drippies flanking Baruuk.</span></b>
+
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">To access: Open pause menu, select Options, select the Interface tab, select Customize UI Theme.</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Added an X Axis for Signa placement!</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><img alt="a22f9fc6452aca706bed0caa18813c50.jpg" class="ipsImage" src="https://www-static.warframe.com/uploads/a22f9fc6452aca706bed0caa18813c50.jpg"><span style="font-style:normal;text-decoration:none;"> </span><br>
+				<span style="font-style:italic;text-decoration:none;">Image Description: Composite image of two screenshots showing the Mesa Heirloom Signa being placed on Wisp. On the left shows the X-offset with a vertical double-sided arrow indicating the direction the signa may be moved. On the right shows the Y-offset showing the horizontal direction.</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Added Drifter versions of the Wolf Hood and the Umbra Hooded Scarf. </span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Players who already owned the Operator version should see the Drifter version in their accounts upon login. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Added various Fishing Stats to player profiles.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Added new Honoria for completing certain Challenges:</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Leaves No Witnesses </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| The Demolitionist </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Angel of Death </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Plague Doctor </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| It Will Kill </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Restless |NAME|</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Was Never Here</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Will Do Anything For Money</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Death from Above</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Parazon Runner</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Added new Honoria to Roathe in exchange for various resources:</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Cryomancer</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Head Cracker</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| It's All Relative</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Master of Minds</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Doctor |NAME| </span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">|NAME| Conscientious Objector</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Added new Honoria rewarded upon completing The Hex Quests:</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The Hex: Marty |NAME| McFlea</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The Hex Finale: Pizza Time for |NAME|</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Added a Personal Decorations option to the Dojo Room Console screen. </span></b>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">CHANGES</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">Sirius &amp; Orion Changes </span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-size:10.5pt;font-style:normal;text-decoration:none;">Sirius &amp; Orion’s Jade Stars now uses (improved) Line of Sight.</span></b>
+
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-size:10.5pt;font-style:normal;text-decoration:none;">With our buffs to it earlier this summer, Jade Stars has become an exponentially popular Helminth ability due to its interactions with far-reaching Damage over Time abilities like Saryn’s Spores. Our goal is to keep Jade Stars feeling powerful and impactful, but avoid situations where it can continually wipe the map without actually seeing the enemies it’s killing (ie standing in a corner and triggering Jade Stars on repeat).</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Sirius &amp; Orion’s Celestial Clash now deals guaranteed Status Effects depending on which Son is Clashing.</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Sirius deals Heat Damage with a guaranteed Heat Status Effect.</span></b>
+			</li>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Orion deals Slash Damage with a guaranteed Slash Status Effect.</span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Sirius &amp; Orion will no longer swap to the Primary Son when using an item from the Gear Wheel</span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-style:normal;text-decoration:none;">General Changes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Weapons with locked Explosion Radius now display a lock icon on that stat in the Arsenal. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Improved the flow when starting the Chimera Prologue from the Codex if you have another Active Quest.</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Previously, a certain interaction would not trigger if a different quest was set to Active. Now, starting the Chimera Prologue will clear all Active Quests so the interaction can occur. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Enemy Highlights now apply to the Targets in the Mastery Rank 6 and Legendary Rank 6 tests. </span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Also improved the visibility of lines between the targets in these tests. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Resetting settings to Defaults now offers players the option to reset All Settings to default, or just the current Tab’s settings. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Improved the dodge hint in the final segment of The Old Peace quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Railjack reticles are now solid white to improve their visibility. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Removed an incorrect Electric Shield ability tip for Volt. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Removed flashing VFX from Void Fissures in-mission to address photosensitivity concerns.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Made adjustments to the Commandeered Prime spawn SFX and mine explosion SFX in The Perita Rebellion. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">The "Mission Tutorial Transmissions" toggle now applies to transmissions in Persto Survival and Hell-Scrub missions.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Background transmissions, such as Ordis chatter or start chart notifications, are now muted when viewing the Inbox. </span></b>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">PERFORMANCE &amp; OPTIMIZATIONS </span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Optimized in-game chat servers to handle larger numbers of players. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a minor hitch when joining a mission with a Sirius &amp; Orion present.</span></b>
+	</li>
+</ul>
+
+<p>
+	 
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:27.999999999999996pt;font-style:normal;text-decoration:none;">FIXES</span></strong></b>
+</p>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:12pt;font-style:normal;text-decoration:none;">Top Fixes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Vectis Incarnon Form benefitting from Primed Chamber on every shot. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Nokko’s Reroot Rampage Augment not triggering Archon Continuity. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Silken Stride’s buff persisting after exiting the Ability if Oraxia does not have a Secondary Weapon equipped. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Incarnon Challenge progress being reset upon swapping to a channeled Exalted Weapon.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Nokko’s Reroot Rampage’s first bounce dealing no damage. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed cases of Frozen enemies despawning in Netracell missions. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a method of being able to trigger Mirror Defense waves to start sooner than intended in Tyana Pass. </span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:12pt;font-style:normal;text-decoration:none;">Sirius &amp; Orion Fixes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Cephalon Simaris blocking abilities based on the Inactive Son’s casts in Sanctuary Onslaught missions.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed swapping between Sons while entering a Nullifier Bubble resulting in the Secondary Son permanently losing access to his Abilities. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed function loss caused by using Transference mid-Clash during Celestial Clash.</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Now Transference is prevented until the animation is completed. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Sirius &amp; Orion being able to sustain Void Fissure buffs for longer than the intended duration. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed cases of pickups not being collected after swapping between Sons in Celestial Clash.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Sirius &amp; Orion remaining permanently invulnerable due to an interaction with the Atomicycle. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a case of Sirius &amp; Orion being able to equip the Vinquibis in only one weapon slot. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Arcane Concentration stacking multiple times for Clients with poor connection when equipped on Sirius &amp; Orion.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Inactive Son running out of Heavy Weapon ammo resulting in their Melee weapon being disabled. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a loss of function when swapping between Sirius &amp; Orion right before entering Submersible Archwing.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Sirius &amp; Orion being able to become permanently stuck after dodging Vena’s spike ability with Celestial Clash in The Kuva Wytch mission.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Arsenal’s Vehicles tab not displaying properly when accessed as Sirius &amp; Orion in a Hub.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed swapping to the Secondary Son resulting in Sirius &amp; Orion being able to bypass the Noodletron-only restriction in Floaty of Fury Alerts. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed cases of HUD buff icons not refreshing properly for Sirius &amp; Orion. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Orion wielding a Melee weapon in non-combat areas (Base of Operations, Relays, etc.) if he has no Primary or Secondary equipped.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Secondary Son’s Secondary Weapon using the Appearance Config A instead of B.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Orion appearing in the background of the Loadout menu after swapping to a loadout with Sirius &amp; Orion equipped. </span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:12pt;font-style:normal;text-decoration:none;">Mission Fixes </span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the possibility of getting a function loss when getting teleported to the Orowyrm fight during Duviri Experience activities.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Clients loading into an empty mission following a host migration while loading into a Scoria’s Angel mission.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Void Hole’s explosion SFX being out of sync in Railjack missions.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed cases of players being able to bypass Vena fight stages if they deal enough damage in a short window. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed additional cases of Inaros and Sevagoth not being teleported if they are in their special death state during a transition in Uranus Proxima missions. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed cases of Vena having a yellowish hue instead of the intended red in the final stage of her boss fight in The Kuva Wytch mission.  </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Ryoku’s smoke bomb VFX missing for Clients in The Kuva Wytch mission.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed flickering VFX on the Asteroid Field in The Kuva Wytch mission.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed enemies remaining in the boss arena after Vena is defeated in The Kuva Wytch mission. Now any remaining living foes should be killed when she is. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed allies being able to body block the “Collect Artifact” context action in The Kuva Wytch mission. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed cases of being able to skip the Exterminate objective in The Kuva Wytch mission. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed being able to use the Omni Recall with very specific timing during Uranus Proxima missions. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed missing SFX when Vena is hacking in the Scoria’s Angel mission.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed allied Scaldra Eradicators sometimes dealing friendly fire with their grenades. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Scrofa Attack Drone’s hitbox not covering the majority of its body. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed House Lavan Components not properly applying their unique trait if triggered via the Archwing Slingshot in Railjack missions.  </span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:12pt;font-style:normal;text-decoration:none;">UI Fixes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed waypoints lingering on the screen when an Ally’s Companion is downed. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed issues related to the “Hide Equipped” toggle in the Trading menu. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the weapon HUD disappearing after unequipping a Mining Laser or Scanner via the Gear Wheel. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed cases of offered items extending off of the screen after using the “select all” option in the Trading Menu. This was a UI-only issue!</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the “Repeat Mission” input bringing players to a broken Node selection pop-up in the Navigation screen. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Styanax Prime’s diorama incorrectly listing Blueprint Details. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a loss of function when attempting to purchase Platinum via a flow of actions originating from the Arsenal Upgrade screen.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed entering a Uranus Proxima mission with a personal Railjack resulting in the Squad HUD using the names of Ryoku or Vena’s Crew. (This was a UI-only issue).</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed partial function loss when opening and exiting Chat Settings while in the Foundry.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Claw Mods being sorted into the Melee category instead of the Beast category. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed being unable to upgrade Titania’s Dex Pixia via the Loadout selection dropdown in the Navigation menu. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the squad overlay appearing in the Amp Customization screen. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Equipment screen using the term Operator when the Drifter is equipped. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Sun &amp; Moon appearing in the Uranus Junction end of mission screen, despite it being a reward from The Duviri Paradox. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the number on the Void Fissure tab in the Navigation menu not updating properly when swapping between Normal and Steel Path. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Dojo Teleporter menu not respecting capitalization choices of players. </span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:12pt;font-style:normal;text-decoration:none;">Quest Fixes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a missing cinematic when returning to The Drifter Camp in The New War quest.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the incorrect HUD appearing briefly when loading into a mission in The Old Peace quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed two Lotuses appearing in The Dark Refractory during The Old Peace quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed placeholder text appearing in a pop-up during The Teacher quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a duplicate Vena and Ryoku appearing in their ending boss fight cutscenes in the Jade Shadows: Constellations quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed cases of Stalker using the incorrect weapon during a cutscene in the Jade Shadows: Constellations quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-size:10.5pt;font-style:normal;text-decoration:none;">Fixed rare cases of the Mission Fail screen appearing when transitioning from a mission in the Heart of Deimos quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a missing confirmation prompt when exiting the Operator customization in The Second Dream quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed fast travelling to Palladino in the Iron Wake causing progression issues in the Chains of Harrow quest.</span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:12pt;font-style:normal;text-decoration:none;">Cosmetic Fixes </span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed being unable to equip Amp Skins on the Mote Amp and Sirocco. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Garuda’s Talons never being holstered when equipped as a Melee weapon in-mission. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Gemini Skin faces being deformed when swapping between Loadouts equipped with Gemini Skins in the Navigation screen.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed various Emblem offsets on the Dante Tytonis Skin. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed various Sugatra offsets on the Xoris Elixis Skin. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed various leg armor offset issues on the Ryoku Gemini Skin, Vena Gemini Skin, and on Kullervo. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed various chest armor offset issues on the Mesa Heirloom Skin, Voruna Medeina Skin, Drifter Goth Suit, Drifter Chymerist Suit, and Vena Gemini Skin. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed various shoulder armor offset issues on Khora and Wisp. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed various Daurus Prime armor set offset issues. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Mesa Heirloom’s Syandana clipping through her legs with the Valkyr Carnivex Noble Animation equipped. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed customizing Merulina resulting in Yareli briefly not using an animation set. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Tealtrian Ephemera not properly applying Energy tints. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Octavia Prime’s skirt not being removed when equipping the default Octavia skin. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed an issue where selecting an Operator/Drifter Complexion Tint before it was fully initialized resulting in it applying at full Tint Vibrancy instead of the default of 0.05.</span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:12pt;font-style:normal;text-decoration:none;">Misc. Fixes</span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Sanctum Anatomica becoming inaccessible when replaying a Quest.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Archwing Articula decoration breaking if the equipped Loadout is deleted.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed changing Dojo Dry Dock polychrome colors also affecting the Vessel. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed walkways in the Dry Dock not being affected by Polychrome.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed being unable to chatlink the Exploration Poster.</span></b>
+		<ul>
+			<li>
+				<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Also fixed issues with its Market Diorama positioning. </span></b>
+			</li>
+		</ul>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a lingering blocking volume in the Orb Vallis after completing the Jade Shadows: Constellations quest. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed the Backroom using custom Camera Position settings after returning from a mission.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed minor typos in a Hex chat and in Mother’s bounty subtitles. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed being unable to chatlink various Operator and Drifter suit pieces. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a file path in the Bladeswarm Nullifier Crewman Codex entry. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed Sevagoth’s Lullaby continuing to play after exiting its Market Diorama. </span></b>
+	</li>
+</ul>
+
+<p>
+	<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><strong><span style="font-size:12pt;font-style:normal;text-decoration:none;">Crashes &amp; Script Error Fixes </span></strong></b>
+</p>
+
+<ul>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a crash upon reviving as Sirius &amp; Orion. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a crash upon returning to the Dry Dock with Vena in your Railjack Crew.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error in the Operator/Drifter Customization menu.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error related to Frost’s Snow Globe. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error in Archwing Pursuit missions. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error when dropping an explosive Power Cell into a Gravity Conveyor while on Merulina during the Raptors assassination mission. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error when browsing through cosmetics in the Arsenal. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed an edge case in the market where having the market open while an item is being retired caused a script error.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error related to the Orphix’s anti-Warframe aura.</span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a rare crash for players that lingered in Relays or Hubs for 24+ hours. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error when subsuming an Ability or installing an Archon Shard in Sirius &amp; Orion. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error related to Railjack component research. </span></b>
+	</li>
+	<li>
+		<b id="docs-internal-guid-4fdaad87-7fff-8f22-66b4-4888f9735ad1" style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">Fixed a script error when killing a Grineer Roller while transitioning from an Open Landscape to the Hub. </span></b>
+	</li>
+</ul>
+
+<p>
+	<b style="font-weight:normal;"><span style="font-style:normal;text-decoration:none;">For list of known issues that are on our radar, visit our dedicated thread: <br>
+	<a href="https://forums.warframe.com/topic/1519687-known-issues-amirs-shockwave/" ipsnoembed="false" rel="">https://forums.warframe.com/topic/1519687-known-issues-amirs-shockwave/</a></span></b><br>
+	 
+</p>
+]]></description><guid isPermaLink="false">1519695</guid><pubDate>Wed, 12 Aug 2026 15:05:43 +0000</pubDate></item></channel></rss>

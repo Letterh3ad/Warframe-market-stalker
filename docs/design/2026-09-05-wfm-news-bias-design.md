@@ -884,6 +884,115 @@ From the 2026-09-06 review, recorded rather than resolved.
   at three.
 - Whether the curated frame-to-signature-weapon table is needed, or whether direct match
   plus set expansion is good enough. Decide after step 4 on real data.
-- Forum HTML parsing may need a fallback if the markup shifts. Consider whether the forum
-  source earns its maintenance cost versus warframe.com alone.
+- ~~Forum HTML parsing may need a fallback if the markup shifts.~~ **Resolved by the
+  reconnaissance below: there is no forum HTML to parse.** The forum serves 403 to
+  non-browser clients and its RSS serves the full post body, so the fragility is XML
+  element names, not CSS selectors. The maintenance-cost question is answered too: the
+  forum is the cheapest of the three sources, not the most expensive.
 - Whether `news_enabled` stays off by default permanently.
+
+## Source reconnaissance 2026-09-06
+
+Captured live by `scripts/capture_news_fixtures.py`; fixtures in `tests/fixtures/news/`.
+Everything below was observed, not assumed. **The headline result: none of the three
+sources needs HTML parsing.** All three have a structured feed, so the "invent CSS
+selectors" risk that gated this task is gone, except for one optional fallback.
+
+### Summary
+
+| | Feed | Body inline? | Requests per poll |
+|---|---|---|---|
+| warframe.com | JSON, paginated | no, teaser only | 1 + N articles |
+| forums | RSS 2.0 | **yes, full HTML body** | 1 |
+| reddit | Atom | **yes, full selftext** | 1 |
+
+### warframe.com
+
+1. **Structured feed: yes, JSON.** The listing page's own load-more handler calls
+   `https://www.warframe.com/en/news/search_posts_json?query=&page=N&version=2`, which
+   returns `{"posts": [...], "hasMore": bool}`, 10 posts per page. Every post is exactly
+   `{date, title, description, url, image}` (verified as the key union across pages 1, 2
+   and 5). `hasMore` was still true at page 5, reaching back to 2026-06-12, so historical
+   backfill is available and cheap.
+   The HTML listing is server-rendered and equally parseable (`.NewsCard-title`,
+   `.NewsCard-date`, `.NewsCard-description`, `.NewsCard-tags`), so it stays as a
+   fallback. **A regex-based fallback would be wrong**: the page carries an eleventh
+   `NewsCard` inside `<script id="news-template" type="text/x-handlebars-template">` whose
+   date is the literal `{{date}}`. An HTML parser skips script contents; a regex does not.
+   The JSON payload has no platform tags, whereas the HTML has `.PlatformTag`. Nothing in
+   9a reads tags, so this does not decide anything yet.
+2. **`external_id`: the URL path slug**, e.g. `citrine-prime-access` from
+   `https://www.warframe.com/en/news/citrine-prime-access`. Stable, no query string, no
+   numeric id anywhere in the payload. Note `/news` 302s to `/en/news`, so the locale
+   segment is in every canonical URL and must be stripped or fixed, not stored as-is.
+3. **Publish date: `"2026-09-04 07:54:00"`, naive, and it is `America/Toronto`, not UTC.**
+   Established rather than guessed: the Citrine Prime Access post is stamped 07:54:00,
+   and the first three r/Warframe threads reacting to it are stamped 11:56:53, 12:00:13
+   and 12:00:21 UTC. 07:54 + 4h = 11:54, two minutes before the first reaction. UTC would
+   put the reactions four hours late; any other plausible offset is worse. DE is in
+   London, Ontario, which agrees.
+   **Use `zoneinfo("America/Toronto")`, not a fixed `-04:00`**, because the corpus will
+   cross a DST boundary within weeks of starting.
+   **Do not use the article page's `ld+json`.** It exists (`@type: NewsArticle`, with
+   `datePublished` and `dateModified`) but for that same article it reads
+   `2026-09-04 10:08:58`, also naive and consistent with neither reading of the listing
+   date. It is a different clock; the listing date is the one corroborated by external
+   evidence.
+4. **Body: second request required.** The listing gives only `description`, a one-line
+   teaser ("Wake up flawless on September 23."). The full body is on the article page in
+   `div#post-body.BlogPost` inside `.ArticleBody-content.post-content`, server-rendered,
+   no JS needed. Budget is therefore 1 + N. `/en/amp/<slug>` exists as a `<link>` but
+   serves the identical 66KB document, so there is no lighter variant to fetch.
+5. n/a.
+
+### forums.warframe.com
+
+1. **Structured feed: yes, RSS 2.0, and it is the only way in.** The HTML forum returns
+   **403 to every non-browser client**, with the tool UA and with a current Chrome UA
+   alike (5.6KB challenge page). The Invision per-forum feed at
+   `https://forums.warframe.com/forum/3-pc-update-notes.xml/` returns **HTTP 200,
+   `text/xml`, 874KB, 25 `<item>`s** with the plain tool UA. **The trailing slash is
+   required.** `https://forums.warframe.com/rss/` also 403s, so the per-forum path is
+   the one that works.
+2. **`external_id`: `<guid isPermaLink="false">1520640</guid>`** — the bare numeric topic
+   id, also embedded in `<link>` as `/topic/1520640-amir%E2%80%99s-shockwave-hotfix-4353/`.
+   Prefer the `guid`: the link's slug half changes if a title is edited, the id does not.
+3. **Publish date: `<pubDate>Tue, 18 Aug 2026 19:04:45 +0000</pubDate>`.** RFC 2822 with
+   an explicit `+0000`. Aware, so `to_utc_iso` takes it directly. No assumption needed.
+4. **Body: inline, in full.** `<description>` holds the entire post as CDATA-wrapped HTML
+   (`<p>`, `<ul>`, `<strong>`). One request per poll, no fan-out. This is why the feed is
+   874KB for 25 items: hotfix notes are long. **Practical consequence: the forum source
+   is the cheapest of the three, not the most expensive**, which inverts the design's
+   assumption that the forum would carry the highest maintenance cost.
+5. n/a.
+
+### reddit
+
+1. **`.json` is dead; the Atom feed works.** `https://www.reddit.com/r/Warframe/hot.json`
+   returns **403 with a 190KB HTML block page**, with the tool UA and with a Chrome UA
+   alike. `old.reddit.com` redirects to a login wall. `https://www.reddit.com/r/Warframe/
+   hot.rss?limit=25` returns **HTTP 200, `application/atom+xml`, 58KB, 25 `<entry>`s**
+   with the plain tool UA. `search.rss` works the same way.
+   **Reddit rate-limits hard**: a second identical request a few minutes later returned
+   **429**. Whatever poll interval the ingest service picks, this source needs its own
+   backoff, and reddit stays disabled by default as the design already says.
+2. **`external_id`: `<id>t3_1vy9lck</id>`**, reddit's own fullname. Stable and opaque.
+   The `<link href>` permalink carries a title slug and is the wrong choice.
+3. **Publish date: `<published>2026-08-25T19:20:27+00:00</published>`.** ISO 8601, aware.
+   There is a separate `<updated>` with the same value on a fresh post.
+4. **Body: inline.** `<content type="html">` holds the entity-escaped selftext. One
+   request per poll. Note the content is double-escaped HTML inside XML, so it needs
+   unescaping once after XML parsing.
+5. Answered above: **403 on JSON, 200 on Atom, 429 on repeat.**
+
+### What this changes for the parser plan
+
+- No HTML parsing is required for two of the three sources, and the third's HTML is only
+  a fallback behind a JSON endpoint. The "confidently wrong selectors" risk that made
+  this a reconnaissance gate is largely gone.
+- Two of three parsers are XML feed readers with near-identical shape (fetch, iterate
+  elements, map four fields). That is a shared `feedparser`-style helper on stdlib
+  `xml.etree`, not three bespoke parsers. No new dependency.
+- Only warframe.com needs a per-article fetch, so only it needs a fan-out budget.
+- Only warframe.com needs a timezone assumption, and it is now recorded above with the
+  evidence for it.

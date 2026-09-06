@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+<script src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js" data-domain-script="dc221a11-cd8a-45cb-852e-53e3d4af92ee" data-document-language="true"></script>
+<script>function OptanonWrapper(){}</script>
+<link rel="canonical" href="https://www.warframe.com/en/news">
+<meta name="csrf-token" content="BKY314O9e0Hz39rUBhXctFF0sYqEC43F6UtBHZCP">
+<script src="https://www-static.warframe.com/js/walib/walib.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+if (typeof analytics === 'object') {
+analytics.enable_gtm('GTM-KVZL9RQ', 'metrics.warframe.com', '');
+analytics.enable_google_adwords('AW-706066714', 'en', false);
+analytics.set_brand('warframe');
+analytics.enable_google_analytics();
+analytics.enable_amplitude();
+}
+</script>
+<link rel="icon" href="https://www-static.warframe.com/images/warframe/favicon.ico" sizes="any">
+<link rel="icon" href="https://www-static.warframe.com/images/warframe/lotus-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="https://www-static.warframe.com/images/warframe/favicon-180.png">
+<link rel="manifest" href="https://www-static.warframe.com/manifest.webmanifest">
+
+<link rel='stylesheet' type='text/css' href='https://fonts.googleapis.com/css?family=Michroma&subset=latin,latin-ext' >
+<link rel='stylesheet' type='text/css' href='https://fonts.googleapis.com/css?family=Open+Sans:400,700,700italic,300,300italic,400italic'>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&family=Noto+Sans+SC:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;700&display=swap" rel="stylesheet"> 
+
+<script src="https://www-static.warframe.com/bower_components/jquery-legacy/dist/jquery.min.js" crossorigin="anonymous" defer></script>
+<script src="https://www-static.warframe.com/bower_components/jquery-validation/dist/jquery.validate.min.js" crossorigin="anonymous" defer></script>
+<script src="https://www-static.warframe.com/bower_components/js-cookie/src/js.cookie.js" crossorigin="anonymous" defer></script>
+<script>
+    let locale = window.locale = 'en';
+    let userSpecificData = null;
+    window.isLoggedIn = false;
+    const queryParams = new Proxy(new URLSearchParams(window.location.search), {
+        get: (searchParams, prop) => searchParams.get(prop),
+    });
+</script>
+
+
+    <script>
+        let _rollbarConfig = {
+            accessToken: "03ffb0fa6aae4095827dadb5552e0395",
+            captureUncaught: true,
+            captureUnhandledRejections: true,
+            hostSafeList: ["www.warframe.com", "www-static.warframe.com"], // + optional metrics domain?
+            payload: {
+                environment: 'production',
+                client: {
+                    javascript: {
+                        source_map_enabled: true,
+                        guess_uncaught_frames: true
+                    }
+                }
+            }
+        };
+        !function(){"use strict";function r(r,o,n){if(o.hasOwnProperty&&o.hasOwnProperty("addEventListener")){for(var e=o.addEventListener;e._rollbarOldAdd&&e.belongsToShim;)e=e._rollbarOldAdd;var t=function(o,n,t){e.call(this,o,r.wrap(n),t)};t._rollbarOldAdd=e,t.belongsToShim=n,o.addEventListener=t;for(var a=o.removeEventListener;a._rollbarOldRemove&&a.belongsToShim;)a=a._rollbarOldRemove;var l=function(r,o,n){a.call(this,r,o&&o._rollbar_wrapped||o,n)};l._rollbarOldRemove=a,l.belongsToShim=n,o.removeEventListener=l}}function o(r,n){this.impl=r(n,this),this.options=n,function(r){for(var o=function(r){return function(){var o=Array.prototype.slice.call(arguments,0);if(this.impl[r])return this.impl[r].apply(this.impl,o)}},n="log,debug,info,warn,warning,error,critical,global,configure,handleUncaughtException,handleAnonymousErrors,handleUnhandledRejection,_createItem,wrap,loadFull,shimId,captureEvent,captureDomContentLoaded,captureLoad".split(","),e=0;e<n.length;e++)r[n[e]]=o(n[e])}(o.prototype)}o.prototype._swapAndProcessMessages=function(r,o){var n,e,t;for(this.impl=r(this.options);n=o.shift();)e=n.method,t=n.args,this[e]&&"function"==typeof this[e]&&("captureDomContentLoaded"===e||"captureLoad"===e?this[e].apply(this,[t[0],n.ts]):this[e].apply(this,t));return this};var n=o;function e(r){return e="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(r){return typeof r}:function(r){return r&&"function"==typeof Symbol&&r.constructor===Symbol&&r!==Symbol.prototype?"symbol":typeof r},e(r)}function t(r){return function(){try{return r.apply(this,arguments)}catch(r){try{console.error("[Rollbar]: Internal error",r)}catch(r){}}}}var a=0;function l(r,o){this.options=r,this._rollbarOldOnError=null;var n=a++;this.shimId=function(){return n},"undefined"!=typeof window&&window._rollbarShims&&(window._rollbarShims[n]={handler:o,messages:[]})}var i=function(r,o){return new l(r,o)},s=function(r){return new n(i,r)};function d(r){return t((function(){var o=Array.prototype.slice.call(arguments,0),n={shim:this,method:r,args:o,ts:new Date};window._rollbarShims[this.shimId()].messages.push(n)}))}l.prototype.loadFull=function(r,o,n,e,a){var l=!1,i=o.createElement("script"),s=o.getElementsByTagName("script")[0],d=s.parentNode;i.crossOrigin="",i.src=e.rollbarJsUrl,n||(i.async=!0),i.onload=i.onreadystatechange=t((function(){if(!(l||this.readyState&&"loaded"!==this.readyState&&"complete"!==this.readyState)){i.onload=i.onreadystatechange=null;try{d.removeChild(i)}catch(r){}l=!0,function(){var o;if(void 0===r._rollbarDidLoad){o=new Error("rollbar.js did not load");for(var n,e,t,l,i=0;n=r._rollbarShims[i++];)for(n=n.messages||[];e=n.shift();)for(t=e.args||[],i=0;i<t.length;++i)if("function"==typeof(l=t[i])){l(o);break}}"function"==typeof a&&a(o)}()}})),d.insertBefore(i,s)},l.prototype.wrap=function(r,o,n){try{var e;if(e="function"==typeof o?o:function(){return o||{}},"function"!=typeof r)return r;if(r._isWrap)return r;if(!r._rollbar_wrapped&&(r._rollbar_wrapped=function(){n&&"function"==typeof n&&n.apply(this,arguments);try{return r.apply(this,arguments)}catch(n){var o=n;throw o&&("string"==typeof o&&(o=new String(o)),o._rollbarContext=e()||{},o._rollbarContext._wrappedSource=r.toString(),window._rollbarWrappedError=o),o}},r._rollbar_wrapped._isWrap=!0,r.hasOwnProperty))for(var t in r)r.hasOwnProperty(t)&&(r._rollbar_wrapped[t]=r[t]);return r._rollbar_wrapped}catch(o){return r}};for(var c="log,debug,info,warn,warning,error,critical,global,configure,handleUncaughtException,handleAnonymousErrors,handleUnhandledRejection,captureEvent,captureDomContentLoaded,captureLoad".split(","),p=0;p<c.length;++p)l.prototype[c[p]]=d(c[p]);var u="https://cdn.rollbar.com/rollbarjs/refs/tags/v3.1.0/rollbar.min.js";if(_rollbarConfig=_rollbarConfig||{},!_rollbarConfig.rollbarJsUrl){var f="replay"in _rollbarConfig;_rollbarConfig.rollbarJsUrl=f?u.replace("rollbar.min.js","rollbar.replay.min.js"):u}_rollbarConfig.async=void 0===_rollbarConfig.async||_rollbarConfig.async;var b,h=function(o,n){if(o){var a=n.globalAlias||"Rollbar";if("object"===e(o[a]))return o[a];o._rollbarShims={},o._rollbarWrappedError=null;var l=new s(n);return t((function(){n.captureUncaught&&(l._rollbarOldOnError=o.onerror,function(r,o){if(r){var n;if("function"==typeof o._rollbarOldOnError)n=o._rollbarOldOnError;else if(r.onerror){for(n=r.onerror;n._rollbarOldOnError;)n=n._rollbarOldOnError;o._rollbarOldOnError=n}o.handleAnonymousErrors();var e=function(){var e=Array.prototype.slice.call(arguments,0);!function(r,o,n,e){r._rollbarWrappedError&&(e[4]||(e[4]=r._rollbarWrappedError),e[5]||(e[5]=r._rollbarWrappedError._rollbarContext),r._rollbarWrappedError=null);var t=o.handleUncaughtException.apply(o,e);n&&n.apply(r,e),"anonymous"===t&&(o.anonymousErrorsPending+=1)}(r,o,n,e)};e._rollbarOldOnError=n,r.onerror=e}}(o,l),n.wrapGlobalEventHandlers&&function(o,n,e){if(o){var t,a,l="EventTarget,Window,Node,ApplicationCache,AudioTrackList,ChannelMergerNode,CryptoOperation,EventSource,FileReader,HTMLUnknownElement,IDBDatabase,IDBRequest,IDBTransaction,KeyOperation,MediaController,MessagePort,ModalWindow,Notification,SVGElementInstance,Screen,TextTrack,TextTrackCue,TextTrackList,WebSocket,WebSocketWorker,Worker,XMLHttpRequest,XMLHttpRequestEventTarget,XMLHttpRequestUpload".split(",");for(t=0;t<l.length;++t)o[a=l[t]]&&o[a].prototype&&r(n,o[a].prototype,e)}}(o,l,!0)),n.captureUnhandledRejections&&function(r,o){if(r){"function"==typeof r._rollbarURH&&r._rollbarURH.belongsToShim&&r.removeEventListener("unhandledrejection",r._rollbarURH);var n=function(r){var n,e,t;try{n=r.reason}catch(r){n=void 0}try{e=r.promise}catch(r){e="[unhandledrejection] error getting `promise` from event"}try{t=r.detail,!n&&t&&(n=t.reason,e=t.promise)}catch(r){}n||(n="[unhandledrejection] error getting `reason` from event"),o&&o.handleUnhandledRejection&&o.handleUnhandledRejection(n,e)};n.belongsToShim=!0,r._rollbarURH=n,r.addEventListener("unhandledrejection",n)}}(o,l);var t=n.autoInstrument;return!1!==n.enabled&&(void 0===t||!0===t||function(r){return!("object"!==e(r)||void 0!==r.page&&!r.page)}(t))&&o.addEventListener&&(o.addEventListener("load",l.captureLoad.bind(l)),o.addEventListener("DOMContentLoaded",l.captureDomContentLoaded.bind(l))),o[a]=l,l}))()}}(window,_rollbarConfig),y=(b=_rollbarConfig,function(r){if(!r&&!window._rollbarInitialized){for(var o,n,e=(b=b||{}).globalAlias||"Rollbar",t=window.rollbar,a=function(r){return new t(r)},l=0;o=window._rollbarShims[l++];)n||(n=o.handler),o.handler._swapAndProcessMessages(a,o.messages);window[e]=n,window._rollbarInitialized=!0}});window.rollbar=s,h.loadFull(window,document,!_rollbarConfig.async,_rollbarConfig,y)}();
+    </script>
+
+    <script src="https://www-static.warframe.com/bower_components/handlebars/handlebars.min.js"></script>
+
+<title>Warframe</title>
+
+<meta property="og:site_name" content="Warframe">
+<meta property="og:url" content="https://www.warframe.com/en/news">
+<meta property="og:title" content="Warframe">
+<meta name="twitter:title" content="Warframe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@playwarframe">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="facebook-domain-verification" content="yivn1wp3buknb7zl2xwbqlbx8ypxq5">
+<meta name="description" content="Join the Tenno and defend an ever-expanding universe. Wield your Warframe&#039;s tactical abilities, craft a loadout of devastating weaponry and define your playstyle to become an unstoppable force in this genre-defining looter-shooter. Your Warframe is waiting, Tenno.">
+<meta property="og:description" content="Join the Tenno and defend an ever-expanding universe. Wield your Warframe&#039;s tactical abilities, craft a loadout of devastating weaponry and define your playstyle to become an unstoppable force in this genre-defining looter-shooter. Your Warframe is waiting, Tenno.">
+<meta name="twitter:description" content="Join the Tenno and defend an ever-expanding universe. Wield your Warframe&#039;s tactical abilities, craft a loadout of devastating weaponry and define your playstyle to become an unstoppable force in this genre-defining looter-shooter. Your Warframe is waiting, Tenno.">
+<meta property="og:image" content="https://www-static.warframe.com/images/landing/warframe-metacard.png">
+<meta property="og:image:secure_url" content="https://www-static.warframe.com/images/landing/warframe-metacard.png">
+
+<link rel="preload" as="style" href="https://www-static.warframe.com/build/assets/app-B2bJ_Euw.css" /><link rel="preload" as="style" href="https://www-static.warframe.com/build/assets/styles2-podDP4JT.css" /><link rel="modulepreload" as="script" href="https://www-static.warframe.com/build/assets/warframe-DZhAASrf.js" /><link rel="modulepreload" as="script" href="https://www-static.warframe.com/build/assets/components-Cf73JsEi.js" /><link rel="stylesheet" href="https://www-static.warframe.com/build/assets/app-B2bJ_Euw.css" data-navigate-track="reload" /><link rel="stylesheet" href="https://www-static.warframe.com/build/assets/styles2-podDP4JT.css" data-navigate-track="reload" /><script type="module" src="https://www-static.warframe.com/build/assets/warframe-DZhAASrf.js" data-navigate-track="reload"></script></head>
+<body class=" news lang-en">
+            <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://metrics.warframe.com/ns.html?id=GTM-KVZL9RQ"
+              height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->        <!-- content guardrails -->
+    <div class="Page">
+        <div class="Page-content">
+            <div class="wrapper">
+                                    <header id="header"
+            class="HeaderNavigationBar FixedHeaderElement is-collapsed is-mobile">
+        <a class="HeaderNavigationLogo" href="https://www.warframe.com/en">
+            <img class="HeaderNavigationLogo-image HeaderNavigationLogo-full"
+                 src="https://www-static.warframe.com/images/logoWhite.png"
+                 alt="Warframe">
+            <img class="HeaderNavigationLogo-image HeaderNavigationLogo-compact"
+                 src="https://www-static.warframe.com/images/greyLotus.png"
+                 alt="Warframe">
+        </a>
+        <div class="HeaderNavigationBar-menuContainer">
+            <div class="HeaderDesktopMenu">
+                <!-- What's New (combined rotating links) -->
+<div
+    class="HeaderMenuItem HeaderMenuItem--dropdown">
+    <div class="HeaderMenuItem-label"
+         data-analytics-event="event:sitenav_click,creative_placement:sitenav-root,creative_title:events,creative_type:sitenav">
+        <div class="HeaderNewLabel">
+
+            <span class="HeaderNewLabel-text">What&#039;s New</span>
+        </div>
+        <img class="Icon HeaderMenuItem-icon" alt="" src="https://www-static.warframe.com/images/icons/material/dropdown.svg" >
+    </div>
+    <div class="HeaderMenuItem-dropdown">
+        <div class="HeaderMenuItem-subheading">Updates</div>
+
+        <a href="https://www.warframe.com/en/jade-shadows-constellations" class="HeaderMenuItem-option"
+           data-analytics-event="event:sitenav_click,creative_placement:updates,creative_title:jade-shadows-constellations,creative_type:sitenav">
+            Jade Shadows: Constellations
+        </a>
+
+                <a href="https://www.warframe.com/en/iceblade-of-narin" class="HeaderMenuItem-option"
+           data-analytics-event="event:sitenav_click,creative_placement:updates,creative_title:iceblade-of-narin,creative_type:sitenav">
+            Iceblade of Narin
+            
+
+                            <span class="HeaderNewLabel"><span
+                        class="HeaderNewLabel-tag">Coming Soon</span></span>
+                    </a>
+        
+        
+
+                <a href="https://www.warframe.com/en/tau" class="HeaderMenuItem-option"
+           data-analytics-event="event:sitenav_click,creative_placement:updates,creative_title:tau-announcement,creative_type:sitenav">
+            Tau
+
+                            <span class="HeaderNewLabel"><span
+                        class="HeaderNewLabel-tag">Coming Soon</span></span>
+                        </a>
+        
+        
+        
+
+        
+            </div>
+</div>
+
+<!-- Game -->
+<div
+    class="HeaderMenuItem HeaderMenuItem--dropdown">
+    <div class="HeaderMenuItem-label" id="drpNavGame"
+         data-analytics-event="event:sitenav_click,creative_placement:sitenav-root,creative_title:game,creative_type:sitenav">
+        Game
+        <img class="Icon HeaderMenuItem-icon" alt="" src="https://www-static.warframe.com/images/icons/material/dropdown.svg" >
+    </div>
+    <div class="HeaderMenuItem-dropdown">
+        <a href="https://www.warframe.com/en/game/about" class="HeaderMenuItem-option" id="drpGameAbout"
+           data-analytics-event="event:sitenav_click,creative_placement:game,creative_title:game-about,creative_type:sitenav">
+            About
+        </a>
+        <a href="https://www.warframe.com/en/news" class="HeaderMenuItem-option" id="drpGameNews"
+           data-analytics-event="event:sitenav_click,creative_placement:game,creative_title:news,creative_type:sitenav">
+            Latest News
+        </a>
+        <a href="https://www.warframe.com/en/patch-notes" class="HeaderMenuItem-option" id="drpGamePatchNotes"
+           data-analytics-event="event:sitenav_click,creative_placement:game,creative_title:patch_notes,creative_type:sitenav"
+        >
+            Patch Notes
+        </a>
+        <a href="https://www.warframe.com/en/game/warframes" class="HeaderMenuItem-option" id="drpGamesWarframe"
+           data-analytics-event="event:sitenav_click,creative_placement:game,creative_title:warframes,creative_type:sitenav">
+            Warframes
+        </a>
+        <a href="https://www.warframe.com/en/download" class="HeaderMenuItem-option" id="drpGamesDownload"
+           data-analytics-event="event:sitenav_click,creative_placement:game,creative_title:download,creative_type:sitenav">
+            <span>Download Game</span>
+            <img class="Icon HeaderMenuItem-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/download.svg" >
+        </a>
+        
+        <a href="https://www.warframe.com/en/zendesk" class="HeaderMenuItem-option" id="drpGamesSupport"
+           data-analytics-event="event:sitenav_click,creative_placement:game,creative_title:support,creative_type:sitenav">
+            Support
+        </a>
+    </div>
+</div>
+<!-- Store -->
+<div
+    class="HeaderMenuItem HeaderMenuItem--dropdown">
+    <div class="HeaderMenuItem-label" id="drpNavStore"
+         data-analytics-event="event:sitenav_click,creative_placement:sitenav-root,creative_title:store,creative_type:sitenav">
+        Store
+        <img class="Icon HeaderMenuItem-icon" alt="" src="https://www-static.warframe.com/images/icons/material/dropdown.svg" >
+    </div>
+    <div class="HeaderMenuItem-dropdown">
+        <a href="https://www.warframe.com/en/shop" class="HeaderMenuItem-option" id="drpStorePlatinum"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:plat,creative_type:sitenav">
+            Platinum &amp; Bundles
+        </a>
+
+        <a href="https://www.warframe.com/en/shop/currency" class="HeaderMenuItem-option" id="drpStoreCurrency"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:currency,creative_type:sitenav">
+            Currencies
+        </a>
+
+        <a href="https://www.warframe.com/en/gemini" class="HeaderMenuItem-option" id="drpStoreGemini"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:gemini,creative_type:sitenav">
+            Gemini Collection
+        </a>
+
+        <a href="https://www.warframe.com/en/heirloom" class="HeaderMenuItem-option" id="drpStoreHeirloom"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:heirloom,creative_type:sitenav">
+            Heirloom Collection
+        </a>
+        <a href="https://www.warframe.com/en/prime-access" class="HeaderMenuItem-option" id="drpStoreAccess"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:primeaccess,creative_type:sitenav">
+            Prime Access
+        </a>
+        <a href="https://www.warframe.com/en/prime-resurgence" class="HeaderMenuItem-option" id="drpStoreResurgence"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:primeresurgence,creative_type:sitenav">
+            Prime Resurgence
+        </a>
+        <a href="https://www.warframe.com/en/supporter-packs" class="HeaderMenuItem-option" id="drpStoreSupporter"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:supporterpacks,creative_type:sitenav">
+            Supporter Packs
+        </a>
+
+        <a href="https://www.warframe.com/en/shop/new-player-packs" class="HeaderMenuItem-option" id="drpStoreStarterPack"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:starterpacks,creative_type:sitenav">
+            New Player Packs
+        </a>
+
+        <a href="https://store.warframe.com/?utm_source=website&utm_medium=nav-bar&utm_campaign=merch-2022"
+           class="HeaderMenuItem-option" id="drpStoreMerch" target="_blank" rel="noopener"
+           data-analytics-event="event:sitenav_click,creative_placement:store,creative_title:merch,creative_type:sitenav">
+            Official Merch
+            <img class="Icon HeaderMenuItem-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/launch.svg" >
+        </a>
+        <a href="https://www.warframe.com/en/promocode" class="HeaderMenuItem-option"
+           id="drpStoreRedeem">Redeem Code</a>
+    </div>
+</div>
+<!-- Community -->
+<div
+    class="HeaderMenuItem HeaderMenuItem--dropdown">
+    <div class="HeaderMenuItem-label" id="drpNavCommunity"
+         data-analytics-event="event:sitenav_click,creative_placement:sitenav-root,creative_title:community,creative_type:sitenav">
+        Community
+        <img class="Icon HeaderMenuItem-icon" alt="" src="https://www-static.warframe.com/images/icons/material/dropdown.svg" >
+    </div>
+    <div class="HeaderMenuItem-dropdown">
+        <a href="https://www.warframe.com/en/community" class="HeaderMenuItem-option"
+           data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:community,creative_type:sitenav">
+            Community
+        </a>
+        <a href="https://www.warframe.com/en/community/stats" class="HeaderMenuItem-option"
+           data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:globalstats,creative_type:sitenav">
+            Global Community Stats
+            <!--            <span class="HeaderMenuItem-live">New!</span>-->
+        </a>
+        <a href="https://forums.warframe.com" class="HeaderMenuItem-option" id="drpCommunityForum" target="_blank"
+           rel="noopener"
+           data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:forums,creative_type:sitenav">
+            Forums
+            <img class="Icon HeaderMenuItem-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/launch.svg" >
+        </a>
+        <a href="https://www.warframe.com/en/community/creators" class="HeaderMenuItem-option" id="drpCommunityCreators"
+           data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:creators,creative_type:sitenav">
+            Warframe Creators
+        </a>
+        <a href="https://www.warframe.com/en/community/referral" class="HeaderMenuItem-option" id="drpCommunityReferral"
+           data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:referral,creative_type:sitenav">
+            Referral Program
+        </a>
+        <a href="https://www.warframe.com/en/community/volunteers" class="HeaderMenuItem-option" id="drpCommunityVolunteers"
+           data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:volunteers,creative_type:sitenav">
+            Warframe Volunteers
+        </a>
+        <a href="https://www.warframe.com/en/community/charity" class="HeaderMenuItem-option" id="drpCommunityCreators"
+           data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:charity,creative_type:sitenav">
+            Charity
+        </a>
+        <a href="https://discord.com/invite/playwarframe" class="HeaderMenuItem-option" id="drpCommunityDiscord"
+           target="_blank" rel="noopener"
+           data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:discord,creative_type:sitenav">
+            Official Discord Server
+            <img class="Icon HeaderMenuItem-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/launch.svg" >
+        </a>
+                    <a href="https://www.twitch.tv/warframe" class="HeaderMenuItem-option" id="drpCommunityTwitch"
+               target="_blank"
+               rel="noopener"
+               data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:twitch,creative_type:sitenav">
+                Twitch Channel
+                <img class="Icon HeaderMenuItem-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/launch.svg" >
+            </a>
+            <a href="https://x.com/playwarframe" class="HeaderMenuItem-option" id="drpCommunityTwitter" target="_blank"
+               rel="noopener"
+               data-analytics-event="event:sitenav_click,creative_placement:community,creative_title:twitter,creative_type:sitenav">
+                Twitter
+                <img class="Icon HeaderMenuItem-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/launch.svg" >
+            </a>
+            </div>
+</div>
+<!-- Guides -->
+<div
+    class="HeaderMenuItem HeaderMenuItem--dropdown">
+    <div class="HeaderMenuItem-label" id="drpNavGuides"
+         data-analytics-event="event:sitenav_click,creative_placement:sitenav-root,creative_title:guides,creative_type:sitenav">
+        Guides
+        <img class="Icon HeaderMenuItem-icon" alt="" src="https://www-static.warframe.com/images/icons/material/dropdown.svg" >
+    </div>
+    <div class="HeaderMenuItem-dropdown">
+        <a href="https://www.warframe.com/en/news/new-player-guide" class="HeaderMenuItem-option"
+           id="drpGuidesNewPlayer"
+           data-analytics-event="event:sitenav_click,creative_placement:guides,creative_title:newplayerguide,creative_type:sitenav">
+            New Player Guide
+        </a>
+        <a href="https://www.warframe.com/en/news/returning-player-guide" class="HeaderMenuItem-option"
+           id="drpGuidesReturningPlayer"
+           data-analytics-event="event:sitenav_click,creative_placement:guides,creative_title:returningplayer,creative_type:sitenav">
+            Returning Player Guide
+        </a>
+        <a href="https://www.warframe.com/en/guides/quests" class="HeaderMenuItem-option" id="drpGuidesQuest"
+           data-analytics-event="event:sitenav_click,creative_placement:guides,creative_title:questguide,creative_type:sitenav">
+            Quest Guide
+            <!--            <span class="HeaderMenuItem-live">New!</span>-->
+        </a>
+        <a href="https://wiki.warframe.com/" class="HeaderMenuItem-option" id="drpGuidesWiki" target="_blank"
+           rel="noopener"
+           data-analytics-event="event:sitenav_click,creative_placement:guides,creative_title:wiki,creative_type:sitenav">
+            Warframe Wiki
+            <img class="Icon HeaderMenuItem-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/launch.svg" >
+        </a>
+        <a href="https://www.warframe.com/en/game/quickstart" class="HeaderMenuItem-option" id="drpGuidesStart"
+           data-analytics-event="event:sitenav_click,creative_placement:guides,creative_title:quickstart,creative_type:sitenav">
+            Quick Start Guide
+        </a>
+        <a href="https://www.warframe.com/en/crossprogression" class="HeaderMenuItem-option" id="drpGuidesCrossplay"
+           data-analytics-event="event:sitenav_click,creative_placement:guides,creative_title:crossplay,creative_type:sitenav">
+            Cross Platform Play Guide
+        </a>
+    </div>
+</div>
+<div class="HeaderMenuItem">
+    <a class="HeaderMenuItem-label is-inline" id="drpNavVideos" href="https://www.warframe.com/en/media"
+       data-analytics-event="event:sitenav_click,creative_placement:sitenav-root,creative_title:media,creative_type:sitenav">
+        Media
+    </a>
+</div>
+
+
+            </div>
+            <div class="HeaderNavigationBar-mobileButtonContainer">
+                <a href="https://www.warframe.com/en/signup" class="signupLink">
+                    <button class="Button Button--primary is-fullWidth" data-analytics-title="play-free-now">
+        <span class="Button-label">Play Free Now</span>
+    </button>
+                </a>
+                <a href="https://www.warframe.com/en/login" class="loginLink">
+                    <button class="Button Button--secondary is-fullWidth" data-analytics-title="log-in">
+    <img class="Icon Button-icon" alt="" src="https://www-static.warframe.com/images/icons/material/login.svg" >
+    <span class="Button-label">Log In</span>
+    </button>
+                </a>
+            </div>
+        </div>
+        <div class="HeaderNavigationBar-controlsContainer">
+            <div class="HeaderNavigationLoggedOut">
+                <div class="HeaderNavigationControls">
+                    <a href="https://www.warframe.com/en/signup" class="signupLink" id="btnSignup"
+                       data-analytics-event="event:sitenav_click,creative_placement:sitenav-root,creative_title:play-free-now,creative_type:sitenav">
+                        <button class="Button Button--primary">
+        <span class="Button-label">Play Free Now</span>
+    </button>
+                    </a>
+                    <a href="https://www.warframe.com/en/login" class="loginLink" id="btnLogin"
+                       data-analytics-event="event:sitenav_click,creative_placement:sitenav-root,creative_title:log-in,creative_type:sitenav">
+                        <button class="Button Button--secondary">
+    <img class="Icon Button-icon" alt="" src="https://www-static.warframe.com/images/icons/material/login.svg" >
+    <span class="Button-label">Log In</span>
+    </button>
+                    </a>
+                </div>
+            </div>
+            <div class="HeaderNavigationLoggedIn">
+                <div class="HeaderUserProfile">
+                    <div class="HeaderUserProfile-container">
+                        <img class="HeaderUserProfile-avatar" src="https://www-static.warframe.com/images/default-avatar.png"
+                             alt="">
+                        <div class="HeaderUserProfile-name">
+                            <span class="HeaderUserProfile-nameText">--</span>
+                        </div>
+                        <div class="HeaderUserProfile-information">
+                            <span
+                                class="HeaderUserProfile-mastery">MR <span class="HeaderUserProfile-masteryNumber">0</span></span>
+                            <span
+                                class="HeaderUserProfile-legendary">LR <span class="HeaderUserProfile-masteryNumber">0</span></span>
+                            <span class="HeaderUserProfile-platinum HeaderUserProfile-platinumDivider">
+                                <img class="Icon Icon--raster HeaderUserProfile-platinumIcon" alt="" src="https://www-static.warframe.com/images/icons/material/platinum.png" >
+                                <span class="HeaderUserProfile-platinumNumber"></span>
+                            </span>
+                        </div>
+                        <img class="Icon HeaderUserProfile-dropdownIcon" alt="" src="https://www-static.warframe.com/images/icons/material/dropdown.svg" >
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="HeaderNavigationBar-mobileMenuToggle">
+            <div class="HeaderNavigationBar-mobileMenuToggleInner">
+                <img class="Icon HeaderNavigationBar-mobileMenuIcon" alt="" src="https://www-static.warframe.com/images/icons/material/menu.svg" >
+            </div>
+        </div>
+
+        <div class="HeaderNavigationBar-mobileMenuOverlay"></div>
+        <div class="HeaderUserMenu">
+    <div class="HeaderUserMenu-content">
+        <div class="HeaderUserMenu-row HeaderUserMenu-crossSave">
+            <div class="HeaderUserMenu-rowTitle">
+                <img class="Icon HeaderUserMenu-crossSaveIcon" alt="" src="https://www-static.warframe.com/images/icons/material/crossplatform.svg" >
+                <span>Cross Platform Save </span>
+            </div>
+            <a class="HeaderUserMenu-crossSaveLink" href="https://www.warframe.com/cross-save">Link your account!</a>
+        </div>
+        <div class="HeaderUserMenu-row HeaderUserMenu-twitch">
+            <div class="HeaderUserMenu-rowTitle">
+                <img class="Icon HeaderUserMenu-twitchIcon" alt="" src="https://www-static.warframe.com/images/icons/material/twitch.svg" >
+                <span>Twitch</span>
+                <span class="HeaderUserMenu-linked">&nbsp;&ndash; Linked</span>
+            </div>
+            <a class="HeaderUserMenu-unlinked" href="https://www.warframe.com/twitch/link">Link your account!</a>
+        </div>
+
+        <a class="HeaderUserMenu-link" href="https://www.warframe.com/en/year-in-review">2025 Year In Review</a>
+
+        <div class="HeaderUserMenu-row HeaderUserMenu-couponDiscount">
+            <div class="HeaderUserMenu-rowTitle">Active Coupon</div>
+            <div class="HeaderUserMenu-rowText">
+                <span class="HeaderUserMenu-couponDiscountPercent">0</span>% off all Platinum
+            </div>
+        </div>
+        <div class="HeaderUserMenu-row HeaderUserMenu-couponMultiplier">
+            <div class="HeaderUserMenu-rowTitle">Active Coupon</div>
+            <div class="HeaderUserMenu-rowText">
+                +<span class="HeaderUserMenu-couponMultiplierAmount">0</span>% Bonus Platinum on select packs
+            </div>
+        </div>
+        <div class="HeaderUserMenu-row">
+            <div class="HeaderUserMenu-rowTitle">Your Platinum</div>
+            <div class="HeaderUserMenu-platinum">
+                <img class="Icon Icon--raster HeaderUserMenu-platinumIcon" alt="" src="https://www-static.warframe.com/images/icons/material/platinum.png" >
+                <span class="HeaderUserMenu-platinumNumber"></span>
+                <span class="HeaderUserMenu-platinumDivider">&bull;</span>
+                <a href="https://www.warframe.com/en/shop" class="HeaderUserMenu-platinumLink">Buy Now</a>
+            </div>
+        </div>
+    </div>
+    <div class="HeaderUserMenu-divider"></div>
+    <div class="HeaderUserMenu-links">
+        <a href="https://www.warframe.com/en/user" id="nav-option-account-management" class="HeaderUserMenu-link">Account Management</a>
+        <a href="https://www.warframe.com/en/download" id="nav-option-download" class="HeaderUserMenu-link">
+            <span>Download Game</span>
+            <img class="Icon HeaderUserMenu-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/download.svg" >
+        </a>
+        <a href="https://www.warframe.com/en/promocode" id="nav-option-promo" class="HeaderUserMenu-link">Redeem Code</a>
+        <a href="https://www.warframe.com/user/logout" id="nav-option-logout" class="HeaderUserMenu-link HeaderUserMenu-linkLast">
+            <span>Log Out</span>
+            <img class="Icon HeaderUserMenu-linkIcon" alt="" src="https://www-static.warframe.com/images/icons/material/logout.svg" >
+        </a>
+    </div>
+</div>
+
+        <script>
+            {
+                const header = document.getElementById("header");
+                // Inline storage pull to reduce flickering
+                try {
+                    const rawHeaderState = sessionStorage.getItem("WF_GlobalNavState");
+                    if (rawHeaderState) {
+                        const headerState = JSON.parse(rawHeaderState);
+                        if (header) {
+                            header.classList.toggle('is-collapsed', headerState.collapsed);
+                            header.classList.toggle('is-mobile', headerState.mobile);
+                        }
+                    }
+                } catch (e) {
+                    // Do nothing
+                }
+            }
+        </script>
+    </header>
+                
+                <div id="mainContent" class="">
+                                            <section class="Section" id="newsIndex2">
+        <div class="Section-background" ></div>
+    <div class="Section-content"><div class="SectionContent"><div class="row categories"></div>
+
+            <div class="NewsPageSearchBar">
+                <div class="Search">
+    <form class="Search-form" action="https://www.warframe.com/en/news">
+        <input class="Search-text" id="fldNews" type="text" name="query" placeholder="Search Warframe News..." minlength="5" maxlength="50">
+        <button class="Search-submit" id="btnSearch" type="submit"><img class="Icon Search-submitIcon" alt="Search" src="https://www-static.warframe.com/images/icons/material/search.svg" >
+</button>
+                    <input type="hidden" name="category" value="">
+                            <input type="hidden" name="version" value="">
+            </form>
+</div>
+            </div>
+
+                            <div class="NewsCardList">
+                                                                <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/b48e84d751e6fb9fc957fb63f97135a7_800x450.jpg);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/citrine-prime-access" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/citrine-prime-access">Citrine Prime Access</a></div>
+    <div class="NewsCard-date">Posted On 2026-09-04 07:54:00</div>
+        <div class="NewsCard-description">Wake up flawless on September 23.</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/citrine-prime-access">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/dd1d6b0711b5de5b77af1ae6d95a33ad_800x450.png);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/get-banshee-as-a-free-login-reward-to-celebrate-her-evolution" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/get-banshee-as-a-free-login-reward-to-celebrate-her-evolution">Get Banshee as a Free Login Reward to Celebrate Her Evolution</a></div>
+    <div class="NewsCard-date">Posted On 2026-09-04 07:48:00</div>
+        <div class="NewsCard-description">Rework, Login Reward and Deluxe Collection Coming September 23</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/get-banshee-as-a-free-login-reward-to-celebrate-her-evolution">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/0a84be1fd6de17991934bc99ceb1723b_800x450.jpg);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/epoch-operation-taubound" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/epoch-operation-taubound">Epoch Operation: Taubound</a></div>
+    <div class="NewsCard-date">Posted On 2026-09-04 07:18:00</div>
+        <div class="NewsCard-description">Once-in-a-lifetime event coming October 15</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/epoch-operation-taubound">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/50fe802a3f0882914ae878a32825b1e0_800x450.jpg);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/myboo-cosplay-joins-us-for-tennovip-seoul" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/myboo-cosplay-joins-us-for-tennovip-seoul">Myboo Cosplay joins us for TennoVIP: Seoul</a></div>
+    <div class="NewsCard-date">Posted On 2026-09-04 06:00:00</div>
+        <div class="NewsCard-description">The popular costume and prop artist will be at the event!</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/myboo-cosplay-joins-us-for-tennovip-seoul">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/e0b4329d70058361af8a72ce4cb203cd_800x450.png);">
+            <a class="Card-media" href="https://www.warframe.com/en/prime-resurgence" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/prime-resurgence">Banshee Prime and Mirage Prime enter Prime Resurgence</a></div>
+    <div class="NewsCard-date">Posted On 2026-09-03 14:05:00</div>
+        <div class="NewsCard-description">Wield a chaotic cacophony or master the art of mystifying deception!</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/prime-resurgence">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/2a5bb43b2ed1b01fbf708eb5d07eb142_800x450.png);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/operation-plague-star-2026" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/operation-plague-star-2026">Operation Plague Star 2026</a></div>
+    <div class="NewsCard-date">Posted On 2026-09-02 14:03:00</div>
+        <div class="NewsCard-description">Cetus calls for your aid once more!</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/operation-plague-star-2026">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/751a20e1e5ee05c279d6d1145e7f8109_800x450.png);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/ark8-x-warframe-lookbook" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/ark8-x-warframe-lookbook">ARK/8 x Warframe Lookbook</a></div>
+    <div class="NewsCard-date">Posted On 2026-09-02 11:18:00</div>
+        <div class="NewsCard-description">Enjoy a preview of several items from the collaboration!</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/ark8-x-warframe-lookbook">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/fdf7fab4abfd9d6057aa167a5ae01482_800x450.png);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/ark8-x-warframe-online-drop" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/ark8-x-warframe-online-drop">ARK/8 x Warframe Online Drop</a></div>
+    <div class="NewsCard-date">Posted On 2026-09-02 11:16:00</div>
+        <div class="NewsCard-description">Fresh fits will arrive on September 9!</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/ark8-x-warframe-online-drop">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/0dcf7ba8e92776ef7285912b5c660ee9_800x450.png);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/teshin-plushie-campaign" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/teshin-plushie-campaign">Teshin Plushie Campaign</a></div>
+    <div class="NewsCard-date">Posted On 2026-08-27 11:25:00</div>
+        <div class="NewsCard-description">The legendary teacher gets a bit squishier.</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/teshin-plushie-campaign">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                            <div class="Card NewsCard" style="--card-image-url:url(https://www-static.warframe.com/uploads/thumbnails/f7fd47cc3a3129fd3f08edb08c133d95_800x450.png);">
+            <a class="Card-media" href="https://www.warframe.com/en/news/tennoconcert-2026-visualizer-and-live-album" ></a>
+        <div class="Card-content"><div class="NewsCard-title"><a href="https://www.warframe.com/en/news/tennoconcert-2026-visualizer-and-live-album">TennoConcert 2026 Visualizer and Live Album</a></div>
+    <div class="NewsCard-date">Posted On 2026-08-17 16:11:00</div>
+        <div class="NewsCard-description">Immerse yourself in the sounds of the Origin System</div>
+            <div class="NewsCard-link"><a href="https://www.warframe.com/en/news/tennoconcert-2026-visualizer-and-live-album">Read More</a></div>
+        <div class="NewsCard-tags">
+            </div></div>
+</div>
+                                    </div>
+
+                                    <div class="NewsLoadMoreRow">
+                        <a id="load-more-button" href="#"><button class="Button Button--primary">
+        <span class="Button-label">Load 10 More</span>
+    </button>
+</a>
+                    </div></div></div>
+    </section>
+                </div>
+            </div>
+                                    <footer id="footer" class="FooterNavigationContainer">
+    <div id="FooterGeometry">
+        <div class="SacredGeometry" data-sacred-geometry>
+    <svg class="SacredGeometry--svg"
+        viewBox="0 0 1280 1280"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+        focusable="false">
+        <g class="SacredGeometry--lines">
+
+            <path
+                    id="path-1"
+                    class="GeometryLine"
+                    d="M639.633,25.748c50.166,36.992 55.685,115.912 0.122,153.678c-66,44.859 -148.844,-9.078 -146.417,-67.959c66.706,-28.772 132.348,23.183 132.05,84.228c-0.323,66.282 -68.052,114.583 -132.637,85.623c-1.201,-59.576 78.658,-110.14 139.231,-73.063c71.98,44.06 46.531,135.776 8.405,157.495c-56.672,-40.977 -50.733,-125.118 7.301,-157.246c58.053,-32.14 130.459,0.885 139.575,72.108c-65.042,29.947 -133.061,-17.127 -133.061,-84.841c-0,-67.714 67.695,-112.176 132.425,-84.568c-9.078,69.061 -77.846,105.43 -138.196,72.894c-61.348,-33.074 -65.671,-119.712 -8.798,-158.349Z"
+            />
+            <path
+                    id="path-2"
+                    class="GeometryLine"
+                    d="M640,383.057c103.447,0 187.308,-83.861 187.308,-187.308c0,-103.447 -83.861,-187.308 -187.308,-187.308c-103.447,-0 -187.308,83.861 -187.308,187.308c0,103.447 83.861,187.308 187.308,187.308Z"
+            />
+            <path
+                    id="path-3"
+                    class="GeometryLine"
+                    d="M645.71,383.058c436.96,0 791.18,-354.224 791.18,-791.181c0,-436.957 -354.22,-791.177 -791.18,-791.177c-436.957,0 -791.181,354.22 -791.181,791.177c0,436.957 354.224,791.181 791.181,791.181Z"
+            />
+            <path
+                    id="path-4"
+                    class="GeometryLine"
+                    d="M36.712,958.663c436.957,0 791.181,-354.224 791.181,-791.181c0,-436.957 -354.224,-791.181 -791.181,-791.181c-436.957,0 -791.181,354.224 -791.181,791.181c0,436.957 354.224,791.181 791.181,791.181Z"
+            />
+            <path
+                    id="path-5"
+                    class="GeometryLine"
+                    d="M1243.8,2541.5c436.96,0 791.18,-354.23 791.18,-791.18c0,-436.96 -354.22,-791.183 -791.18,-791.183c-436.957,0 -791.181,354.223 -791.181,791.183c0,436.95 354.224,791.18 791.181,791.18Z"
+            />
+            <path
+                    id="path-6"
+                    class="GeometryLine"
+                    d="M642.181,1590.36c436.959,-0 791.179,-354.22 791.179,-791.179c-0,-436.957 -354.22,-791.181 -791.179,-791.181c-436.957,-0 -791.181,354.224 -791.181,791.181c-0,436.959 354.224,791.179 791.181,791.179Z"
+            />
+            <path
+                    id="path-7"
+                    class="GeometryLine"
+                    d="M1207.09,198.817c313.19,0 567.08,-253.893 567.08,-567.085c0,-313.192 -253.89,-567.085 -567.08,-567.085c-313.196,0 -567.089,253.893 -567.089,567.085c0,313.192 253.893,567.085 567.089,567.085Z"
+            />
+            <path
+                    id="path-8"
+                    class="GeometryLine"
+                    d="M72.915,1333.98c313.192,0 567.085,-253.9 567.085,-567.088c0,-313.193 -253.893,-567.085 -567.085,-567.085c-313.193,-0 -567.085,253.892 -567.085,567.085c0,313.188 253.892,567.088 567.085,567.088Z"
+            />
+            <path
+                    id="path-9"
+                    class="GeometryLine"
+                    d="M40.146,2541.5c436.957,0 791.181,-354.23 791.181,-791.18c0,-436.96 -354.224,-791.183 -791.181,-791.183c-436.957,0 -791.181,354.223 -791.181,791.183c0,436.95 354.224,791.18 791.181,791.18Z"
+            />
+            <path
+                    id="path-10"
+                    class="GeometryLine"
+                    d="M646.144,1965.89c436.956,0 791.176,-354.22 791.176,-791.18c-0,-436.956 -354.22,-791.18 -791.176,-791.18c-436.957,0 -791.181,354.224 -791.181,791.18c-0,436.96 354.224,791.18 791.181,791.18Z"
+            />
+            <path
+                    id="path-11"
+                    class="GeometryLine"
+                    d="M1243.37,958.663c436.96,0 791.18,-354.224 791.18,-791.181c-0,-436.957 -354.22,-791.181 -791.18,-791.181c-436.957,0 -791.181,354.224 -791.181,791.181c-0,436.957 354.224,791.181 791.181,791.181Z"
+            />
+            <path
+                    id="path-12"
+                    class="GeometryLine"
+                    d="M1207.09,1333.98c313.19,0 567.09,-253.9 567.09,-567.088c-0,-313.193 -253.9,-567.085 -567.09,-567.085c-313.192,-0 -567.085,253.892 -567.085,567.085c0,313.188 253.893,567.088 567.085,567.088Z"
+            />
+            <path
+                    id="path-13"
+                    class="GeometryLine"
+                    d="M62.88,198.817c313.192,0 567.085,-253.893 567.085,-567.085c0,-313.192 -253.893,-567.085 -567.085,-567.085c-313.192,0 -567.085,253.893 -567.085,567.085c0,313.192 253.893,567.085 567.085,567.085Z"
+            />
+
+        </g>
+    </svg>
+</div>    </div>
+    <div class="FooterSocialLinks">
+        <div class="FooterSocialLinks-title">Connect with other Tenno</div>
+        <div class="FooterSocialLinks-divider"></div>
+        <div class="FooterSocialLinks-inner">
+            <a class="FooterSocialLink" data-platform="vkontakte" href="https://vk.com/warframeofficial" target="_blank"><img class="Icon" alt="VK" src="https://www-static.warframe.com/images/icons/material/vkontakte.svg" >
+</a>
+            <a class="FooterSocialLink" id="btnFooterFacebook" data-platform="facebook" href="https://www.facebook.com/PlayWarframe/" target="_blank"><img class="Icon" alt="Facebook" src="https://www-static.warframe.com/images/icons/material/facebook.svg" >
+</a>
+            <a class="FooterSocialLink" id="btnFooterInstagram" data-platform="instagram" href="https://www.instagram.com/playwarframe/" target="_blank"><img class="Icon" alt="Instagram" src="https://www-static.warframe.com/images/icons/material/instagram.svg" >
+</a>
+
+            <a class="FooterSocialLink" id="btnFooterTwitter" data-platform="twitter" href="https://twitter.com/playwarframe" target="_blank"><img class="Icon" alt="Twitter" src="https://www-static.warframe.com/images/icons/material/twitter.svg" >
+</a>
+            <a class="FooterSocialLink" id="btnFooterBlueSky" data-platform="bluesky" href="https://bsky.app/profile/warframe.com" target="_blank"><img class="Icon" alt="Blue Sky" src="https://www-static.warframe.com/images/icons/material/bluesky.svg" >
+</a>
+            <a class="FooterSocialLink" id="btnFooterDiscord" data-platform="discord" href="https://discord.com/invite/playwarframe" target="_blank"><img class="Icon" alt="Discord" src="https://www-static.warframe.com/images/icons/material/discord.svg" >
+</a>
+            <a class="FooterSocialLink" id="btnFooterTwitch" data-platform="twitch" href="https://www.twitch.tv/warframe" target="_blank"><img class="Icon" alt="Twitch" src="https://www-static.warframe.com/images/icons/material/twitch.svg" >
+</a>
+            <a class="FooterSocialLink" id="btnFooterYoutube" data-platform="youtube" href="https://www.youtube.com/user/playwarframe" target="_blank"><img class="Icon" alt="Youtube" src="https://www-static.warframe.com/images/icons/material/youtube.svg" >
+</a>
+        </div>
+    </div>
+        <nav class="FooterNavigationBar" role="navigation" aria-label="Main">
+        <div class="FooterNavigationBar-content">
+            <div class="FooterNavigationBar-inner">
+                <div class="FooterNavigationBar-linkContainer">
+                    <div class="FooterNavigationBar-links">
+                        
+                        <a class="FooterNavigationLink" id="lnkFooterSupport" href="https://www.warframe.com/en/zendesk">Support</a>
+                        <a class="FooterNavigationLink" id="lnkFooterPress" href="https://www.digitalextremes.com">Press</a>
+                        <a class="FooterNavigationLink" id="lnkFooterTOU" href="https://www.warframe.com/en/terms">Terms of Use</a>
+                        <a class="FooterNavigationLink" id="lnkFooterPrivPolicy" href="https://www.warframe.com/en/privacy">Privacy Policy</a>
+                        <a class="FooterNavigationLink" id="lnkFooterEULA" href="https://www.warframe.com/en/eula">EULA</a>
+                                                    <div class="FooterNavigationLink">
+                                <div id="ot-sdk-btn" class="ot-sdk-show-settings">Cookie Settings</div>
+                            </div>
+                                            </div>
+                </div>
+                <div class="FooterNavigationBar-dropdownContainer" id="drpFooterLanguage">
+                    <div id="footer-language-dropdown" class="FooterNavigationLanguageDropdown">
+    <div class="FooterNavigationLanguageDropdown-overlay">
+        <img class="Icon FooterNavigationLanguageDropdown-languageIcon" alt="" src="https://www-static.warframe.com/images/icons/material/language.svg" >
+        <div class="FooterNavigationLanguageDropdown-label">English</div>
+        <img class="Icon FooterNavigationLanguageDropdown-dropdownIcon" alt="" src="https://www-static.warframe.com/images/icons/material/dropdown.svg" >
+    </div>
+    <ul class="FooterNavigationLanguageDropdown-dropdown">
+                                                        <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpDE" href="/de/news">Deutsch</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpRU" href="/ru/news">Русский</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpFR" href="/fr/news">Français</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpES" href="/es/news">Español</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpJA" href="/ja/news">日本語</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpPT-BR" href="/pt-br/news">Português</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpTR" href="/tr/news">Türkçe</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpPL" href="/pl/news">Polski</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpKO" href="/ko/news">한국어</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpIT" href="/it/news">Italiano</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpZH-HANS" href="/zh-hans/news">简体中文</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpZH-HANT" href="/zh-hant/news">繁體中文</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpUK" href="/uk/news">Українська</a>
+                </li>
+                                                <li class="FooterNavigationLanguageDropdown-option">
+                    <a class="FooterNavigationLanguageDropdown-optionLink" id="drpTH" href="/th/news">ไทย</a>
+                </li>
+                        </ul>
+</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+        <div class="FooterLowerContainer">
+        <div class="FooterLowerContainer-inner">
+            <div class="FooterLogo">
+                <img class="FooterLogo-image" src="https://www-static.warframe.com/images/warframe-logo-blue-white.svg" alt="Warframe" loading="lazy">
+            </div>
+            <div class="FooterCopyrightText">
+                ©2026 Digital Extremes Ltd. All rights reserved.
+                All trademarks are the property of their respective owners.
+            </div>
+
+            <div class="FooterPlatformIcons">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-pc" src="https://www-static.warframe.com/images/footer/platforms/PC.svg" alt="PC Logo">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-steam" src="https://www-static.warframe.com/images/footer/platforms/steam-full-wordmark.svg" alt="Steam Logo">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-epic" src="https://www-static.warframe.com/images/footer/platforms/epic-games-store.svg" alt="Epic Games Store Logo">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-switch" src="https://www-static.warframe.com/images/footer/platforms/switch-2-combo-black.svg" alt="Nintendo Switch Logo">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-psn" src="https://www-static.warframe.com/images/footer/platforms/psn.png" alt="PSN Logo">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-xboxone" src="https://www-static.warframe.com/images/footer/platforms/XboxOne-white.svg" alt="XBOX One Logo">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-xbox" src="https://www-static.warframe.com/images/footer/platforms/xbox.png" alt="XBOX Logo">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-ios" src="https://www-static.warframe.com/images/footer/platforms/ios-app-store.svg" alt="IOS App Store Logo">
+                <img class="FooterPlatformIcons-icon FooterPlatformIcons-android" src="https://www-static.warframe.com/images/footer/platforms/google-play-black.png" alt="Google Play Logo">
+            </div>
+            <div class="FooterRatingsContainer">
+                <div class="FooterRatingsContainer-content FooterRatingsContainer-ratings">
+                    <div class="FooterRatingBoardCard">
+    <img class="FooterRatingBoardCard-image" src="https://www-static.warframe.com/images/footer/ratings/pegi.jpg" alt="">
+    <div class="FooterRatingBoardCard-text">
+                    <ul>
+                <li>Violence</li>
+                <li>In-game Purchases</li>
+            </ul>
+            </div>
+</div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+    <link rel="preload" as="style" href="https://www-static.warframe.com/build/assets/news-C_igksiG.css" /><link rel="stylesheet" href="https://www-static.warframe.com/build/assets/news-C_igksiG.css" data-navigate-track="reload" />    <script id="news-template" type="text/x-handlebars-template">
+    <div class="Card NewsCard" style="--card-image-url: url({{image}});">
+        <a class="Card-media" href="{{url}}"></a>
+        <div class="Card-content">
+            <div class="NewsCard-title"><a href="{{url}}">{{title}}</a></div>
+            <div class="NewsCard-date">Posted On {{date}}</div>
+            <div class="NewsCard-description">{{description}}</div>
+            <div class="NewsCard-link"><a href="{{url}}">Read More</a></div>
+            <div class="NewsCard-tags">
+                {{#if blog}}
+                <div class="PlatformTag" data-platform="blog">blog</div>
+                {{/if}}
+                {{#if pc}}
+                <div class="PlatformTag" data-platform="pc">pc</div>
+                {{/if}}
+                {{#if xbox}}
+                <div class="PlatformTag" data-platform="xbox">xbox</div>
+                {{/if}}
+                {{#if psn}}
+                <div class="PlatformTag" data-platform="psn">psn</div>
+                {{/if}}
+                {{#if switch}}
+                <div class="PlatformTag" data-platform="switch">nintendo switch</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const postList = document.querySelector('.NewsCardList');
+            const defaultImage = "https://www-static.warframe.com/images/news/placeholder.jpg";
+            const template = Handlebars.compile(document.getElementById('news-template').innerHTML);
+            const loadMoreUrl = "https://www.warframe.com/en/news/search_posts_json";
+            const query = '';
+            let lastPage = 1;
+
+            const loadMoreButton = document.getElementById('load-more-button');
+            loadMoreButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                lastPage++;
+                const xhr = new XMLHttpRequest();
+                xhr.onload = () => {
+                    const data = JSON.parse(xhr.responseText);
+
+                    if(data.posts) {
+                        data.posts.forEach((post) => {
+                            if (!post.image) post.image = defaultImage;
+                            const html = template(post);
+                            postList.insertAdjacentHTML('beforeend', html);
+                        })
+                    }
+
+                    if(!data.posts || data.posts.length === 0) {
+                        loadMoreButton.classList.add('is-hidden');
+                        return;
+                    }
+                }
+                xhr.open("GET", `${loadMoreUrl}?query=${encodeURIComponent(query)}&page=${lastPage}&version=2`);
+                xhr.send();
+            });
+        });
+    </script>
+
+<!--
+                             ,
+                             B
+                            BMB.
+                          3BBBMBX
+                       .PMBMBMBMBBD,
+                     7MBMBMBMBMBMBMBMs
+                  :EBMBMBMBMx iMBMBMBMBO:
+                7BMBMBBBMBJ     vBBBBBMBMBs
+              xMBMBBBMBH,    .    .UBMBMBMBBF
+ .          .BMBBBMBX:      :Br      .FBMBMBBB:
+ LR;,.:rUOBMBMBMBM;       ;MBMBBr       :OBMBMBBBRSr:.,:EU
+  MBMBMBBBMBMBMM.      :0BMBBEMBMBD:       WMBBBMBMBMBMBM
+  HMB.::.  BBMc     .HBMBMBK   FBBBMBZ,     ;BBB  .::.BBM
+  MBM      UMP    .BMBMBZ:       ,HBMBMB:    LBM      MBM
+  BBB   BMBMBr   cBMBW:     0BM     .0BMBF   .BMBMB   BMB:
+ WBBx   cBL.iB   BMR     cMBM1MBM3     PMB   M7,;BK   ;BMB
+ MBM    BM:  .J  BB    RBMB;   :RMBM    RM  c:   MB    MBM
+:BM7    BB     , ,M   MBr         ;BM   Or .     BM:   :MBi
+:MB,   7B7        .i  B             B  ::        :BS    BM
+ BMG    BK             :           .,            cM:   2MB
+  BMH   .Mi     : :                 E:          :M:   sMB
+   ;MRui  ;:.   :Fui:;  :;;7i   .;;;rS:,  rr   ,:  :7EO:
+        ::::::,   .UUi:77;::37s7Lv7;  ,;3SD,....:;;,
+     BM: ..:i7rJLxS:  .      rs: 7   ..;LxxUWRFU;::7OW
+      S2r:::iis0r;J3Or.:rvLi:::rBL.  .:;,  .   :ri:.,
+                    .ZL. .:L;,r7;i7r;7:
+                            xMc     ,
+                           :. 3v
+                           :S  ;
+                            LB;
+                             7
+-->
+
+<!-- ~~ (2) 06-09-26 04:36:34 :fire_emoji: ~~ -->
+
+
+<script>
+window.recaptchaReady = window.recaptchaReady || function() {}
+window._AutofillCallbackHandler = window._AutofillCallbackHandler || function(){}
+</script>
+
+<script src="https://www.recaptcha.net/recaptcha/enterprise.js?onload=recaptchaReady&render=6LcWYwYgAAAAAIw9zG71CAPMr2oJPm3zpiaCXLVj"></script>
+        </div>
+    </div>
+
+    <script>
+        try {
+            const mightBeLoggedIn = !!(sessionStorage && sessionStorage.getItem("wfSessionShouldBeLoggedIn") === "isLoggedIn");
+            document.body.classList.toggle('logged-in', mightBeLoggedIn);
+            document.body.classList.toggle('logged-out', !mightBeLoggedIn);
+        } catch(_) {}
+    </script>
+    </body>
+</html>
