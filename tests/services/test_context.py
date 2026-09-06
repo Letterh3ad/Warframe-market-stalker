@@ -24,3 +24,15 @@ def test_daemon_state_and_poll_state_are_wired(conn):
     ctx = AppContext(Config(), conn=conn)
     assert ctx.daemon_state.get() is None
     assert ctx.poll_state.all() == {}
+
+
+def test_context_exposes_a_news_repo(tmp_path):
+    from wfm.config import Config
+    from wfm.services.context import AppContext
+    from wfm.store.news import NewsRepo
+
+    ctx = AppContext(Config(db_path=tmp_path / "t.db"))
+    try:
+        assert isinstance(ctx.news, NewsRepo)
+    finally:
+        ctx.conn.close()

@@ -89,3 +89,24 @@ def test_service_modules_never_import_the_gui(path):
         "existing at all; wfm.cli is the composition root that is allowed to import "
         "both, and builds the app to hand to services that need it."
     )
+
+
+FORBIDDEN_FOR_NEWS = ("wfm.gui", "wfm.services", "wfm.store", "wfm.api")
+
+
+@pytest.mark.parametrize(
+    "path", _modules("news") or [SOURCE_ROOT / "cli" / "main.py"], ids=lambda p: p.name
+)
+def test_news_modules_are_pure(path):
+    if "news" not in str(path):
+        pytest.skip("news package does not exist yet")
+    offenders = {
+        name
+        for name in _imports(path)
+        if any(name == f or name.startswith(f + ".") for f in FORBIDDEN_FOR_NEWS)
+    }
+    assert offenders == set(), (
+        f"{path.name} imports {offenders}. wfm.news holds value types and pure "
+        "matching; persistence lives in wfm.store.news and orchestration in "
+        "wfm.services, so the gate stays testable with plain values."
+    )

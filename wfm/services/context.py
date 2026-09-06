@@ -14,6 +14,7 @@ from wfm.store.groups import GroupsRepo
 from wfm.store.http_cache import HttpCacheRepo
 from wfm.store.items import ItemsRepo
 from wfm.store.migrate import migrate
+from wfm.store.news import NewsRepo
 from wfm.store.orders import OrderSnapshotsRepo, RawSnapshotsRepo
 from wfm.store.poll_state import PollStateRepo
 from wfm.store.signals import SignalsRepo
@@ -65,6 +66,7 @@ class AppContext:
         self.http_cache = HttpCacheRepo(self.conn)
         self.daemon_state = DaemonStateRepo(self.conn)
         self.poll_state = PollStateRepo(self.conn)
+        self.news = NewsRepo(self.conn)
 
     def new_client(self) -> WFMClient:
         if self._client is None:
