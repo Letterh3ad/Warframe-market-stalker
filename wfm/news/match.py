@@ -24,6 +24,12 @@ _WORD = re.compile(r"[A-Za-z0-9]+")
 # "Mesa Prime Neuroptics" into "Mesa Prime" would lose that.
 _SET_SUFFIX = "set"
 
+# A base item named right before the word "prime" is the Prime variant being talked
+# about, not the base item. Announcements are the case that matters: on announcement day
+# the Prime is not in the catalog at all, so the longest entry that matches is the base
+# one, and linking it would attach a Prime Access event to the wrong item.
+_PRIME_TOKEN = "prime"
+
 # Single-word catalog names that are also ordinary English. Derived from the catalog once
 # (SELECT name FROM items WHERE LENGTH(name)<=6 AND name NOT LIKE '% %'), not guessed.
 # These match only mid-sentence, where a capital is a real proper-noun signal. Requiem
@@ -152,6 +158,9 @@ def _match_at(
             if score < threshold:
                 continue
 
+        if _PRIME_TOKEN not in entry_tokens and _followed_by_prime(tokens, i + n):
+            continue
+
         start = tokens[i][1]
         if n == 1:
             token, _ = tokens[i]
@@ -164,6 +173,15 @@ def _match_at(
         return n, slug, name, score, start, last_start + len(last_token)
 
     return None
+
+
+def _followed_by_prime(tokens: list[tuple[str, int]], index: int) -> bool:
+    """True when the very next token is "prime".
+
+    Only the next token: "the Steflos is cheaper than any Prime shotgun" is still about
+    the Steflos, and scanning further would throw away real matches.
+    """
+    return index < len(tokens) and tokens[index][0] == _PRIME_TOKEN
 
 
 def _sentence_initial(text: str, start: int) -> bool:

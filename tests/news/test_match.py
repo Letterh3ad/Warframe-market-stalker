@@ -174,3 +174,46 @@ def test_results_are_ordered_by_descending_score():
     lex = build_lexicon(CATALOG)
     found = find_candidates("Condition Overlod and Nekros Prime Set both change.", lex)
     assert [c.score for c in found] == sorted([c.score for c in found], reverse=True)
+
+
+def test_a_base_item_does_not_match_when_the_text_says_prime():
+    # Verified against the live catalog: on announcement day "Steflos Prime" is not in
+    # the catalog and "Steflos Set" is, so without this guard a Prime Access article
+    # links to the base weapon, which moves differently from the Prime.
+    lexicon = build_lexicon(
+        [Item(slug="steflos_set", name="Steflos Set", url_name="steflos_set", is_set=True)]
+    )
+    text = "Steflos Prime enters Prime Access on September 23."
+    assert find_candidates(text, lexicon) == []
+
+
+def test_a_prime_entry_still_matches_text_that_says_prime():
+    lexicon = build_lexicon(
+        [
+            Item(
+                slug="vectis_prime_set",
+                name="Vectis Prime Set",
+                url_name="vectis_prime_set",
+                is_set=True,
+            )
+        ]
+    )
+    text = "Fixed the Vectis (Prime) not having a fully reloaded magazine."
+    (found,) = find_candidates(text, lexicon)
+    assert found.slug == "vectis_prime_set"
+
+
+def test_a_base_item_still_matches_when_prime_does_not_follow_it():
+    lexicon = build_lexicon(
+        [Item(slug="steflos_set", name="Steflos Set", url_name="steflos_set", is_set=True)]
+    )
+    (found,) = find_candidates("The Steflos is a shotgun.", lexicon)
+    assert found.slug == "steflos_set"
+
+
+def test_the_guard_looks_at_the_next_token_not_the_rest_of_the_sentence():
+    lexicon = build_lexicon(
+        [Item(slug="steflos_set", name="Steflos Set", url_name="steflos_set", is_set=True)]
+    )
+    (found,) = find_candidates("The Steflos is cheaper than any Prime shotgun.", lexicon)
+    assert found.slug == "steflos_set"
