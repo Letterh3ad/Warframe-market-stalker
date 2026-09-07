@@ -996,3 +996,36 @@ selectors" risk that gated this task is gone, except for one optional fallback.
 - Only warframe.com needs a per-article fetch, so only it needs a fan-out budget.
 - Only warframe.com needs a timezone assumption, and it is now recorded above with the
   evidence for it.
+
+## Gate measurement 2026-09-06
+
+Measured, not eyeballed, per "Recall is measured, not assumed". The real gate was run
+over the captured fixtures against the live 3839-item catalog.
+
+| Article | Candidates |
+|---|---|
+| Hotfix 43.5.3 (2.3KB) | 2 |
+| Hotfix 43.5.4 (1.0KB) | 0 |
+| Update 43.5 (37KB) | 56 |
+| Devshorts #115 (1.9KB) | 0 |
+| Dev Workshop: Banshee (6.2KB) | 4 |
+| Citrine Prime Access (2.2KB) | 0, was 2 wrong ones before the guard |
+
+**Three things this changes.**
+
+1. **Prime Access announcements resolve to nothing, by construction.** The announced
+   items do not exist in the catalog until release. Before the trailing-Prime guard the
+   gate answered `steflos_set` and `corufell_set` for the Citrine Prime Access article,
+   attaching the event to the base weapons. That is worse than silence, so the guard
+   makes it silence. **`prime_access` is the event type the design leans on hardest, and
+   the gate cannot see its subject on announcement day.** Resolving it needs either a
+   catalog that carries unreleased items or a rule mapping "X Prime" to a future slug,
+   and neither is in 9a. Recorded, not solved.
+2. **Base frame names never resolve.** News prose says "Banshee", "Yareli", "Baruuk";
+   the catalog sells "Banshee Prime Set". Recall on warframe-subject articles is
+   therefore near zero unless the article says "Prime". Adding base-name aliases would
+   fix recall and cost precision, since those words are common English in this domain.
+   A decision for the user, not a silent default.
+3. **One update note produced 56 candidates.** Per-candidate prompting means a big
+   hotfix note is ~56 model calls. The classifier plan needs a per-article cap or a
+   score floor; the cost belongs where it is spent, so it is not capped here.
