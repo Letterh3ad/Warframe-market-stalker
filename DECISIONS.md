@@ -1326,3 +1326,25 @@ London, Ontario.
 `-04:00` offset (rejected: the corpus crosses a DST boundary within weeks). Use the
 `ld+json` `datePublished` (rejected: reads 10:08:58 for that article, consistent with
 neither reading of the listing date, so it is a different clock).
+
+## 2026-09-07 - tzdata is the one dependency the no-new-dependency rule allows
+
+**Context:** The news plan's global constraint is "no new Python dependency". Task 6's
+warframe.com source must read DE-local publish timestamps via `zoneinfo`
+(`America/Toronto`), and the 2026-09-06 decision above explicitly rejected a fixed
+`-04:00` offset because the corpus crosses a DST boundary. On a clean Windows install
+`ZoneInfo("America/Toronto")` raises `ZoneInfoNotFoundError`: CPython bundles no IANA
+time-zone database on Windows, unlike Linux and macOS which have a system one.
+
+**Decision:** Add `tzdata>=2024.1; platform_system == 'Windows'` to
+`pyproject.toml` dependencies (done in commit 5fd4819). `tzdata` is the PyPI packaging of
+the IANA database and has no importable API or logic, so it is categorically unlike the
+`feedparser` / `beautifulsoup4` / `rapidfuzz` packages the no-new-dependency rule was
+written to exclude: it makes a mandated stdlib module function rather than replacing
+hand-written code. It was already present in the dev venv, so this changes nothing today;
+the line makes a latent requirement explicit. The rule stands for everything else.
+
+**Alternatives:** A fixed UTC offset (rejected 2026-09-06: crosses DST). Vendoring a
+minimal tz table (rejected: a hand-maintained DST table is exactly what `zoneinfo` +
+`tzdata` exists to stop anyone writing). The `platform_system == 'Windows'` marker keeps
+`tzdata` off Linux/macOS, where adding it would shadow the system database.

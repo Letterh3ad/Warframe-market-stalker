@@ -149,15 +149,40 @@ async def test_build_sources_ignores_an_unknown_name(conn):
         Config(news_sources=("forums", "twitter")), conn=conn, clock=FakeClock(NOW)
     )
     assert [s.name for s in news_service.build_sources(ctx, object())] == [NewsSource.FORUMS]
+    # The discard is surfaced, not silent.
+    assert news_service.unknown_sources(ctx) == ["twitter"]
 
 
 def test_status_reports_the_corpus(ctx):
     assert news_service.status(ctx) == {
         "enabled": True,
         "sources": ["warframe_news", "forums"],
+        "unknown_sources": [],
         "articles": 0,
         "pending": 0,
     }
+
+
+def test_status_lists_only_resolving_sources_and_flags_the_rest(conn):
+    ctx = AppContext(
+        Config(news_sources=("warframe_news", "twitter", "forums")),
+        conn=conn,
+        clock=FakeClock(NOW),
+    )
+    reported = news_service.status(ctx)
+    assert reported["sources"] == ["warframe_news", "forums"]
+    assert reported["unknown_sources"] == ["twitter"]
+
+
+async def test_ingest_summary_flags_unknown_configured_sources(conn):
+    ctx = AppContext(
+        Config(news_enabled=True, news_sources=("twitter",)),
+        conn=conn,
+        clock=FakeClock(NOW),
+    )
+    ctx.items.upsert_many(CATALOG)
+    result = await news_service.ingest(ctx)
+    assert result["unknown_sources"] == ["twitter"]
 
 
 async def test_status_counts_what_ingest_stored(ctx):

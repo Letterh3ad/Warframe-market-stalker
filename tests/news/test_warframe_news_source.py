@@ -141,7 +141,7 @@ async def test_the_body_budget_caps_the_fan_out():
     assert len(articles) == 1
 
 
-async def test_an_article_whose_body_cannot_be_found_still_yields_no_partial_hash():
+async def test_an_article_whose_body_cannot_be_found_is_skipped_not_stored():
     def bodyless(request):
         if "search_posts_json" in str(request.url):
             return httpx.Response(200, text=LISTING)
@@ -149,11 +149,11 @@ async def test_an_article_whose_body_cannot_be_found_still_yields_no_partial_has
 
     src, fetcher = source(bodyless, max_bodies=1)
     try:
-        (article,) = await src.fetch()
+        articles = await src.fetch()
     finally:
         await fetcher.aclose()
-    assert article.body == ""
-    assert article.content_hash
+    # Not yielded and not stored, so it stays out of known_ids and the next poll retries.
+    assert articles == []
 
 
 async def test_a_listing_with_an_unparseable_date_still_yields_the_article():

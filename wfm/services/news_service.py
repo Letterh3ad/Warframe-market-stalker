@@ -36,12 +36,22 @@ SOURCE_BUILDERS = {
 def build_sources(ctx: AppContext, fetcher: NewsFetcher) -> list[Source]:
     """The configured sources, in configured order. Unknown names are ignored rather
     than fatal: a stale config entry should not stop the sources that do exist.
+    `unknown_sources` surfaces the discard so it is not silent.
     """
     return [
         SOURCE_BUILDERS[name](ctx, fetcher)
         for name in ctx.config.news_sources
         if name in SOURCE_BUILDERS
     ]
+
+
+def _resolved_sources(ctx: AppContext) -> list[str]:
+    return [n for n in ctx.config.news_sources if n in SOURCE_BUILDERS]
+
+
+def unknown_sources(ctx: AppContext) -> list[str]:
+    """Configured names that resolve to no builder, in config order."""
+    return [n for n in ctx.config.news_sources if n not in SOURCE_BUILDERS]
 
 
 async def ingest(
@@ -55,6 +65,7 @@ async def ingest(
             "unchanged": 0,
             "no_match": 0,
             "sources": {},
+            "unknown_sources": [],
             "errors": {},
         }
 
@@ -82,6 +93,9 @@ async def ingest(
             "unchanged": 0,
             "no_match": 0,
             "sources": {},
+            # Config names that resolved to no builder, so a typo does not hide silently.
+            # Empty when sources were injected: nothing was resolved from config then.
+            "unknown_sources": unknown_sources(ctx) if owned else [],
             "errors": {},
         }
 
@@ -147,7 +161,8 @@ def _excerpt(candidates: list[Candidate]) -> str | None:
 def status(ctx: AppContext) -> dict:
     return {
         "enabled": ctx.config.news_enabled,
-        "sources": list(ctx.config.news_sources),
+        "sources": _resolved_sources(ctx),
+        "unknown_sources": unknown_sources(ctx),
         "articles": len(ctx.news.recent_articles(limit=10_000)),
         "pending": len(ctx.news.pending(limit=10_000)),
     }

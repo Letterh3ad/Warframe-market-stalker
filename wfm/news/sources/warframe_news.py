@@ -72,13 +72,21 @@ class WarframeNewsSource:
             budget -= 1
 
             page = await self._fetcher.get_text(url)
+            body = extract_element_text(page, BODY_ELEMENT_ID)
+            # An empty body means the post-body element was absent: a renamed element, an
+            # interstitial, or a JS-only render. Storing it now would freeze it bodyless
+            # forever, since its id lands in known_ids and later polls skip it. Drop it
+            # instead so the next poll retries; the body request is not refunded to
+            # budget, so a run of bodyless pages cannot fan out unboundedly.
+            if not body.strip():
+                continue
             articles.append(
                 Article(
                     source=NewsSource.WARFRAME_NEWS,
                     external_id=external_id,
                     url=url,
                     title=title,
-                    body=extract_element_text(page, BODY_ELEMENT_ID),
+                    body=body,
                     published_at=_published(post.get("date")),
                 ).hashed()
             )

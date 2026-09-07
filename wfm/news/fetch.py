@@ -20,6 +20,11 @@ from wfm.clock import Clock
 
 _RETRYABLE = frozenset({429, 500, 502, 503, 504})
 
+# A Retry-After longer than this is not waited out: sleeping a whole poll cycle (or an
+# hour) to retry one source starves the others. Past the ceiling the fetcher gives up
+# and lets ingest move on.
+MAX_RETRY_AFTER_S = 60.0
+
 
 class NewsFetchError(RuntimeError):
     """One upstream failed. Ingest catches this per source and keeps the others."""
@@ -75,11 +80,16 @@ class NewsFetcher:
 
             if response.status_code in _RETRYABLE:
                 last = f"HTTP {response.status_code} from {url}"
+                retry_after = response.headers.get("Retry-After")
+                requested = _parse_retry_after(retry_after)
+                if requested is not None and requested > MAX_RETRY_AFTER_S:
+                    raise NewsFetchError(
+                        f"HTTP {response.status_code} from {url}: Retry-After "
+                        f"{requested:g}s exceeds the {MAX_RETRY_AFTER_S:g}s ceiling"
+                    )
                 if attempt == self._max_attempts:
                     break
-                await self._clock.sleep(
-                    self._backoff(attempt, response.headers.get("Retry-After"))
-                )
+                await self._clock.sleep(self._backoff(attempt, retry_after))
                 continue
 
             if response.status_code >= 400:
@@ -98,11 +108,18 @@ class NewsFetcher:
         self._next_allowed[key] = self._clock.now() + self._min_interval
 
     def _backoff(self, attempt: int, retry_after: str | None = None) -> float:
-        if retry_after:
-            try:
-                # Only the delta-seconds form is honoured. The HTTP-date form is rare
-                # here and parsing it wrong would sleep for years.
-                return max(float(retry_after), self._min_interval)
-            except ValueError:
-                pass
+        requested = _parse_retry_after(retry_after)
+        if requested is not None:
+            return min(max(requested, self._min_interval), MAX_RETRY_AFTER_S)
         return self._min_interval * (2 ** (attempt - 1))
+
+
+def _parse_retry_after(retry_after: str | None) -> float | None:
+    """Delta-seconds only. The HTTP-date form is rare here and parsing it wrong would
+    sleep for years, so it is ignored (falls back to exponential backoff)."""
+    if not retry_after:
+        return None
+    try:
+        return float(retry_after)
+    except ValueError:
+        return None

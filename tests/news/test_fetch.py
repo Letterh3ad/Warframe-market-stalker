@@ -81,6 +81,22 @@ async def test_a_429_is_retried_after_the_retry_after_delay():
     assert 7.0 in clock.sleeps
 
 
+async def test_a_huge_retry_after_makes_the_fetcher_give_up_without_sleeping_it_out():
+    clock = FakeClock(START)
+
+    def handler(request):
+        return httpx.Response(429, headers={"Retry-After": "3600"}, text="come back later")
+
+    f = fetcher(handler, clock=clock)
+    try:
+        with pytest.raises(NewsFetchError, match="429|3600"):
+            await f.get_text("https://example.test/a")
+    finally:
+        await f.aclose()
+    assert 3600 not in clock.sleeps
+    assert max(clock.sleeps, default=0) <= 60
+
+
 async def test_a_persistent_429_gives_up_with_the_status_in_the_message():
     f = fetcher(lambda request: httpx.Response(429, text="no"), max_attempts=2)
     try:
