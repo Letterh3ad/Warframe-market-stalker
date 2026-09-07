@@ -12,6 +12,7 @@ from wfm.cli import (
     digest,
     group,
     holdings,
+    news,
     pnl,
     report,
     scan,
@@ -37,6 +38,7 @@ SUBCOMMANDS: list[tuple[str, Callable]] = [
     ("holdings", holdings.register),
     ("pnl", pnl.register),
     ("daemon", daemon.register),
+    ("news", news.register),
     ("scan", scan.register),
 ]
 
