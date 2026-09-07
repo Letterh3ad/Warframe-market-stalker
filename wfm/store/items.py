@@ -55,6 +55,17 @@ class ItemsRepo:
     def all_slugs(self) -> list[str]:
         return [r[0] for r in self._conn.execute("SELECT slug FROM items ORDER BY slug")]
 
+    def all(self) -> list[Item]:
+        """Every catalog item.
+
+        The news lexicon is built from the whole catalog in one pass, and paging it
+        through page() would just reassemble this list a hundred rows at a time.
+        """
+        return [
+            _to_item(r)
+            for r in self._conn.execute(f"SELECT {_COLUMNS} FROM items ORDER BY slug")
+        ]
+
     def search(self, query: str, limit: int = 20) -> list[Item]:
         rows = self._conn.execute(
             f"SELECT {_COLUMNS} FROM items WHERE name LIKE ? ESCAPE '\\' ORDER BY name LIMIT ?",

@@ -133,6 +133,29 @@ class NewsRepo:
             )
         return len(unique)
 
+    def replace_candidates(self, article_id: int, candidates: list[Candidate]) -> int:
+        """Re-gate an article: the stored candidates become exactly this set.
+
+        insert_candidates alone is not enough after an edit. It refreshes the slugs the
+        new text still mentions and silently keeps every slug it no longer does, which
+        would hand the classifier context lifted from text that no longer exists.
+        """
+        with transaction(self._conn):
+            self._conn.execute(
+                "DELETE FROM news_candidates WHERE article_id=?", (article_id,)
+            )
+            return self.insert_candidates(article_id, candidates)
+
+    def known_external_ids(self, source: NewsSource | None = None) -> set[str]:
+        """Every stored external_id, so a source can skip what is already ingested."""
+        if source is None:
+            rows = self._conn.execute("SELECT external_id FROM news_articles")
+        else:
+            rows = self._conn.execute(
+                "SELECT external_id FROM news_articles WHERE source=?", (source.value,)
+            )
+        return {r[0] for r in rows}
+
     def candidates_for(self, article_id: int) -> list[Candidate]:
         rows = self._conn.execute(
             "SELECT slug, name, score, context FROM news_candidates "

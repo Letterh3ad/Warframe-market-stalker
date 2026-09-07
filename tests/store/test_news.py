@@ -61,18 +61,18 @@ def test_external_id_is_unique(conn):
 
 from datetime import datetime, timezone
 
-from wfm.news.types import Article, ArticleStatus, NewsSource
+from wfm.news.types import Article, ArticleStatus, Candidate, NewsSource
 from wfm.store.news import NewsRepo
 
 NOW = datetime(2026, 9, 6, 12, 0, tzinfo=timezone.utc)
 
 
-def _article(body="Body", external_id="a1"):
+def _article(body="Body", external_id="a1", source=NewsSource.WARFRAME_NEWS):
     # .hashed() is what a real Source calls at fetch time (Task 2); without it
     # content_hash stays "" for every body and upsert_article can never tell
     # articles apart.
     return Article(
-        source=NewsSource.WARFRAME_NEWS,
+        source=source,
         external_id=external_id,
         url="https://example.test/a1",
         title="Prime Vault: Mesa Prime Returns",
@@ -404,3 +404,56 @@ def test_active_links_falls_back_to_published_at_when_effective_is_null(conn):
     _classified(conn, "noeff", NOW - timedelta(days=5), None)
     assert len(NewsRepo(conn).active_links(NOW, horizon_days=60)) == 1
     assert NewsRepo(conn).active_links(NOW, horizon_days=2) == []
+
+
+def test_replace_candidates_drops_the_ones_the_new_text_no_longer_mentions(conn):
+    repo = NewsRepo(conn)
+    article_id = repo.upsert_article(_article(body="mentions rage"), NOW)
+    repo.insert_candidates(
+        article_id,
+        [
+            Candidate(slug="rage", name="Rage", score=1.0, context="c", start=0, end=4),
+            Candidate(slug="flow", name="Flow", score=1.0, context="c", start=0, end=4),
+        ],
+    )
+
+    written = repo.replace_candidates(
+        article_id,
+        [Candidate(slug="rage", name="Rage", score=0.9, context="new", start=0, end=4)],
+    )
+
+    assert written == 1
+    remaining = repo.candidates_for(article_id)
+    assert [c.slug for c in remaining] == ["rage"]
+    assert remaining[0].context == "new"
+
+
+def test_replace_candidates_with_nothing_clears_the_article(conn):
+    repo = NewsRepo(conn)
+    article_id = repo.upsert_article(_article(), NOW)
+    repo.insert_candidates(
+        article_id,
+        [Candidate(slug="rage", name="Rage", score=1.0, context="c", start=0, end=4)],
+    )
+    assert repo.replace_candidates(article_id, []) == 0
+    assert repo.candidates_for(article_id) == []
+
+
+def test_known_external_ids_reports_what_is_already_stored(conn):
+    repo = NewsRepo(conn)
+    repo.upsert_article(_article(external_id="warframe_news:a"), NOW)
+    repo.upsert_article(_article(external_id="forums:1"), NOW)
+    assert repo.known_external_ids() == {"warframe_news:a", "forums:1"}
+
+
+def test_known_external_ids_can_be_narrowed_to_one_source(conn):
+    repo = NewsRepo(conn)
+    repo.upsert_article(_article(external_id="warframe_news:a"), NOW)
+    repo.upsert_article(
+        _article(external_id="forums:1", source=NewsSource.FORUMS), NOW
+    )
+    assert repo.known_external_ids(NewsSource.WARFRAME_NEWS) == {"warframe_news:a"}
+
+
+def test_known_external_ids_is_empty_on_a_fresh_database(conn):
+    assert NewsRepo(conn).known_external_ids() == set()

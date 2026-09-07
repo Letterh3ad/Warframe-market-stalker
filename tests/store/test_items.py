@@ -110,3 +110,18 @@ def test_page_and_count_match_on_tags_as_well_as_name(conn):
     assert repo.count("prime") == 2
     # A wildcard in a tag search is escaped too.
     assert repo.count("we%pon") == 0
+
+
+def test_all_returns_every_item(conn):
+    repo = ItemsRepo(conn)
+    repo.upsert_many(
+        [
+            Item(slug="b_item", name="B", url_name="b_item"),
+            Item(slug="a_item", name="A", url_name="a_item"),
+        ]
+    )
+    assert [i.slug for i in repo.all()] == ["a_item", "b_item"]
+
+
+def test_all_is_empty_on_a_fresh_database(conn):
+    assert ItemsRepo(conn).all() == []
