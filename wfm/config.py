@@ -45,6 +45,13 @@ class Config:
     score_saturation: float = 1.0
     decay_after_unchanged_polls: int = 3
     catchup_max_items: int = 25
+    news_enabled: bool = False
+    news_sources: tuple[str, ...] = ("warframe_news", "forums")
+    # Its own budget, deliberately not the market TokenBucket: these are unrelated hosts.
+    news_min_interval_s: float = 1.0
+    # warframe.com is the only source needing a request per article. The listing holds
+    # ten, so this covers a full page and the rest wait for the next poll.
+    news_max_bodies_per_poll: int = 10
     analyzers: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -60,6 +67,8 @@ class Config:
             object.__setattr__(self, "concurrency", 1)
         object.__setattr__(self, "db_path", Path(self.db_path))
         object.__setattr__(self, "pid_file", Path(self.pid_file))
+        # TOML gives a list, and a list on a frozen dataclass is shared mutable state.
+        object.__setattr__(self, "news_sources", tuple(self.news_sources))
 
     @property
     def user_agent(self) -> str:
@@ -94,12 +103,15 @@ class Config:
                 "w_spread",
                 "w_pin",
                 "score_saturation",
+                "news_min_interval_s",
             ):
                 out[name] = float(raw)
-            elif name in ("crossplay", "persist_features"):
+            elif name in ("crossplay", "persist_features", "news_enabled"):
                 out[name] = raw.strip().lower() in ("1", "true", "yes")
             elif name in ("platform", "language", "discord_webhook_url", "gui_host"):
                 out[name] = raw
+            elif name == "news_sources":
+                out[name] = tuple(p.strip() for p in raw.split(",") if p.strip())
             else:
                 out[name] = int(raw)
         return out

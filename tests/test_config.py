@@ -111,3 +111,42 @@ def test_gui_host_is_overridable_by_env(tmp_path: Path, monkeypatch):
     config = Config.load(tmp_path / "absent.toml")
     assert config.gui_host == "0.0.0.0"
     assert config.gui_port == 9000
+
+
+def test_news_is_off_by_default():
+    cfg = Config()
+    assert cfg.news_enabled is False
+    assert cfg.news_sources == ("warframe_news", "forums")
+
+
+def test_reddit_is_not_a_default_source():
+    # It ships complete but off, so a week of its output can be inspected first.
+    assert "reddit" not in Config().news_sources
+
+
+def test_news_sources_from_toml_becomes_a_tuple(tmp_path):
+    path = tmp_path / "wfm.toml"
+    path.write_text('news_enabled = true\nnews_sources = ["forums", "reddit"]\n', encoding="utf-8")
+    cfg = Config.load(path)
+    assert cfg.news_enabled is True
+    assert cfg.news_sources == ("forums", "reddit")
+
+
+def test_news_enabled_can_be_set_from_the_environment(monkeypatch, tmp_path):
+    monkeypatch.setenv("WFM_NEWS_ENABLED", "true")
+    assert Config.load(tmp_path / "absent.toml").news_enabled is True
+
+
+def test_news_sources_from_the_environment_is_comma_separated(monkeypatch, tmp_path):
+    monkeypatch.setenv("WFM_NEWS_SOURCES", "forums, reddit")
+    assert Config.load(tmp_path / "absent.toml").news_sources == ("forums", "reddit")
+
+
+def test_news_min_interval_from_the_environment_is_a_float(monkeypatch, tmp_path):
+    monkeypatch.setenv("WFM_NEWS_MIN_INTERVAL_S", "2.5")
+    assert Config.load(tmp_path / "absent.toml").news_min_interval_s == 2.5
+
+
+def test_news_max_bodies_from_the_environment_is_an_int(monkeypatch, tmp_path):
+    monkeypatch.setenv("WFM_NEWS_MAX_BODIES_PER_POLL", "3")
+    assert Config.load(tmp_path / "absent.toml").news_max_bodies_per_poll == 3
