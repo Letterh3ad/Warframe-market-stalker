@@ -1029,3 +1029,52 @@ over the captured fixtures against the live 3839-item catalog.
 3. **One update note produced 56 candidates.** Per-candidate prompting means a big
    hotfix note is ~56 model calls. The classifier plan needs a per-article cap or a
    score floor; the cost belongs where it is spent, so it is not capped here.
+
+## Gate decisions 2026-09-08
+
+Findings 1 and 2 above are now decided (user, 2026-09-08). Finding 3 stays with plan 3.
+
+### 1. Prime Access announcements: synthesize a set-level future slug
+
+On seeing `"<Name> Prime"` with no catalog hit, the gate emits a candidate carrying the
+**predicted set slug** (`"Steflos Prime"` → `steflos_prime_set`: lowercase, spaces to
+underscores, append `_set`). That candidate existing is also what pulls the article into
+the classifier queue, so the `prime_access` event and its `date_text` are recorded even
+if the slug guess later proves wrong.
+
+- **Set level only.** Part slugs are not predictable (barrel/receiver/stock, blade/handle,
+  blueprint/chassis/neuroptics/systems, and DE's market names occasionally differ). The
+  set is one clean prediction and it is all the 9b event study needs.
+- **`link_method = 'synthetic'`.** Direction cannot come from `Item.tags` (no catalog
+  row), so synthetic links assume `role = set` (true by construction) → `prime_access`
+  row → `down`, weight 1.0.
+- **Check before synthesizing.** If `<name>_prime_set` already exists (Prime released
+  between announcement and ingest), link normally instead.
+- **Reconciliation pass.** On catalog refresh (`refresh-items`), re-run linkage for any
+  event still holding a synthetic link. Once the real slug exists, replace the synthetic
+  link with a real one and run normal set-expansion to parts and relics. This is the
+  design's re-runnable linkage (`replace_links_for`) with a trigger.
+- **Staleness flag.** If the slug has not appeared within ~30 days of a known release, the
+  News tab shows the event as unresolved rather than trusting the guess indefinitely.
+
+**Plan 3 must check** whether `news_candidates` / `news_item_links` carry a FK to
+`items(slug)` in `m0004`. A synthetic slug would violate it; if so, drop the FK or add a
+nullable `is_synthetic` flag.
+
+### 2. Base warframe names: alias to the Prime set, reusing the single-token discriminator
+
+Add every base warframe name to the lexicon, aliased to `<name>_prime_set`.
+
+- **Guard 1: alias resolves only if `<name>_prime_set` exists in the catalog.** Frames
+  with no Prime yet (Dagath, Qorvex, Kullervo, …) simply do not link. No synthesis here,
+  unlike decision 1: a base frame has no announced release date to reconcile against.
+- **Guard 2: the existing single-token rule applies unchanged.** The English-collision
+  names (`Ember`, `Frost`, `Volt`, `Mag`, `Nova`, `Ash`, plus any a catalog pass turns
+  up) join `_AMBIGUOUS_SINGLE_TOKENS`, so they also require non-sentence-initial position.
+- **`link_method = 'base_alias'`, weight ≈ 0.9** (a bare name is weaker evidence than an
+  explicit "Banshee Prime").
+- Precision on non-event mentions ("Frost damage was adjusted") is the classifier's job:
+  such a mention gets an `event_type` that yields `sign = 0`. The gate stays recall-first.
+
+**Scope: warframes only.** Weapons ("Braton" → Braton Prime) have far more non-Prime
+entries and worse ambiguity; a separate decision if the corpus later shows it matters.

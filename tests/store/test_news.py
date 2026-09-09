@@ -20,6 +20,24 @@ def test_schema_version_is_four(conn):
     assert current_version(conn) == 4
 
 
+def test_news_tables_do_not_reference_items(conn):
+    """A synthetic Prime slug names an item that does not exist yet.
+
+    m0004 deliberately carries no FK from news_candidates.slug or
+    news_item_links.slug to items(slug). Adding one would make the Prime Access
+    decision (design doc, "Gate decisions 2026-09-08") unimplementable, so the
+    absence is asserted on purpose.
+    """
+    for table in ("news_candidates", "news_item_links"):
+        targets = {row["table"] for row in conn.execute(
+            f"PRAGMA foreign_key_list({table})"
+        )}
+        assert "items" not in targets, (
+            f"{table} now references items(slug). Synthetic Prime slugs are not in "
+            "the catalog on announcement day and would be rejected."
+        )
+
+
 def test_deleting_an_article_cascades_to_events_and_links(conn):
     conn.execute(
         "INSERT INTO news_articles (id, source, external_id, url, title, "

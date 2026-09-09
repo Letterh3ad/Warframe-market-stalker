@@ -1348,3 +1348,52 @@ the line makes a latent requirement explicit. The rule stands for everything els
 minimal tz table (rejected: a hand-maintained DST table is exactly what `zoneinfo` +
 `tzdata` exists to stop anyone writing). The `platform_system == 'Windows'` marker keeps
 `tzdata` off Linux/macOS, where adding it would shadow the system database.
+
+## 2026-09-08 - Prime Access announcements synthesize a set-level future slug
+
+**Context:** The fuzzy gate cannot see a Prime Access announcement's subject: DE names
+"Steflos Prime" / "Corufell Prime", none of which exist in the warframe.market catalog
+until release day. After the Task 7 trailing-`Prime` guard the gate correctly produces no
+candidate rather than attaching the event to the base weapon. But `prime_access` is the
+event type the design leans on hardest, so the classifier queue structurally excludes its
+highest-signal event on announcement day.
+
+**Decision:** On `"<Name> Prime"` with no catalog hit, the gate emits a candidate carrying
+a predicted **set** slug (`steflos_prime_set`: lowercase, spaces to underscores, `_set`
+suffix). `link_method = 'synthetic'`, `role = set` by construction → `prime_access`
+direction `down`, weight 1.0. If the real slug already exists, link normally instead. A
+reconciliation pass on `refresh-items` re-runs linkage for events still holding a
+synthetic link; once the real slug appears it is replaced and set-expanded to parts and
+relics. If the slug has not appeared within ~30 days of a known release the News tab shows
+the event unresolved. Set level only: part slugs are not predictable enough to guess, and
+the 9b event study only needs the set.
+
+**Alternatives:** Accept the gap for v1 (rejected: guts the top event class for six
+months, though 9b linkage could resolve it retroactively). Predict part/relic slugs too
+(rejected: barrel/receiver/stock, blade/handle etc. are not reliably derivable). A
+hand-maintained unreleased-items catalog (rejected: a manual data file to keep current,
+out of scope for 9a).
+
+## 2026-09-08 - Base warframe names alias to the Prime set
+
+**Context:** News prose says "Banshee", "Yareli", "Baruuk"; the catalog sells "Banshee
+Prime Set". A rework or buff/nerf to a base frame is a real market event for the Prime
+set, but the gate misses it unless the article writes "Prime". Recall on frame-subject
+articles is near zero.
+
+**Decision:** Add every base warframe name to the gate lexicon aliased to
+`<name>_prime_set`. The alias resolves only if that slug exists in the catalog (frames
+with no Prime do not link; no synthesis, since a base frame has no release date to
+reconcile against). The existing single-token discriminator applies unchanged, and the
+English-collision names (`Ember`, `Frost`, `Volt`, `Mag`, `Nova`, `Ash`, plus any a
+catalog pass finds) join `_AMBIGUOUS_SINGLE_TOKENS` so they also require non-sentence-
+initial position. `link_method = 'base_alias'`, weight ~0.9. Precision on non-event
+mentions is the classifier's job (`sign = 0` for a non-event `event_type`); the gate
+stays recall-first. Warframes only: weapon base names are far more ambiguous and are a
+separate decision.
+
+**Alternatives:** No extra guard, rely only on capitalization (rejected: "Frost"/"Volt"
+are constant in patch prose as element/ability words). Context-gated aliasing on a nearby
+rework/buff keyword (rejected: new mechanism in a deliberately pure gate, duplicates the
+classifier, still misses trigger-free phrasing). Accept near-zero recall for v1
+(rejected: frame reworks are frequent and highly tradeable).
