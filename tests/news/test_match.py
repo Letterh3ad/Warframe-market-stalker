@@ -360,3 +360,40 @@ def test_an_explicit_prime_still_beats_the_base_alias():
     found = find_candidates("Banshee Prime enters the vault.", lex)
     assert [c.slug for c in found] == ["banshee_prime_set"]
     assert found[0].name == "Banshee Prime Set"  # the real entry, not a synthetic one
+
+
+def test_a_cosmetic_phrase_does_not_synthesize():
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = find_candidates("Sphatika Prime Syandana looks great.", lex)
+    assert found == []
+
+
+def test_suppression_is_per_occurrence_not_per_name():
+    # Load-bearing: the two-token cosmetic-noun lookahead only stays safe if it
+    # suppresses the one occurrence next to a cosmetic noun, not the name everywhere.
+    # A clean mention of the same name elsewhere must still synthesize.
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = {
+        c.slug
+        for c in find_candidates(
+            "Sphatika Prime Syandana looks great. Sphatika Prime arrives next week.", lex
+        )
+    }
+    assert found == {"sphatika_prime_set"}
+
+
+def test_the_cosmetic_noun_lookahead_does_not_cross_a_sentence_boundary():
+    # Regression: "Citrine Prime." is a clean, standalone sentence. A stop-word
+    # starting the NEXT sentence must not suppress synthesis just because it falls
+    # within the two-token lookahead window.
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = {c.slug for c in find_candidates("Citrine Prime. Bundle deals available soon.", lex)}
+    assert found == {"citrine_prime_set"}
+
+
+def test_the_adjacency_guard_alone_blocks_a_pack_list():
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = find_candidates(
+        "Select from the Weapons, Prime, Complete and Accessories Packs.", lex
+    )
+    assert found == []

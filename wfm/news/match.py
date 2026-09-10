@@ -270,12 +270,23 @@ def _synthetic_at(
         entry_tokens = (tokens[i][0],)
 
     # Look two tokens past "prime", not just one: "Spinele Prime Facial Accessory"
-    # only reveals itself as a cosmetic at "Accessory", the word after "Facial".
+    # only reveals itself as a cosmetic at "Accessory", the word after "Facial". But
+    # stop at a sentence terminator, the same discipline _followed_by_prime already
+    # applies at one token: "Citrine Prime. Bundle deals..." must not let "Bundle" in
+    # the NEXT sentence suppress synthesis of citrine_prime_set.
     prime_index = i + len(entry_tokens)
+    prime_token, prime_start = tokens[prime_index]
+    boundary = prime_start + len(prime_token)
     for offset in (1, 2):
         after_prime = prime_index + offset
-        if after_prime < len(tokens) and tokens[after_prime][0] in NEVER_PRIME_FOLLOWED_BY:
+        if after_prime >= len(tokens):
+            break
+        next_token, next_start = tokens[after_prime]
+        if any(ch in _SENTENCE_END for ch in text[boundary:next_start]):
+            break
+        if next_token in NEVER_PRIME_FOLLOWED_BY:
             return None
+        boundary = next_start + len(next_token)
 
     slug = "_".join(entry_tokens) + "_prime_set"
     if slug in lexicon.slugs:
