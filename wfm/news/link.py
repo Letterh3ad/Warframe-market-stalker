@@ -36,27 +36,44 @@ UP, DOWN, UNCLEAR = NewsDirection.UP, NewsDirection.DOWN, NewsDirection.UNCLEAR
 # vault_in is a WORKING HYPOTHESIS, flagged in the design doc for review after ~6
 # months of parallel news and price data. Do not "fix" it from first principles.
 DIRECTION_TABLE: dict[EventType, dict[str, NewsDirection | str | None]] = {
-    EventType.VAULT_IN: {ROLE_SET: UP, ROLE_PART: UP, ROLE_RELIC: UP, ROLE_MOD: None},
+    EventType.VAULT_IN: {
+        ROLE_SET: UP, ROLE_PART: UP, ROLE_RELIC: UP, ROLE_MOD: None, ROLE_OTHER: None
+    },
     EventType.VAULT_OUT: {
-        ROLE_SET: DOWN, ROLE_PART: DOWN, ROLE_RELIC: DOWN, ROLE_MOD: None
+        ROLE_SET: DOWN, ROLE_PART: DOWN, ROLE_RELIC: DOWN, ROLE_MOD: None, ROLE_OTHER: None
     },
     EventType.PRIME_ACCESS: {
-        ROLE_SET: DOWN, ROLE_PART: DOWN, ROLE_RELIC: DOWN, ROLE_MOD: None
+        ROLE_SET: DOWN, ROLE_PART: DOWN, ROLE_RELIC: DOWN, ROLE_MOD: None, ROLE_OTHER: None
     },
-    EventType.BUFF: {ROLE_SET: UP, ROLE_PART: UP, ROLE_RELIC: UP, ROLE_MOD: UP},
-    EventType.NERF: {ROLE_SET: DOWN, ROLE_PART: DOWN, ROLE_RELIC: DOWN, ROLE_MOD: DOWN},
+    EventType.BUFF: {
+        ROLE_SET: UP, ROLE_PART: UP, ROLE_RELIC: UP, ROLE_MOD: UP, ROLE_OTHER: None
+    },
+    EventType.NERF: {
+        ROLE_SET: DOWN, ROLE_PART: DOWN, ROLE_RELIC: DOWN, ROLE_MOD: DOWN, ROLE_OTHER: None
+    },
     EventType.REWORK: {
-        ROLE_SET: UNCLEAR, ROLE_PART: UNCLEAR, ROLE_RELIC: UNCLEAR, ROLE_MOD: UNCLEAR
+        ROLE_SET: UNCLEAR,
+        ROLE_PART: UNCLEAR,
+        ROLE_RELIC: UNCLEAR,
+        ROLE_MOD: UNCLEAR,
+        ROLE_OTHER: None,
     },
     EventType.DROP_RATE_CHANGE: {
         ROLE_SET: USE_EVENT_DIRECTION,
         ROLE_PART: USE_EVENT_DIRECTION,
         ROLE_RELIC: USE_EVENT_DIRECTION,
         ROLE_MOD: None,
+        ROLE_OTHER: None,
     },
-    EventType.NEW_CONTENT: {ROLE_SET: UP, ROLE_PART: UP, ROLE_RELIC: None, ROLE_MOD: UP},
+    EventType.NEW_CONTENT: {
+        ROLE_SET: UP, ROLE_PART: UP, ROLE_RELIC: None, ROLE_MOD: UP, ROLE_OTHER: None
+    },
     EventType.OTHER: {
-        ROLE_SET: UNCLEAR, ROLE_PART: UNCLEAR, ROLE_RELIC: UNCLEAR, ROLE_MOD: UNCLEAR
+        ROLE_SET: UNCLEAR,
+        ROLE_PART: UNCLEAR,
+        ROLE_RELIC: UNCLEAR,
+        ROLE_MOD: UNCLEAR,
+        ROLE_OTHER: None,
     },
 }
 
@@ -137,8 +154,22 @@ def build_links(
         return links
 
     prefix = slug[: -len("set")]
+    set_prefixes = {
+        s: s[: -len("set")] for s in catalog if s.endswith("_set")
+    }
     for sibling_slug, sibling in catalog.items():
-        if sibling_slug == slug or not sibling_slug.startswith(prefix):
+        if sibling_slug == slug or sibling_slug.endswith("_set"):
+            continue
+        if not sibling_slug.startswith(prefix):
+            continue
+        # Longest-prefix ownership: "steflos_prime_blueprint" starts with both
+        # "steflos_" (steflos_set) and "steflos_prime_" (steflos_prime_set); the
+        # longer, more specific prefix wins, so it belongs to the Prime set only.
+        owner = max(
+            (s for s, p in set_prefixes.items() if sibling_slug.startswith(p)),
+            key=lambda s: len(set_prefixes[s]),
+        )
+        if owner != slug:
             continue
         links.append(
             ItemLink(
@@ -159,7 +190,7 @@ def _direction(
     event_direction: NewsDirection,
 ) -> NewsDirection | None:
     value = row.get(role)
-    if value is USE_EVENT_DIRECTION or value == USE_EVENT_DIRECTION:
+    if value == USE_EVENT_DIRECTION:
         return event_direction
     return value
 
