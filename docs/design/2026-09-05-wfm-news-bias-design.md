@@ -1078,3 +1078,63 @@ Add every base warframe name to the lexicon, aliased to `<name>_prime_set`.
 
 **Scope: warframes only.** Weapons ("Braton" → Braton Prime) have far more non-Prime
 entries and worse ambiguity; a separate decision if the corpus later shows it matters.
+
+## Triage measurement 2026-09-09
+
+Measured on the live 3839-item catalog against the Update 43.5 fixture
+(`tests/fixtures/news/forums_updates.xml`, entry index 2, "Update 43.5: Amir's
+Shockwave", 37280 body chars after `strip_tags`), the 37KB note that produced the
+56-candidate problem. Reproduce: build the lexicon from `items`, run
+`find_candidates(title + "\n\n" + body, lexicon)`, then `triage(candidates, cap=25)`.
+
+| | Candidates |
+|---|---|
+| Gate output | 56 |
+| After the signal filter | 7 |
+| After the cap (25) | 7 |
+
+Signal-group hit counts (over all 56): vault: 1, release: 0, balance: 6, drop: 0,
+rework: 0. The filter is doing all of the work here; the cap never engages, because 7
+survivors are well under 25. So on this note the cost saving is 56 -> 7 calls, an 87%
+reduction.
+
+**The answer key.** Reading the note by hand, 36 of the 56 candidates carry a real,
+tradeable event:
+
+- 27 mods in the "Permanent Cred Offerings" list (19 auras: Corrosive Projection ...
+  Steel Charge; 8 warframe mods: Deceptive Bond ... Singularity). The section says they
+  "are now available at all times ... no longer part of the store rotations" — a
+  permanent supply increase, the most price-relevant thing in the whole note.
+- 4 weapon arcanes added to the rotation under "New Cred Offerings" (Biotic Rounds,
+  Leaded Gas, Sentient Surge, Vile Discharge), plus Clip Delegation, whose duplicate was
+  removed from that rotation.
+- 4 newly introduced reward mods (Prototype Shock Coils / EFV-8 Mars, Overpressured
+  Rounds / EFV-5 Jupiter).
+
+The other 20 are bug-fix lines, Nightwave act names that collide with mod names
+(`fury`, `guardian`, `sanctuary`, `bounty_hunter`, `howl`, `hunt`, `reach`, `twitch`),
+and two skin-list mentions whose subject is a skin, not the weapon (`cedo_set`,
+`vesper_77_set`).
+
+**What the filter dropped that it should not have.** 34 of those 36. Only
+`overpressured_rounds` and `efv_5_jupiter_set` survived, and only by luck: their
+context window happened to include "decrease Spread". Everything in the Cred Offerings
+lists was dropped. The event language exists in the article — "The following rewards
+are now available at all times in the Cred Offerings Store ... they are no longer part
+of the store rotations" — but it sits in the section's opening paragraph, and the mods
+are a bare bullet list, so a mid-list entry's 200-character window contains nothing but
+other mod names. Recall on this note is 2/36.
+
+**What this costs.** The cap is not doing the work and would not have fired; the
+keyword filter is the whole mechanism, and on this article it is far too aggressive.
+Two fixes, in order. First, data: a `supply` group (`"now available"`, `"no longer"`,
+`"permanent addition"`, `"cred offerings"`, `"added the following"`, `"rotation"`)
+recovers 18 of the 34 measured against this answer key, and costs nothing structural —
+this is the recommended next change and is exactly the "the fix is a keyword" case the
+module's docstring describes. Second, and only after that: the remaining 16 are
+unreachable by any keyword, because their context window carries no prose at all. That
+is a context-window problem in the gate (`context_chars=200` around a bullet in a
+30-name list), not a triage problem, and it should be argued separately rather than
+patched here. Until both land, the honest statement is that triage buys an 87% call
+reduction on this note at the price of most of its real events, and that a bulk-supply
+note is its worst case rather than its typical one.

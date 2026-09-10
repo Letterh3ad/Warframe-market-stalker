@@ -1397,3 +1397,26 @@ are constant in patch prose as element/ability words). Context-gated aliasing on
 rework/buff keyword (rejected: new mechanism in a deliberately pure gate, duplicates the
 classifier, still misses trigger-free phrasing). Accept near-zero recall for v1
 (rejected: frame reworks are frequent and highly tradeable).
+
+## 2026-09-09 - Per-article candidate triage, then a hard cap
+
+**Context:** Per-candidate prompting turns one 37KB update note into 56 model calls.
+The gate measurement flagged the cost and left the control to this plan. A score
+floor cannot serve: the gate scores exact token matches 1.0 and effectively all 56
+are exact, so any floor keeps all or none.
+
+**Decision:** `wfm/news/triage.py` scores each candidate's context by how many
+distinct event-signal keyword groups it contains (vault, release, balance, drop,
+rework). Zero-signal candidates are never classified; survivors sort by
+`(-signal, -score, slug)` and truncate to `news_max_candidates_per_article`
+(default 25). Skips are reported by ingest and `wfm news status`, never silent. The
+recall cost is measured on the real note and recorded in the design doc under
+`## Triage measurement 2026-09-09`; when it goes wrong the fix is a keyword group,
+not a redesign.
+
+**Alternatives:** A bare cap (rejected: with scores tied at 1.0 the gate's order is
+alphabetical, so it drops real events to keep `Adaptation`). A score floor (rejected:
+cannot discriminate a field of exact matches). Classify everything (rejected: ~56
+calls per big note makes a local backfill a weekend job and a Claude backfill an
+unbudgeted cost). A cheap first-pass model to pre-filter (rejected: a second model to
+tune and benchmark, for a job five keyword groups do).
