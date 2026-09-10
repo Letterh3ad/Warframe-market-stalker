@@ -69,11 +69,20 @@ DISCORD_SINK = SOURCE_ROOT / "alerts" / "discord.py"
 # budget per upstream prevents the market budget from being corrupted.
 NEWS_FETCHER = SOURCE_ROOT / "news" / "fetch.py"
 
+# The Ollama classifier talks to localhost only, so it needs its own transport too:
+# it touches no upstream budget at all, market or otherwise.
+NEWS_OLLAMA = SOURCE_ROOT / "news" / "classify" / "ollama.py"
+
 
 def test_only_the_client_and_discord_sink_construct_an_http_transport():
     offenders = []
     for path in SOURCE_ROOT.rglob("*.py"):
-        if path.name == "client.py" or path == DISCORD_SINK or path == NEWS_FETCHER:
+        if (
+            path.name == "client.py"
+            or path == DISCORD_SINK
+            or path == NEWS_FETCHER
+            or path == NEWS_OLLAMA
+        ):
             continue
         text = path.read_text(encoding="utf-8")
         if "httpx.AsyncClient(" in text or "requests." in text:
@@ -84,11 +93,13 @@ def test_only_the_client_and_discord_sink_construct_an_http_transport():
 def test_no_write_verb_reaches_the_transport_except_in_the_discord_sink():
     # Matched against the transport rather than the bare verb, so that a cache put or
     # a dict pop cannot be mistaken for an HTTP write. Narrowed, not deleted: the
-    # Discord sink is exempt and pinned down separately.
+    # Discord sink is exempt and pinned down separately. The Ollama classifier is
+    # exempt too: /api/chat is a POST by Ollama's own design, and localhost is not
+    # warframe.market's budget to protect.
     pattern = re.compile(r"(?:_http|httpx|requests|session|client)\.(?:post|put|patch|delete)\(")
     offenders = []
     for path in SOURCE_ROOT.rglob("*.py"):
-        if path == DISCORD_SINK:
+        if path == DISCORD_SINK or path == NEWS_OLLAMA:
             continue
         for match in pattern.finditer(path.read_text(encoding="utf-8")):
             offenders.append(f"{path}: {match.group(0)}")
