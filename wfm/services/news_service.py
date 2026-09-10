@@ -9,13 +9,18 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from wfm.news.classify.base import ClassifierError, FakeClassifier, to_event
+from wfm.news.classify.claude import ClaudeClassifier
+from wfm.news.classify.ollama import OllamaClassifier
 from wfm.news.fetch import NewsFetcher
+from wfm.news.link import build_links
 from wfm.news.match import Lexicon, build_lexicon, find_candidates
 from wfm.news.sources.base import Source
 from wfm.news.sources.forums import ForumsSource
 from wfm.news.sources.reddit import RedditSource
 from wfm.news.sources.warframe_news import WarframeNewsSource
-from wfm.news.types import Article, ArticleStatus, Candidate, NewsSource
+from wfm.news.triage import triage
+from wfm.news.types import Article, ArticleStatus, Candidate, ClassifyRequest, NewsSource
 from wfm.services.context import AppContext
 
 EXCERPT_CANDIDATES = 3
@@ -159,10 +164,124 @@ def _excerpt(candidates: list[Candidate]) -> str | None:
 
 
 def status(ctx: AppContext) -> dict:
+    model = ctx.config.news_model or ctx.config.news_claude_model
     return {
         "enabled": ctx.config.news_enabled,
         "sources": _resolved_sources(ctx),
         "unknown_sources": unknown_sources(ctx),
-        "articles": len(ctx.news.recent_articles(limit=10_000)),
-        "pending": len(ctx.news.pending(limit=10_000)),
+        "classifier": (
+            "none"
+            if ctx.config.news_classifier == "none"
+            else f"{ctx.config.news_classifier}:{model}"
+        ),
+        "articles": ctx.news.count_articles(),
+        "pending": ctx.news.count_articles(ArticleStatus.PENDING),
+        "classified": ctx.news.count_articles(ArticleStatus.CLASSIFIED),
+        "failed": ctx.news.count_articles(ArticleStatus.FAILED),
     }
+
+
+def build_classifier(ctx: AppContext):
+    """The configured backend, or None when classification is switched off."""
+    name = ctx.config.news_classifier
+    if name == "ollama":
+        return OllamaClassifier(
+            ctx.config.news_model, base_url=ctx.config.news_ollama_url
+        )
+    if name == "claude":
+        return ClaudeClassifier(ctx.config.news_claude_model)
+    if name == "fake":
+        return FakeClassifier()
+    return None
+
+
+def _empty_summary(enabled: bool) -> dict:
+    return {
+        "enabled": enabled,
+        "articles": 0,
+        "events": 0,
+        "links": 0,
+        "failed": 0,
+        "candidates_seen": 0,
+        "candidates_skipped": 0,
+        "errors": {},
+    }
+
+
+async def classify(ctx: AppContext, classifier=None, limit: int | None = None) -> dict:
+    owned = classifier is None
+    if owned:
+        classifier = build_classifier(ctx)
+    if classifier is None:
+        return _empty_summary(False)
+
+    summary = _empty_summary(True)
+    try:
+        # One read, not one per article: the catalog cannot change mid-run.
+        catalog = {item.slug: item for item in ctx.items.all()}
+        batch = limit if limit is not None else ctx.config.news_classify_batch
+        for article in ctx.news.pending(batch):
+            await _classify_article(ctx, article, classifier, catalog, summary)
+        return summary
+    finally:
+        if owned and hasattr(classifier, "aclose"):
+            await classifier.aclose()
+
+
+async def _classify_article(ctx, article, classifier, catalog, summary) -> None:
+    candidates = ctx.news.candidates_for(article.id)
+    kept, skipped = triage(candidates, ctx.config.news_max_candidates_per_article)
+    summary["candidates_seen"] += len(candidates)
+    summary["candidates_skipped"] += skipped
+    now = ctx.clock.utcnow()
+
+    events = []
+    links_per_event = []
+    try:
+        for candidate in kept:
+            labels = await classifier.classify(
+                ClassifyRequest(
+                    subject=candidate.name,
+                    context=candidate.context,
+                    published_at=article.published_at,
+                )
+            )
+            event = to_event(
+                labels,
+                candidate.name,
+                article.published_at,
+                ctx.config.news_strength_map,
+                ctx.config.news_confidence_map,
+                store_raw_json=ctx.config.news_store_raw_json,
+            )
+            events.append(event)
+            links_per_event.append(
+                build_links(
+                    event.event_type,
+                    event.direction,
+                    candidate.slug,
+                    candidate.name,
+                    candidate.score,
+                    catalog,
+                )
+            )
+    except (ClassifierError, ValueError) as exc:
+        # Nothing is written for a partially classified article: half its events in
+        # the database would reach active_links looking complete.
+        summary["failed"] += 1
+        summary["errors"][article.external_id] = str(exc)
+        ctx.news.mark(article.id, ArticleStatus.FAILED, when=now)
+        return
+
+    event_ids = ctx.news.insert_events(article.id, events)
+    for event_id, links in zip(event_ids, links_per_event):
+        summary["links"] += ctx.news.insert_links(event_id, links)
+    ctx.news.mark(
+        article.id,
+        ArticleStatus.CLASSIFIED,
+        classifier.name,
+        classifier.version,
+        when=now,
+    )
+    summary["articles"] += 1
+    summary["events"] += len(events)

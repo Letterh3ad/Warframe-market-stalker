@@ -379,6 +379,13 @@ def _to_article(row: sqlite3.Row) -> Article:
         excerpt=row["excerpt"],
         status=ArticleStatus(row["status"]),
         content_hash=row["content_hash"],
+        classifier_name=row["classifier_name"],
+        classifier_version=row["classifier_version"],
+        classified_at=(
+            datetime.fromisoformat(row["classified_at"])
+            if row["classified_at"]
+            else None
+        ),
     )
 
 

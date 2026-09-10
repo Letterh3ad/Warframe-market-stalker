@@ -79,6 +79,9 @@ class Article:
     excerpt: str | None = None
     status: ArticleStatus = ArticleStatus.PENDING
     content_hash: str = ""
+    classifier_name: str | None = None
+    classifier_version: str | None = None
+    classified_at: datetime | None = None
     id: int | None = None
 
     def hashed(self) -> Article:

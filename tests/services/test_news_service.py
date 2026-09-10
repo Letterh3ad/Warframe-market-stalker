@@ -158,8 +158,11 @@ def test_status_reports_the_corpus(ctx):
         "enabled": True,
         "sources": ["warframe_news", "forums"],
         "unknown_sources": [],
+        "classifier": "none",
         "articles": 0,
         "pending": 0,
+        "classified": 0,
+        "failed": 0,
     }
 
 
