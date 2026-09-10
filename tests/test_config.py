@@ -157,7 +157,9 @@ def test_classifier_defaults_are_off_and_conservative():
     assert cfg.news_classifier == "none"
     assert cfg.news_claude_model == "claude-haiku-4-5"
     assert cfg.news_ollama_url == "http://localhost:11434"
-    assert cfg.news_max_candidates_per_article == 25
+    # 40, not 25: measured to sit above the 28 survivors the largest real article
+    # produces, so the cap is a ceiling rather than a guillotine.
+    assert cfg.news_max_candidates_per_article == 40
     assert cfg.news_store_raw_json is False
     assert cfg.news_strength_map == {"minor": 0.3, "moderate": 0.6, "major": 0.9}
     assert cfg.news_confidence_map == {"low": 0.4, "medium": 0.7, "high": 0.95}

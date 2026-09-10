@@ -63,9 +63,12 @@ class Config:
     news_ollama_url: str = "http://localhost:11434"
     news_claude_model: str = "claude-haiku-4-5"
     news_classify_batch: int = 25
-    # The cost gate for per-candidate prompting: one 37KB update note produced 56
-    # candidates, i.e. 56 model calls. See wfm/news/triage.py.
-    news_max_candidates_per_article: int = 25
+    # A backstop against a pathological article, not a second filter: triage does the
+    # filtering. 40 because the largest article in the corpus (Update 43.5, 56
+    # candidates) leaves 28 survivors, and at 25 the cap was cutting real events out of
+    # a field tied at signal 1. See wfm/news/triage.py and the design doc's
+    # "Triage measurement 2026-09-09".
+    news_max_candidates_per_article: int = 40
     news_store_raw_json: bool = False
     # Label -> number. Retunable from the backtest with no reclassification, which is
     # the whole reason the model is never asked for a float.

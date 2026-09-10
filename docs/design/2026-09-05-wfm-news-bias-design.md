@@ -1106,35 +1106,51 @@ The other 20 are bug-fix lines, Nightwave act names that collide with mod names
 and two skin-list mentions whose subject is a skin, not the weapon (`cedo_set`,
 `vesper_77_set`).
 
-### As shipped (six groups, with `supply`)
+### As shipped (six groups, cap 40)
 
 | | Candidates | Real events kept (of 36) |
 |---|---|---|
 | Gate output | 56 | 36 |
 | After the signal filter | 28 | 20 |
-| After the cap (25) | 25 | 19 |
+| After the cap (40) | 28 | 20 |
 
 Signal-group hits over all 56: vault 1, release 0, balance 6, drop 0, rework 0,
-**supply 21**. Recall 19/36; precision 19/25 (6 kept candidates are noise:
-`bounty_hunter`, `fury`, `guardian`, `primed_chamber`, `sanctuary`, `vesper_77_set`).
-Cost: 56 -> 25 calls, a 55% reduction.
+**supply 21**. Recall 20/36; precision 20/28. Cost: 56 -> 28 calls, a 50% reduction.
 
-**The cap now engages**, which it did not before: 28 survivors, 3 truncated. Every
-survivor scores signal 1, so the tie-break decides, and it drops the two lowest gate
-scores first (`kill_switch` 0.90, `secondary_wind` 0.89, both noise) and then the
-alphabetically last of the 1.0s — `vile_discharge`, which is a real event. That is one
-real event lost to the cap rather than the filter, and it is the expected shape of the
-cost: a cap has to cut somewhere, and cutting the alphabetical tail of a tied field is
-arbitrary by construction.
+**The cap does not engage**, which is the intent: triage does the filtering and the cap
+is a backstop against a pathological article. It is 40, not the 25 the plan first named,
+because 25 was chosen before anyone had run the filter over a real article and the
+largest article in the corpus leaves 28 survivors. At 25 the cap was measured cutting
+three of them, and because every survivor scores signal 1 the tie-break decided which:
+the two lowest gate scores (`kill_switch` 0.90, `secondary_wind` 0.89, both noise) and
+then the alphabetically last of the tied 1.0s, `vile_discharge` — a real event, lost to
+alphabetical order. That is precisely the arbitrary N-of-M choice the plan rejected when
+it refused a cap-only design. 40 restores the plan's stated intent, a ceiling rather
+than a guillotine.
 
-**Real events still dropped: 17.** Sixteen are bare entries in the middle of the
+**The precision cost, stated plainly.** 8 of the 28 kept candidates (29%) carry no
+event: `bounty_hunter`, `fury`, `guardian`, `primed_chamber`, `sanctuary`, `kill_switch`,
+`secondary_wind`, `vesper_77_set` — Nightwave act names that collide with mod names,
+bug-fix lines, and one skin-list mention. `"rotation"` and `"cred offerings"` are broad
+keywords and this is the noise they buy. It is the right trade and it is not free: a
+wasted model call costs one call, a missed event is invisible forever, so triage is
+deliberately biased toward keeping. Budget on this article is ~29% noise.
+
+**Reading `skipped` on a store-update note.** Every survivor here scores signal 1, so
+the ordering inside the survivor set is decided by gate score then slug — close to
+alphabetical. That means a non-zero `skipped` on an article of this shape indicates the
+article was *under-read*, not that noise was removed: whatever the cap cut was tied with
+what it kept. Task 13's reporting should treat `skipped > 0` on a store update as a
+flag, not as a success metric.
+
+**Real events still dropped: 16.** All of them bare entries in the middle of the
 "Permanent Cred Offerings" bullet list (`deceptive_bond`, `power_of_three`,
 `prism_guard`, `purging_slash`, `purifying_flames`, `recharge_barrier`,
 `rifle_scavenger`, `rumbled`, `shield_disruption`, `shotgun_scavenger`, `singularity`,
 `sniper_scavenger`, `sprint_boost`, `steel_charge`) plus the two new-reward mods
-(`prototype_shock_coils`, `efv_8_mars_set`); the seventeenth is `vile_discharge`, lost
-to the cap above. **No keyword can reach the sixteen**: their 200-character context
-window contains only other mod names, no prose at all. See the known hole below.
+(`prototype_shock_coils`, `efv_8_mars_set`). **No keyword can reach them**: their
+200-character context window contains only other mod names, no prose at all. See the
+known hole below.
 
 ### Before `supply` existed (five groups), and why the group exists
 
@@ -1146,7 +1162,7 @@ scored zero. An 87% call reduction that loses 34 of 36 real events is not a cost
 control, it is a mute button, and a store-update note is exactly where bulk supply
 events live. The plan pre-committed to the remedy — when recall measures badly the fix
 is data, not architecture — so a sixth `supply` group was added rather than a redesign.
-It moved recall 2/36 -> 19/36 and precision 2/7 -> 19/25, at the price of 18 more model
+It moved recall 2/36 -> 20/36 and precision 2/7 -> 20/28, at the price of 21 more model
 calls on this note.
 
 Two group-membership choices worth recording: `"now available"` moved from `release` to

@@ -1409,18 +1409,27 @@ are exact, so any floor keeps all or none.
 distinct event-signal keyword groups it contains (vault, release, balance, drop,
 rework, supply). Zero-signal candidates are never classified; survivors sort by
 `(-signal, -score, slug)` and truncate to `news_max_candidates_per_article`
-(default 25). Skips are reported by ingest and `wfm news status`, never silent.
+(default 40). Skips are reported by ingest and `wfm news status`, never silent.
 
 The recall cost is measured on the real note, not assumed, and recorded in the design
 doc under `## Triage measurement 2026-09-09`. The first measurement kept 7 of 56 and
 lost 34 of the article's 36 real events, all of them bulk store-availability changes,
 so the `supply` group was added in this phase rather than deferred: recall 2/36 ->
-19/36, precision 2/7 -> 19/25, 25 model calls instead of 7. This is the plan's
+20/36, precision 2/7 -> 20/28, 28 model calls instead of 7. This is the plan's
 pre-committed remedy (when recall measures badly the fix is a keyword group, not a
 redesign) and it is now demonstrated rather than asserted. A remaining 16 real events
 are unreachable by any keyword because their stored 200-char context holds no prose;
 that needs a gate context-width change plus a re-ingest and is deferred past plan 3,
 quantified in the design doc.
+
+The cap is 40, not the 25 the plan first named. 25 predated any measurement; the largest
+real article leaves 28 survivors, and at 25 the cap cut three of them, one a real event
+(`vile_discharge`) lost to an alphabetical tie-break among candidates all tied at signal
+1. That is the arbitrary N-of-M choice a cap-only design was rejected for. 40 sits above
+the corpus maximum, so the cap is a backstop against a pathological article and triage
+does the filtering, which is what the plan intended. The measured precision cost of the
+broader keywords is recorded too: 8 of the 28 kept candidates on that article carry no
+event.
 
 **Alternatives:** A bare cap (rejected: with scores tied at 1.0 the gate order is
 alphabetical, so it drops real events to keep `Adaptation`). A score floor (rejected:
