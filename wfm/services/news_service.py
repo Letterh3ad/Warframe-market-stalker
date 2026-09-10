@@ -321,17 +321,14 @@ def reconcile_synthetic_links(ctx: AppContext) -> dict:
 
     for event in ctx.news.events_with_synthetic_links():
         result["events"] += 1
-        synthetic = [
-            link
-            for link in ctx.news.links_for_event(event.id)
-            if link.link_method is LinkMethod.SYNTHETIC
-        ]
+        current = ctx.news.links_for_event(event.id)
+        synthetic = [link for link in current if link.link_method is LinkMethod.SYNTHETIC]
         if not any(link.slug in catalog for link in synthetic):
             result["still_synthetic"] += 1
             continue
 
         links = []
-        for link in ctx.news.links_for_event(event.id):
+        for link in current:
             if link.link_method is not LinkMethod.SYNTHETIC:
                 links.append(link)
                 continue
@@ -347,5 +344,9 @@ def reconcile_synthetic_links(ctx: AppContext) -> dict:
             )
         ctx.news.replace_links_for(event.id, links)
         result["replaced"] += 1
+        # A multi-slug event can resolve one slug and still hold another: the counts
+        # are not exclusive, so a partial event shows up in both.
+        if any(link.link_method is LinkMethod.SYNTHETIC for link in links):
+            result["still_synthetic"] += 1
 
     return result

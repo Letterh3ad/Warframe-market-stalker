@@ -87,6 +87,43 @@ def _classified_event_with_link(ctx, slug, method, external_id="forums:2"):
     return event_id
 
 
+def _classified_event_with_synthetic_links(
+    ctx, slugs, event_type=EventType.PRIME_ACCESS, external_id="forums:3"
+):
+    article = Article(
+        source=NewsSource.FORUMS,
+        external_id=external_id,
+        url=f"https://forums.warframe.test/{external_id}",
+        title="Steflos Prime Access",
+        body="",
+        published_at=NOW,
+    ).hashed()
+    article_id = ctx.news.upsert_article(article, NOW)
+    event = ExtractedEvent(
+        event_type=event_type,
+        subject_raw="Steflos Prime",
+        direction=NewsDirection.DOWN,
+        strength=0.6,
+        confidence=0.8,
+    )
+    (event_id,) = ctx.news.insert_events(article_id, [event])
+    ctx.news.insert_links(
+        event_id,
+        [
+            ItemLink(
+                slug=slug,
+                rank=0,
+                link_method=LinkMethod.SYNTHETIC,
+                link_score=1.0,
+                direction=NewsDirection.DOWN,
+                weight=1.0,
+            )
+            for slug in slugs
+        ],
+    )
+    return event_id
+
+
 async def _sync_with(ctx, changed, monkeypatch):
     from wfm.sync.catalog import CatalogSyncResult
 
@@ -159,6 +196,62 @@ async def test_reconciliation_run_twice_does_not_duplicate_links(ctx):
     got = news_service.reconcile_synthetic_links(ctx)
     assert got["events"] == 0
     assert ctx.news.links_for_event(event_id) == first
+
+
+async def test_a_partially_resolved_event_is_counted_as_both(ctx):
+    event_id = _classified_event_with_synthetic_links(
+        ctx, ["steflos_prime_set", "unreleased_prime_set"]
+    )
+    ctx.items.upsert_many(
+        [
+            Item(slug="steflos_prime_set", name="Steflos Prime Set", url_name="a",
+                 tags=("set", "prime", "weapon"), is_set=True),
+        ]
+    )
+
+    got = news_service.reconcile_synthetic_links(ctx)
+
+    # Not mutually exclusive: one slug resolved (replaced) while the sibling on the
+    # same event is still a prediction (still_synthetic), and the honest report
+    # says both.
+    assert got == {"events": 1, "replaced": 1, "still_synthetic": 1}
+    links = {l.slug: l for l in ctx.news.links_for_event(event_id)}
+    assert links["steflos_prime_set"].link_method is LinkMethod.EXACT
+    assert links["unreleased_prime_set"].link_method is LinkMethod.SYNTHETIC
+
+
+async def test_a_failed_reconciliation_is_retried_on_the_next_no_op_sync(ctx, monkeypatch):
+    """The stranding scenario: sync_catalog already committed its write (and moved the
+    cursor) before reconcile_synthetic_links raises. Gating on `changed` alone would
+    mean the next sync sees no version change and never retries -- the event would
+    sit SYNTHETIC forever. Gating on "is there work" means the next sync, even a
+    no-op one, tries again and heals it.
+    """
+    _classified_event_with_synthetic_link(ctx, "steflos_prime_set")
+    real_reconcile = news_service.reconcile_synthetic_links
+    calls = {"n": 0}
+
+    def flaky(c):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("db is locked")
+        return real_reconcile(c)
+
+    monkeypatch.setattr(news_service, "reconcile_synthetic_links", flaky)
+
+    with pytest.raises(RuntimeError):
+        await _sync_with(ctx, changed=True, monkeypatch=monkeypatch)
+
+    # The slug ships between the failed attempt and the next sync.
+    ctx.items.upsert_many(
+        [Item(slug="steflos_prime_set", name="Steflos Prime Set", url_name="a",
+              tags=("set", "prime"), is_set=True)]
+    )
+
+    result = await _sync_with(ctx, changed=False, monkeypatch=monkeypatch)
+
+    assert result["news_reconciled"]["replaced"] == 1
+    assert calls["n"] == 2
 
 
 async def test_sync_reconciles_only_when_the_catalog_changed(ctx, monkeypatch):

@@ -22,10 +22,15 @@ async def sync(ctx: AppContext, force: bool = False, dry_run: bool = False) -> d
         ctx.new_client(), ctx.items, ctx.sweep_state, ctx.clock, force=force
     )
     # A predicted Prime slug becomes real the moment the catalog carries it, and the
-    # catalog only moves here. Gated on `changed` so a no-op sync -- the common case,
-    # several times a day -- stays free.
+    # catalog only moves here. Gated on "is there work", not on "did the catalog
+    # change": a reconciliation that fails after `sync_catalog` already committed its
+    # write would otherwise strand a shipped slug until some unrelated future version
+    # bump happened to rescue it. events_with_synthetic_links is one indexed query, so
+    # paying it on every no-op sync -- the common case -- still stays cheap.
     reconciled = (
-        news_service.reconcile_synthetic_links(ctx) if result.changed else None
+        news_service.reconcile_synthetic_links(ctx)
+        if result.changed or ctx.news.events_with_synthetic_links()
+        else None
     )
     return {
         "dry_run": False,
