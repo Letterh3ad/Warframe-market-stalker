@@ -44,6 +44,33 @@ _AMBIGUOUS_SINGLE_TOKENS = frozenset(
 
 _SENTENCE_END = ".!?"
 
+# A predicted slug is an exact textual match to an announced name; the uncertainty is
+# in whether DE ships that slug, and that is carried by link_method='synthetic' and
+# the staleness rule, not by pretending the text matched poorly.
+SYNTHETIC_SCORE = 1.0
+
+# Capitalised words that precede "Prime" without naming an item. "Warframe Prime
+# Access" is the brand, and Excalibur Prime is founders-only, so its set slug will
+# never exist and predicting it would leave a permanently unresolved event.
+NEVER_PRIME_BASE = frozenset({"warframe", "prime", "excalibur"})
+
+# Nouns naming a cosmetic or a bundle rather than a tradeable set: "Sphatika Prime
+# Syandana" and "Weapons Pack" will never ship a "_set" slug, so synthesizing one for
+# them would write a prediction the reconciliation pass can never resolve.
+#
+# This is maintained data, not a clever heuristic. DE adds new cosmetic slot types
+# (Prime Access accessory categories) over time, and each new one will surface here as
+# a synthesized slug that never resolves. The fix when that happens is to add the word,
+# not to invent a smarter rule.
+NEVER_PRIME_FOLLOWED_BY = frozenset(
+    {
+        "syandana", "decoration", "sigil", "armor", "armour", "ephemera", "noggle",
+        "glyph", "sugatra", "skin", "emblem", "captura", "pack", "packs",
+        "accessory", "accessories", "bundle", "collection", "earpiece", "oculus",
+        "attachment", "attachments", "helmet", "figurine", "diorama", "poster", "scene",
+    }
+)
+
 
 def normalize(text: str) -> list[tuple[str, int]]:
     """Lowercased word tokens paired with their start offset in the ORIGINAL text.
@@ -67,6 +94,9 @@ class Lexicon:
 
     by_first: dict[str, tuple[tuple[tuple[str, ...], str, str], ...]]
     max_len: int
+    # Every slug the catalog actually sells. Synthesis checks this: a Prime released
+    # between announcement and ingest must link normally, not be predicted again.
+    slugs: frozenset[str] = frozenset()
 
 
 def build_lexicon(items: Iterable[Item]) -> Lexicon:
@@ -96,7 +126,9 @@ def build_lexicon(items: Iterable[Item]) -> Lexicon:
         for first, rows in buckets.items()
     }
     max_len = max((len(t) for t in entries), default=0)
-    return Lexicon(by_first=by_first, max_len=max_len)
+    return Lexicon(
+        by_first=by_first, max_len=max_len, slugs=frozenset(item.slug for item in items)
+    )
 
 
 def find_candidates(
@@ -117,6 +149,8 @@ def find_candidates(
 
     while i < len(tokens):
         hit = _match_at(text, tokens, i, lexicon, threshold)
+        if hit is None:
+            hit = _synthetic_at(text, tokens, i, lexicon)
         if hit is None:
             i += 1
             continue
@@ -173,6 +207,75 @@ def _match_at(
         return n, slug, name, score, start, last_start + len(last_token)
 
     return None
+
+
+def _synthetic_at(
+    text: str, tokens: list[tuple[str, int]], i: int, lexicon: Lexicon
+) -> tuple[int, str, str, float, int, int] | None:
+    """A "<Name> Prime" the catalog does not sell yet.
+
+    Reached only when the normal scan found nothing here, which for a name followed
+    by "prime" is exactly the trailing-Prime guard firing. Runs longest-first over
+    the lexicon so "Dual Keres Prime" predicts dual_keres_prime_set, and falls back
+    to the single capitalised token so a name absent from the catalog entirely
+    (an unreleased frame) is still predicted.
+
+    Two guards keep this from over-firing on prose that merely puts a capitalised
+    word next to "Prime": punctuation between them makes it a list ("Weapons, Prime,
+    Complete and Accessories Packs"), and a cosmetic/bundle noun right after "Prime"
+    means the thing named is not a tradeable set at all.
+    """
+    start = tokens[i][1]
+    if not text[start].isupper() or tokens[i][0] in NEVER_PRIME_BASE:
+        return None
+
+    entry_tokens: tuple[str, ...] | None = None
+    for candidate_tokens, _slug, _name in lexicon.by_first.get(tokens[i][0], ()):
+        n = len(candidate_tokens)
+        if i + n > len(tokens) or _PRIME_TOKEN in candidate_tokens:
+            continue
+        if tuple(t for t, _ in tokens[i : i + n]) != candidate_tokens:
+            continue
+        if _followed_by_prime(tokens, i + n) and _prime_is_adjacent(text, tokens, i + n):
+            entry_tokens = candidate_tokens
+            break
+
+    if entry_tokens is None:
+        if not (
+            _followed_by_prime(tokens, i + 1) and _prime_is_adjacent(text, tokens, i + 1)
+        ):
+            return None
+        entry_tokens = (tokens[i][0],)
+
+    # Look two tokens past "prime", not just one: "Spinele Prime Facial Accessory"
+    # only reveals itself as a cosmetic at "Accessory", the word after "Facial".
+    prime_index = i + len(entry_tokens)
+    for offset in (1, 2):
+        after_prime = prime_index + offset
+        if after_prime < len(tokens) and tokens[after_prime][0] in NEVER_PRIME_FOLLOWED_BY:
+            return None
+
+    slug = "_".join(entry_tokens) + "_prime_set"
+    if slug in lexicon.slugs:
+        # Released between announcement and ingest: the normal path owns it.
+        return None
+
+    span = len(entry_tokens) + 1  # the name plus the "prime" token it is followed by
+    last_token, last_start = tokens[i + span - 1]
+    end = last_start + len(last_token)
+    return span, slug, text[start:end], SYNTHETIC_SCORE, start, end
+
+
+def _prime_is_adjacent(text: str, tokens: list[tuple[str, int]], prime_index: int) -> bool:
+    """True when only whitespace separates the previous token from the "prime" token
+    at `prime_index`. Call only where that token is known to be "prime".
+
+    Punctuation in the gap means a list, not a name: "Weapons, Prime, Complete and
+    Accessories Packs" is bundle-pack prose, not the item "Weapons Prime".
+    """
+    prev_token, prev_start = tokens[prime_index - 1]
+    prev_end = prev_start + len(prev_token)
+    return text[prev_end : tokens[prime_index][1]].strip() == ""
 
 
 def _followed_by_prime(tokens: list[tuple[str, int]], index: int) -> bool:

@@ -67,10 +67,14 @@ def test_the_base_athodai_is_not_matched_when_the_text_says_athodai_prime():
 def test_hotfix_4354_names_frames_the_catalog_only_sells_as_primes():
     title, body = forum_items()[1]
     found = slugs(title, body)
-    # The note names Yareli, Merulina, Baruuk and Daiku. None resolves: the catalog
-    # entries are "Yareli Prime Set", "Baruuk Prime Set" and "Merulina Guardian", and
-    # Daiku is not in the catalog at all.
-    assert found == set()
+    # The note names Yareli, Merulina, Baruuk and Daiku. Yareli, Merulina and Baruuk
+    # still resolve to nothing: the catalog entries are "Yareli Prime Set", "Baruuk
+    # Prime Set" and "Merulina Guardian", and none of those bare names is followed by
+    # "Prime" in this text. Daiku is not in the catalog at all, but the note does say
+    # "Daiku Prime" ("Fixed Daiku and Daiku Prime's animations..."), which is exactly
+    # the case synthesis exists for: an unreleased frame's Prime, predicted rather
+    # than silently dropped.
+    assert found == {"daiku_prime_set"}
 
 
 def test_the_big_update_note_finds_archon_continuity():
@@ -85,20 +89,21 @@ def test_a_reddit_workshop_finds_the_augment_mods_it_names():
     assert "savage_silence" in slugs(banshee.title, strip_tags(banshee.body_html))
 
 
-def test_a_prime_access_announcement_links_nothing_because_the_items_are_unreleased():
+def test_a_prime_access_announcement_predicts_the_slugs_it_announces():
     from wfm.news.html import extract_element_text
 
     html = (FIXTURES / "warframe_article.html").read_text(encoding="utf-8")
     body = extract_element_text(html, "post-body")
     found = slugs("Citrine Prime Access", body)
 
-    # The single most important measured result in this plan. The article is about
-    # Citrine Prime, Steflos Prime and Corufell Prime. None of the three is in the
-    # catalog on announcement day, because none has been released. Before the
-    # trailing-Prime guard the gate answered {steflos_set, corufell_set}, linking a
-    # Prime Access event to the BASE weapons, which move differently and arguably in
-    # the opposite direction. Empty is the correct answer, and the gap is real.
-    assert found == set()
+    # This assertion used to be `found == set()`, and that emptiness was the single
+    # most important measured result of plan 2: none of the three announced items is
+    # in the catalog on announcement day, and the gate's earlier answer
+    # ({steflos_set, corufell_set}) attached the event to the BASE weapons, which
+    # move in the opposite direction. Silence was better than that. Predicting the
+    # set slug is better than silence: the event and its date get recorded, and the
+    # reconciliation pass on `wfm sync` replaces the guess once the real slug ships.
+    assert found == {"citrine_prime_set", "steflos_prime_set", "corufell_prime_set"}
 
 
 def test_an_empty_body_matches_nothing_and_does_not_raise():

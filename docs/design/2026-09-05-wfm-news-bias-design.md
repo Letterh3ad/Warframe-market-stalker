@@ -1050,6 +1050,14 @@ if the slug guess later proves wrong.
   row → `down`, weight 1.0.
 - **Check before synthesizing.** If `<name>_prime_set` already exists (Prime released
   between announcement and ingest), link normally instead.
+- **Two guards against non-item "<Name> Prime" text.** Punctuation between the name and
+  "Prime" means a list, not a name (`"Weapons, Prime, Complete and Accessories Packs"`).
+  A cosmetic/bundle noun in either of the two tokens after "Prime"
+  (`NEVER_PRIME_FOLLOWED_BY`: syandana, decoration, accessory, earpiece, …) means the
+  thing named is a cosmetic slot, not a tradeable set (`"Spinele Prime Facial
+  Accessory"`). That noun list is **maintained data, not a heuristic** — DE adds new
+  cosmetic slot types over time, and each new one surfaces as a synthesized slug that
+  never resolves until its noun is added here.
 - **Reconciliation pass.** On catalog refresh (`refresh-items`), re-run linkage for any
   event still holding a synthetic link. Once the real slug exists, replace the synthetic
   link with a real one and run normal set-expansion to parts and relics. This is the
