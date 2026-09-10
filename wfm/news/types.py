@@ -158,6 +158,40 @@ class Candidate:
     end: int
 
 
+@dataclass(frozen=True)
+class ClassifyRequest:
+    """One candidate, its surrounding sentences, and the article's publish date.
+
+    One request is one model call. Handing a small model a whole hotfix note and
+    asking for a list of events is hard extraction and it is unreliable at that; the
+    gate already knows which item is named and where, which turns the job into
+    constrained classification of a single subject.
+    """
+
+    subject: str
+    context: str
+    published_at: datetime | None
+
+
+@dataclass(frozen=True)
+class ClassifyLabels:
+    """Exactly what a model is allowed to say. All strings, on purpose.
+
+    Small models cannot produce calibrated probabilities: asked for a 0-to-1
+    confidence a 4B answers 0.8 for almost everything. Asked to pick one of three
+    labels it is reliable. Code maps labels to numbers through config, so retuning
+    that mapping after the backtest reclassifies nothing.
+    """
+
+    event_type: str
+    direction: str
+    strength: str
+    confidence: str
+    timing: str
+    date_text: str | None = None
+    rationale: str | None = None
+
+
 def content_hash(title: str, body: str) -> str:
     """Detects an edited article so it can be re-queued for classification.
 
