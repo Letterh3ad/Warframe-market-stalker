@@ -219,6 +219,12 @@ def test_build_classifier_builds_the_configured_backend(conn):
     assert clf.name == "ollama" and clf.version == "qwen3:4b"
 
 
+def test_build_classifier_rejects_an_unknown_backend_name(conn):
+    ctx = _with_config(conn, news_classifier="fake")
+    with pytest.raises(ValueError, match="fake"):
+        news_service.build_classifier(ctx)
+
+
 def test_status_reports_the_classifier_and_the_counts(conn):
     got = news_service.status(_with_config(conn, news_classifier="ollama",
                                            news_model="qwen3:4b"))

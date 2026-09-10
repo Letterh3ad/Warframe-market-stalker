@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from wfm.news.classify.base import ClassifierError, FakeClassifier, to_event
+from wfm.news.classify.base import ClassifierError, to_event
 from wfm.news.classify.claude import ClaudeClassifier
 from wfm.news.classify.ollama import OllamaClassifier
 from wfm.news.fetch import NewsFetcher
@@ -181,18 +181,28 @@ def status(ctx: AppContext) -> dict:
     }
 
 
+KNOWN_CLASSIFIERS = ("none", "ollama", "claude")
+
+
 def build_classifier(ctx: AppContext):
-    """The configured backend, or None when classification is switched off."""
+    """The configured backend, or None when classification is switched off.
+
+    No "fake" branch: that would let a config typo silently write fabricated
+    events into the ledger, indistinguishable from real classifier output. Tests
+    inject FakeClassifier directly instead of going through this function.
+    """
     name = ctx.config.news_classifier
+    if name == "none":
+        return None
     if name == "ollama":
         return OllamaClassifier(
             ctx.config.news_model, base_url=ctx.config.news_ollama_url
         )
     if name == "claude":
         return ClaudeClassifier(ctx.config.news_claude_model)
-    if name == "fake":
-        return FakeClassifier()
-    return None
+    raise ValueError(
+        f"unknown news_classifier {name!r}; valid values are {KNOWN_CLASSIFIERS}"
+    )
 
 
 def _empty_summary(enabled: bool) -> dict:
@@ -268,6 +278,12 @@ async def _classify_article(ctx, article, classifier, catalog, summary) -> None:
     except (ClassifierError, ValueError) as exc:
         # Nothing is written for a partially classified article: half its events in
         # the database would reach active_links looking complete.
+        #
+        # ValueError is caught deliberately broadly here: it is what to_event raises
+        # for an unmapped strength/confidence label and what the EventType/
+        # NewsDirection enum conversions raise for a label outside the enum. Widening
+        # the try body above without narrowing this catch risks silently swallowing
+        # an unrelated ValueError as a misleadingly-labelled "failed article".
         summary["failed"] += 1
         summary["errors"][article.external_id] = str(exc)
         ctx.news.mark(article.id, ArticleStatus.FAILED, when=now)
