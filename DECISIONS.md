@@ -1439,3 +1439,50 @@ unbudgeted cost). A cheap first-pass model to pre-filter (rejected: a second mod
 tune and benchmark, for a job six keyword groups do). Widening the gate context window
 instead of adding keywords (rejected here: stored contexts mean a re-ingest, which is a
 data decision of its own).
+
+## 2026-09-10 - qwen3:4b-instruct-2507-q8_0 is the provisional news classifier, on operational grounds only
+
+**Context:** Task 17 was specified as a measured model choice: build a gold set with
+`claude-opus-5`, hand-correct it, score every candidate backend against it. The user
+declined the API spend and asked for local models only. That removes the ruler.
+**There is therefore no accuracy measurement of any kind for this classifier, and this
+decision is not a validated comparison.** It is the answer to a narrower question:
+which model can actually run this job on an 8GB RTX 5060 Laptop.
+
+**Decision:** `news_classifier = "ollama"`, `news_model = "qwen3:4b-instruct-2507-q8_0"`
+as the *provisional operational default*. The tag was confirmed by an actual `ollama
+pull`, not from memory. Measured over 50 candidates sampled from the 358 stored in
+`wfm_market.db` (read-only), it loads 100% on GPU at 5.0 GB, returns schema-valid output
+that `decode()` accepts on 50 of 50 calls, averages 2.12 s per call over two passes, and
+is byte-for-byte reproducible at `temperature: 0`. At that rate the largest real article
+(28 candidates after triage) costs ~59 s and the whole stored corpus ~12.6 minutes, so a
+local backfill is neither an overnight nor a weekend job.
+
+**None of that says a single label is correct.** The one prompt-compliance defect that
+*is* checkable without a ruler is recorded: 37 of 50 answers put an ISO date in
+`date_text` copied from the article's `Published:` header, 0 of 37 quoted from the
+article, against a prompt that says never to compute a date. It degrades to
+`published_at`, which is the safe side, but the forward-dated pathway never fired.
+Confidence is `high` on 45 of 50 answers, which is the small-model overconfidence the
+label-not-float design anticipated; whether it is misplaced is unknowable here.
+
+Numbers, method and reproduction steps: `docs/design/2026-09-09-classifier-benchmark.md`.
+`news_enabled` stays `false` until the 9b backtest; nothing in plan 3 moves a bias or a
+Signal. Settings live in the user's gitignored `wfm.toml`, not in the repo.
+
+**To validate this later** the gold set is required: `news_benchmark.py label` over the
+same `gold_input.jsonl`, hand-corrected, then `score`. Because this backend is
+deterministic the local output file from this session can be scored as-is; only the
+Claude labelling half remains to be paid for. Until that exists, do not call this a
+chosen model.
+
+**Alternatives:** The full benchmark with an Opus-labelled gold set (rejected by the
+user: API spend). `claude-haiku-4-5` as the production backend, which the spec proposed
+(not evaluated at all — it needs the API). `gemma4:12b` as a ceiling check (rejected: it
+exists locally but is 8.9 GB resident and `ollama ps` shows a 33%/67% CPU/GPU spill, so
+it does not fit and benchmarking it would measure the wrong machine). The 30B/32B local
+library (rejected: 18-19 GB, same reason). `general-heretic:latest`, a 4B Q8 qwen3 that
+does fit (rejected: its Modelfile is `TEMPLATE {{ .Prompt }}`, i.e. no chat template, so
+`/api/chat` results would be meaningless). Naming no default at all (rejected: a default
+that demonstrably runs is more useful than none while the accuracy question waits, and
+`news_enabled=false` keeps it inert either way).
