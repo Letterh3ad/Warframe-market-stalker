@@ -23,3 +23,26 @@ def test_news_without_a_mode_is_a_parse_error(capsys):
 
     with pytest.raises(SystemExit):
         build_parser().parse_args(["news"])
+
+
+def test_classify_is_a_mode():
+    args = build_parser().parse_args(["news", "classify"])
+    assert args.news_command == "classify"
+    assert args.limit is None  # falls back to news_classify_batch
+
+
+def test_classify_takes_a_limit():
+    args = build_parser().parse_args(["news", "classify", "--limit", "3"])
+    assert args.limit == 3
+
+
+def test_a_non_numeric_limit_is_a_parse_error():
+    import pytest
+
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["news", "classify", "--limit", "lots"])
+
+
+def test_relink_is_a_mode():
+    args = build_parser().parse_args(["news", "relink"])
+    assert args.news_command == "relink"

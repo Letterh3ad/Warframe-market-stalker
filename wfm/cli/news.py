@@ -11,7 +11,14 @@ def register(parser) -> None:
     ingest.add_argument(
         "--force", action="store_true", help="run even when news_enabled is false"
     )
-    modes.add_parser("status", help="corpus size and pending count")
+    classify = modes.add_parser("classify", help="classify the pending articles")
+    classify.add_argument(
+        "--limit", type=int, default=None, help="articles this run (default: config)"
+    )
+    modes.add_parser(
+        "relink", help="re-resolve predicted Prime slugs against the current catalog"
+    )
+    modes.add_parser("status", help="corpus size, pending count and backend")
     parser.set_defaults(handler=run)
 
 
@@ -20,8 +27,12 @@ async def run(args) -> int:
     try:
         if args.news_command == "status":
             emit(news_service.status(ctx), args.json)
-            return 0
-        emit(await news_service.ingest(ctx, force=args.force), args.json)
+        elif args.news_command == "classify":
+            emit(await news_service.classify(ctx, limit=args.limit), args.json)
+        elif args.news_command == "relink":
+            emit(news_service.reconcile_synthetic_links(ctx), args.json)
+        else:
+            emit(await news_service.ingest(ctx, force=args.force), args.json)
         return 0
     finally:
         await ctx.aclose()
