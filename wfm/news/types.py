@@ -56,6 +56,12 @@ class LinkMethod(str, Enum):
     FUZZY = "fuzzy"
     SET_EXPANSION = "set_expansion"
     CURATED = "curated"
+    # The slug is a prediction: an announced Prime the catalog does not sell yet.
+    # Replaced by a real link once `wfm sync` sees the slug appear.
+    SYNTHETIC = "synthetic"
+    # Reached through a base warframe name ("Banshee" -> banshee_prime_set), which
+    # is weaker evidence than the article writing "Banshee Prime".
+    BASE_ALIAS = "base_alias"
 
 
 @dataclass(frozen=True)
