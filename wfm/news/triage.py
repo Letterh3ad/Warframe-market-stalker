@@ -25,7 +25,6 @@ SIGNAL_GROUPS: dict[str, tuple[str, ...]] = {
     "vault": ("vault", "unvault", "resurgence"),
     "release": (
         "prime access",
-        "now available",
         "arrives",
         "launch",
         "introducing",
@@ -47,6 +46,19 @@ SIGNAL_GROUPS: dict[str, tuple[str, ...]] = {
     ),
     "drop": ("drop rate", "drop chance", "drop table", "rarity", "refinement"),
     "rework": ("rework", "revisit", "overhaul", "changes to"),
+    # Bulk availability changes: a mod moving into or out of a shop is a supply event
+    # and the largest price mover in a store-update note. Measured before this group
+    # existed, Update 43.5 scored 2 of its 36 real events; see the design doc.
+    # "now available" moved here from "release": it is an availability claim, and a
+    # phrase in two groups would count one piece of evidence twice. "no longer" is
+    # deliberately absent for the same reason, it already scores under "balance".
+    "supply": (
+        "cred offerings",
+        "now available",
+        "permanent addition",
+        "added the following",
+        "rotation",
+    ),
 }
 
 

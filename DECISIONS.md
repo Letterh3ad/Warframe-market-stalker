@@ -1407,16 +1407,26 @@ are exact, so any floor keeps all or none.
 
 **Decision:** `wfm/news/triage.py` scores each candidate's context by how many
 distinct event-signal keyword groups it contains (vault, release, balance, drop,
-rework). Zero-signal candidates are never classified; survivors sort by
+rework, supply). Zero-signal candidates are never classified; survivors sort by
 `(-signal, -score, slug)` and truncate to `news_max_candidates_per_article`
-(default 25). Skips are reported by ingest and `wfm news status`, never silent. The
-recall cost is measured on the real note and recorded in the design doc under
-`## Triage measurement 2026-09-09`; when it goes wrong the fix is a keyword group,
-not a redesign.
+(default 25). Skips are reported by ingest and `wfm news status`, never silent.
 
-**Alternatives:** A bare cap (rejected: with scores tied at 1.0 the gate's order is
+The recall cost is measured on the real note, not assumed, and recorded in the design
+doc under `## Triage measurement 2026-09-09`. The first measurement kept 7 of 56 and
+lost 34 of the article's 36 real events, all of them bulk store-availability changes,
+so the `supply` group was added in this phase rather than deferred: recall 2/36 ->
+19/36, precision 2/7 -> 19/25, 25 model calls instead of 7. This is the plan's
+pre-committed remedy (when recall measures badly the fix is a keyword group, not a
+redesign) and it is now demonstrated rather than asserted. A remaining 16 real events
+are unreachable by any keyword because their stored 200-char context holds no prose;
+that needs a gate context-width change plus a re-ingest and is deferred past plan 3,
+quantified in the design doc.
+
+**Alternatives:** A bare cap (rejected: with scores tied at 1.0 the gate order is
 alphabetical, so it drops real events to keep `Adaptation`). A score floor (rejected:
 cannot discriminate a field of exact matches). Classify everything (rejected: ~56
 calls per big note makes a local backfill a weekend job and a Claude backfill an
 unbudgeted cost). A cheap first-pass model to pre-filter (rejected: a second model to
-tune and benchmark, for a job five keyword groups do).
+tune and benchmark, for a job six keyword groups do). Widening the gate context window
+instead of adding keywords (rejected here: stored contexts mean a re-ingest, which is a
+data decision of its own).

@@ -34,6 +34,26 @@ def test_signal_is_case_insensitive():
     assert signal_strength("MESA PRIME ENTERS THE PRIME VAULT") >= 1
 
 
+def test_a_store_availability_line_carries_supply_signal():
+    # Measured on Update 43.5: the note's biggest price event is a bulk supply change,
+    # and without this group every candidate in it scored zero.
+    assert signal_strength("We've added the following items into the store rotations.") >= 1
+
+
+def test_the_cred_offerings_store_is_itself_a_supply_signal():
+    assert signal_strength("Aura Mods now sold in the Cred Offerings Store.") >= 1
+
+
+def test_supply_is_its_own_group_not_a_rename_of_another():
+    assert "supply" in SIGNAL_GROUPS
+    assert signal_strength("Permanent addition to the store.") == 1
+
+
+def test_a_bare_list_of_mod_names_still_carries_no_signal():
+    # The rest of that section: names with no prose. Keywords cannot reach these.
+    assert signal_strength("Corrosive Projection Dead Eye Dreamer's Bond EMP Aura") == 0
+
+
 def test_zero_signal_candidates_are_never_classified():
     kept, skipped = triage([cand("rage", "Fixed Rage not applying.")], cap=25)
     assert kept == []

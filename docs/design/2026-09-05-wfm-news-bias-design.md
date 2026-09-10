@@ -1087,24 +1087,14 @@ Shockwave", 37280 body chars after `strip_tags`), the 37KB note that produced th
 56-candidate problem. Reproduce: build the lexicon from `items`, run
 `find_candidates(title + "\n\n" + body, lexicon)`, then `triage(candidates, cap=25)`.
 
-| | Candidates |
-|---|---|
-| Gate output | 56 |
-| After the signal filter | 7 |
-| After the cap (25) | 7 |
-
-Signal-group hit counts (over all 56): vault: 1, release: 0, balance: 6, drop: 0,
-rework: 0. The filter is doing all of the work here; the cap never engages, because 7
-survivors are well under 25. So on this note the cost saving is 56 -> 7 calls, an 87%
-reduction.
-
 **The answer key.** Reading the note by hand, 36 of the 56 candidates carry a real,
 tradeable event:
 
 - 27 mods in the "Permanent Cred Offerings" list (19 auras: Corrosive Projection ...
   Steel Charge; 8 warframe mods: Deceptive Bond ... Singularity). The section says they
-  "are now available at all times ... no longer part of the store rotations" — a
-  permanent supply increase, the most price-relevant thing in the whole note.
+  "are now available at all times in the Cred Offerings Store — in other words, they are
+  no longer part of the store rotations": a permanent supply increase, and the most
+  price-relevant thing in the whole note.
 - 4 weapon arcanes added to the rotation under "New Cred Offerings" (Biotic Rounds,
   Leaded Gas, Sentient Surge, Vile Discharge), plus Clip Delegation, whose duplicate was
   removed from that rotation.
@@ -1116,25 +1106,62 @@ The other 20 are bug-fix lines, Nightwave act names that collide with mod names
 and two skin-list mentions whose subject is a skin, not the weapon (`cedo_set`,
 `vesper_77_set`).
 
-**What the filter dropped that it should not have.** 34 of those 36. Only
-`overpressured_rounds` and `efv_5_jupiter_set` survived, and only by luck: their
-context window happened to include "decrease Spread". Everything in the Cred Offerings
-lists was dropped. The event language exists in the article — "The following rewards
-are now available at all times in the Cred Offerings Store ... they are no longer part
-of the store rotations" — but it sits in the section's opening paragraph, and the mods
-are a bare bullet list, so a mid-list entry's 200-character window contains nothing but
-other mod names. Recall on this note is 2/36.
+### As shipped (six groups, with `supply`)
 
-**What this costs.** The cap is not doing the work and would not have fired; the
-keyword filter is the whole mechanism, and on this article it is far too aggressive.
-Two fixes, in order. First, data: a `supply` group (`"now available"`, `"no longer"`,
-`"permanent addition"`, `"cred offerings"`, `"added the following"`, `"rotation"`)
-recovers 18 of the 34 measured against this answer key, and costs nothing structural —
-this is the recommended next change and is exactly the "the fix is a keyword" case the
-module's docstring describes. Second, and only after that: the remaining 16 are
-unreachable by any keyword, because their context window carries no prose at all. That
-is a context-window problem in the gate (`context_chars=200` around a bullet in a
-30-name list), not a triage problem, and it should be argued separately rather than
-patched here. Until both land, the honest statement is that triage buys an 87% call
-reduction on this note at the price of most of its real events, and that a bulk-supply
-note is its worst case rather than its typical one.
+| | Candidates | Real events kept (of 36) |
+|---|---|---|
+| Gate output | 56 | 36 |
+| After the signal filter | 28 | 20 |
+| After the cap (25) | 25 | 19 |
+
+Signal-group hits over all 56: vault 1, release 0, balance 6, drop 0, rework 0,
+**supply 21**. Recall 19/36; precision 19/25 (6 kept candidates are noise:
+`bounty_hunter`, `fury`, `guardian`, `primed_chamber`, `sanctuary`, `vesper_77_set`).
+Cost: 56 -> 25 calls, a 55% reduction.
+
+**The cap now engages**, which it did not before: 28 survivors, 3 truncated. Every
+survivor scores signal 1, so the tie-break decides, and it drops the two lowest gate
+scores first (`kill_switch` 0.90, `secondary_wind` 0.89, both noise) and then the
+alphabetically last of the 1.0s — `vile_discharge`, which is a real event. That is one
+real event lost to the cap rather than the filter, and it is the expected shape of the
+cost: a cap has to cut somewhere, and cutting the alphabetical tail of a tied field is
+arbitrary by construction.
+
+**Real events still dropped: 17.** Sixteen are bare entries in the middle of the
+"Permanent Cred Offerings" bullet list (`deceptive_bond`, `power_of_three`,
+`prism_guard`, `purging_slash`, `purifying_flames`, `recharge_barrier`,
+`rifle_scavenger`, `rumbled`, `shield_disruption`, `shotgun_scavenger`, `singularity`,
+`sniper_scavenger`, `sprint_boost`, `steel_charge`) plus the two new-reward mods
+(`prototype_shock_coils`, `efv_8_mars_set`); the seventeenth is `vile_discharge`, lost
+to the cap above. **No keyword can reach the sixteen**: their 200-character context
+window contains only other mod names, no prose at all. See the known hole below.
+
+### Before `supply` existed (five groups), and why the group exists
+
+The first pass measured the same article with the original five groups: 56 -> **7**
+survivors, the cap never engaging, **recall 2/36** and precision 2/7. Only
+`overpressured_rounds` and `efv_5_jupiter_set` survived, and only because their windows
+happened to contain "decrease Spread"; every candidate in both Cred Offerings lists
+scored zero. An 87% call reduction that loses 34 of 36 real events is not a cost
+control, it is a mute button, and a store-update note is exactly where bulk supply
+events live. The plan pre-committed to the remedy — when recall measures badly the fix
+is data, not architecture — so a sixth `supply` group was added rather than a redesign.
+It moved recall 2/36 -> 19/36 and precision 2/7 -> 19/25, at the price of 18 more model
+calls on this note.
+
+Two group-membership choices worth recording: `"now available"` moved from `release` to
+`supply` (it is an availability claim, and one phrase scoring under two groups would
+count a single piece of evidence twice), and the bare `"no longer"` was deliberately
+not added to `supply` for the same reason — it already scores under `balance`, so it
+costs nothing in recall to leave it there.
+
+### Known hole: context width, deferred past plan 3
+
+16 of the 36 real events on Update 43.5 are unreachable by any keyword, because their
+200-character context window contains no prose — the gate cut them out of the middle of
+a 30-name bullet list. Fixing that means widening or making section-aware
+`find_candidates(context_chars=...)`, which is a gate change, not a triage one: `context`
+is captured and stored at ingest, so the 358 candidates already in the database were all
+cut at the current width and would need a re-ingest to benefit. That is a data change
+and deserves its own argument. Deferred past plan 3, with the number recorded here so it
+does not have to be rediscovered.
