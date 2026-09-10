@@ -87,13 +87,15 @@ def test_the_base_athodai_is_not_matched_when_the_text_says_athodai_prime():
 def test_hotfix_4354_now_reaches_the_frames_it_names():
     title, body = forum_items()[1]
     found = slugs(title, body)
-    # Was `found == set()`. Yareli and Baruuk now resolve through their Prime sets;
-    # Merulina Guardian already did; Daiku is still not in the catalog at all, but the
-    # note does say "Daiku Prime" ("Fixed Daiku and Daiku Prime's animations..."),
-    # which is exactly the case synthesis exists for: an unreleased frame's Prime,
-    # predicted rather than silently dropped.
-    assert {"yareli_prime_set", "baruuk_prime_set"} <= found
-    assert "daiku_prime_set" in found
+    # Was `found == {"daiku_prime_set"}`. Yareli and Baruuk now resolve through their
+    # Prime sets ("Fixed Yareli being unable to..." and "a crash related to Baruuk's
+    # Elude"). Merulina still resolves to nothing: the note only says the bare word
+    # "Merulina" ("...if Merulina had died..."), never "Merulina Guardian", and the
+    # catalog's two-token item name needs both tokens adjacent. Daiku is still not in
+    # the catalog at all, but the note does say "Daiku Prime" ("Fixed Daiku and Daiku
+    # Prime's animations..."), which is exactly the case synthesis exists for: an
+    # unreleased frame's Prime, predicted rather than silently dropped.
+    assert found == {"yareli_prime_set", "baruuk_prime_set", "daiku_prime_set"}
 
 
 def test_the_big_update_note_finds_archon_continuity():

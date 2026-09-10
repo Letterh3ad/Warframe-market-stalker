@@ -296,7 +296,12 @@ def test_a_base_frame_name_resolves_to_its_prime_set():
 
 
 def test_a_frame_with_no_prime_does_not_link():
-    # Guard 1, and it is free: Dagath has no *_prime_set row, so no alias exists.
+    # Guard 1, and it is free: Dagath is a real catalog warframe tagged "warframe",
+    # but her slug is not "..._prime_set" so the alias pass (which only fires on
+    # `<name> prime set`) never registers an alias for her. She still matches as
+    # herself, which is what proves nothing was synthesized: a buggy pass that
+    # fabricated "dagath_prime_set" for any warframe-tagged item would add a second,
+    # wrong candidate here.
     lex = build_lexicon(
         [
             Item(
@@ -305,10 +310,12 @@ def test_a_frame_with_no_prime_does_not_link():
                 url_name="a",
                 tags=("set", "prime", "warframe"),
                 is_set=True,
-            )
+            ),
+            Item(slug="dagath", name="Dagath", url_name="b", tags=("warframe",)),
         ]
     )
-    assert find_candidates("We revisited Dagath's kit.", lex) == []
+    found = find_candidates("We revisited Dagath's kit.", lex)
+    assert {c.slug for c in found} == {"dagath"}
 
 
 def test_a_prime_weapon_set_does_not_register_a_base_alias():
