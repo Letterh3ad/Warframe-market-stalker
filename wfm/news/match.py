@@ -39,6 +39,16 @@ _AMBIGUOUS_SINGLE_TOKENS = frozenset(
     {
         "bite", "bore", "dig", "flow", "fury", "howl", "hunt", "hush",
         "jolt", "maim", "maul", "rage", "rush",
+        # Frame names that are also ordinary English (decision 2, guard 2). These match
+        # only mid-sentence, where a capital carries real proper-noun information.
+        #
+        # The cost is real and asymmetric: patch notes open lines with the subject
+        # ("Ember: fixed ..."), which is sentence-initial and therefore dropped. That is
+        # accepted deliberately: "Frost damage", "Volt shields" and "increased Mag
+        # capacity" are constant in this prose, and matching them everywhere would put
+        # noise into the classifier queue on every single hotfix.
+        "ash", "ember", "frost", "mag", "nova", "volt",
+        "equinox", "harrow", "limbo", "mirage", "trinity",
     }
 )
 
@@ -116,6 +126,18 @@ def build_lexicon(items: Iterable[Item]) -> Lexicon:
         tokens = tuple(t for t, _ in normalize(item.name))
         if len(tokens) > 1 and tokens[-1] == _SET_SUFFIX:
             entries.setdefault(tokens[:-1], (item.slug, item.name))
+
+    # Base warframe names. News prose says "Banshee"; the catalog sells "Banshee
+    # Prime Set". Derived from the catalog rather than a curated roster, which gets
+    # the decision's guard for free: a frame with no Prime has no *_prime_set row, so
+    # it registers no alias and cannot link. Warframes only, weapon base names
+    # ("Braton") carry far more non-Prime meaning and are a separate decision.
+    for item in items:
+        if not item.slug.endswith("_prime_set") or "warframe" not in item.tags:
+            continue
+        tokens = tuple(t for t, _ in normalize(item.name))
+        if len(tokens) == 3 and tokens[1] == _PRIME_TOKEN and tokens[2] == _SET_SUFFIX:
+            entries.setdefault(tokens[:1], (item.slug, item.name))
 
     buckets: dict[str, list[tuple[tuple[str, ...], str, str]]] = {}
     for tokens, (slug, name) in entries.items():

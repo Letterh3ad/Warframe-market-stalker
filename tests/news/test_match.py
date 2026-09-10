@@ -276,3 +276,87 @@ def test_the_context_of_a_synthetic_candidate_is_the_surrounding_sentence():
     lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
     found = find_candidates("Citrine Prime enters the vault on the 20th.", lex)
     assert "vault" in found[0].context
+
+
+def test_a_base_frame_name_resolves_to_its_prime_set():
+    lex = build_lexicon(
+        [
+            Item(
+                slug="banshee_prime_set",
+                name="Banshee Prime Set",
+                url_name="a",
+                tags=("set", "prime", "warframe"),
+                is_set=True,
+            )
+        ]
+    )
+    assert {c.slug for c in find_candidates("We revisited Banshee's kit.", lex)} == {
+        "banshee_prime_set"
+    }
+
+
+def test_a_frame_with_no_prime_does_not_link():
+    # Guard 1, and it is free: Dagath has no *_prime_set row, so no alias exists.
+    lex = build_lexicon(
+        [
+            Item(
+                slug="banshee_prime_set",
+                name="Banshee Prime Set",
+                url_name="a",
+                tags=("set", "prime", "warframe"),
+                is_set=True,
+            )
+        ]
+    )
+    assert find_candidates("We revisited Dagath's kit.", lex) == []
+
+
+def test_a_prime_weapon_set_does_not_register_a_base_alias():
+    # Warframes only. "Braton" has far more non-Prime meanings than "Banshee".
+    lex = build_lexicon(
+        [
+            Item(
+                slug="braton_prime_set",
+                name="Braton Prime Set",
+                url_name="a",
+                tags=("set", "prime", "weapon", "primary"),
+                is_set=True,
+            )
+        ]
+    )
+    assert find_candidates("Braton damage was adjusted.", lex) == []
+
+
+def test_an_english_collision_frame_needs_mid_sentence_position():
+    lex = build_lexicon(
+        [
+            Item(
+                slug="ember_prime_set",
+                name="Ember Prime Set",
+                url_name="a",
+                tags=("set", "prime", "warframe"),
+                is_set=True,
+            )
+        ]
+    )
+    assert find_candidates("Ember damage now scales.", lex) == []
+    assert {c.slug for c in find_candidates("We reworked Ember this update.", lex)} == {
+        "ember_prime_set"
+    }
+
+
+def test_an_explicit_prime_still_beats_the_base_alias():
+    lex = build_lexicon(
+        [
+            Item(
+                slug="banshee_prime_set",
+                name="Banshee Prime Set",
+                url_name="a",
+                tags=("set", "prime", "warframe"),
+                is_set=True,
+            )
+        ]
+    )
+    found = find_candidates("Banshee Prime enters the vault.", lex)
+    assert [c.slug for c in found] == ["banshee_prime_set"]
+    assert found[0].name == "Banshee Prime Set"  # the real entry, not a synthetic one
