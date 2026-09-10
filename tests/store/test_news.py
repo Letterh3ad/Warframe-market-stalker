@@ -150,9 +150,9 @@ def test_mark_records_the_classifier(conn):
 from wfm.news.types import ExtractedEvent, EventType, ItemLink, LinkMethod, NewsDirection
 
 
-def _event(subject="Mesa Prime"):
+def _event(subject="Mesa Prime", event_type=EventType.VAULT_OUT):
     return ExtractedEvent(
-        event_type=EventType.VAULT_OUT,
+        event_type=event_type,
         subject_raw=subject,
         direction=NewsDirection.DOWN,
         strength=0.8,
@@ -475,3 +475,63 @@ def test_known_external_ids_can_be_narrowed_to_one_source(conn):
 
 def test_known_external_ids_is_empty_on_a_fresh_database(conn):
     assert NewsRepo(conn).known_external_ids() == set()
+
+
+def _repo_with_article(conn):
+    repo = NewsRepo(conn)
+    article_id = repo.upsert_article(_article(external_id="a1").hashed(), NOW)
+    return repo, article_id
+
+
+def test_events_for_article_round_trips_ids_and_effective_at(conn):
+    repo, article_id = _repo_with_article(conn)
+    ids = repo.insert_events(article_id, [_event(), _event(event_type=EventType.NERF)])
+    events = repo.events_for_article(article_id)
+    assert [e.id for e in events] == ids
+    assert all(e.article_id == article_id for e in events)
+    assert events[0].effective_at == _event().effective_at
+
+
+def test_events_for_an_unknown_article_is_empty(conn):
+    repo, _ = _repo_with_article(conn)
+    assert repo.events_for_article(999) == []
+
+
+def test_events_with_synthetic_links_finds_only_those(conn):
+    repo, article_id = _repo_with_article(conn)
+    synthetic_id, real_id = repo.insert_events(article_id, [_event(), _event()])
+    repo.insert_links(synthetic_id, [_link("steflos_prime_set", LinkMethod.SYNTHETIC)])
+    repo.insert_links(real_id, [_link("rage", LinkMethod.EXACT)])
+    assert [e.id for e in repo.events_with_synthetic_links()] == [synthetic_id]
+
+
+def test_an_event_is_listed_once_however_many_synthetic_links_it_has(conn):
+    repo, article_id = _repo_with_article(conn)
+    (event_id,) = repo.insert_events(article_id, [_event()])
+    repo.insert_links(
+        event_id,
+        [
+            _link("steflos_prime_set", LinkMethod.SYNTHETIC),
+            _link("corufell_prime_set", LinkMethod.SYNTHETIC),
+        ],
+    )
+    assert len(repo.events_with_synthetic_links()) == 1
+
+
+def test_synthetic_events_respect_the_limit(conn):
+    repo, article_id = _repo_with_article(conn)
+    ids = repo.insert_events(article_id, [_event() for _ in range(5)])
+    for event_id in ids:
+        repo.insert_links(event_id, [_link("x_prime_set", LinkMethod.SYNTHETIC)])
+    assert len(repo.events_with_synthetic_links(limit=2)) == 2
+
+
+def test_count_articles_counts_without_materialising(conn):
+    repo = NewsRepo(conn)
+    first = repo.upsert_article(_article(external_id="a").hashed(), NOW)
+    second = repo.upsert_article(_article(external_id="b").hashed(), NOW)
+    repo.mark(second, ArticleStatus.CLASSIFIED)
+    assert repo.count_articles() == 2
+    assert repo.count_articles(ArticleStatus.PENDING) == 1
+    assert repo.count_articles(ArticleStatus.CLASSIFIED) == 1
+    assert first is not None
