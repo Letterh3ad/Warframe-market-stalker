@@ -26,7 +26,12 @@ from wfm.news.types import (
 
 
 class ClassifierError(RuntimeError):
-    """The backend could not answer. The article is marked failed and retried later."""
+    """The backend could not answer, so the article is marked failed.
+
+    Terminal on this plan: `pending()` selects status='pending' only and nothing
+    resets FAILED back to it, so a failed article re-enters the queue only when it is
+    re-ingested with changed content. A requeue command is 9b work.
+    """
 
 
 class Classifier(Protocol):

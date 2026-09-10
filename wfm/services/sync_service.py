@@ -25,8 +25,10 @@ async def sync(ctx: AppContext, force: bool = False, dry_run: bool = False) -> d
     # catalog only moves here. Gated on "is there work", not on "did the catalog
     # change": a reconciliation that fails after `sync_catalog` already committed its
     # write would otherwise strand a shipped slug until some unrelated future version
-    # bump happened to rescue it. events_with_synthetic_links is one indexed query, so
-    # paying it on every no-op sync -- the common case -- still stays cheap.
+    # bump happened to rescue it. events_with_synthetic_links is an unindexed scan of
+    # news_item_links (m0004 indexes (slug, "rank") and (event_id), not link_method),
+    # which is cheap at this corpus size -- a few hundred links. An index on
+    # link_method is 9b work, along with the migration that would carry it.
     reconciled = (
         news_service.reconcile_synthetic_links(ctx)
         if result.changed or ctx.news.events_with_synthetic_links()

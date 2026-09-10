@@ -57,8 +57,10 @@ class Config:
     # ten, so this covers a full page and the rest wait for the next poll.
     news_max_bodies_per_poll: int = 10
     # "none" until the benchmark (docs/design/2026-09-09-classifier-benchmark.md)
-    # picks a model. "fake" exists for tests and dry runs.
-    news_classifier: str = "none"  # none | ollama | claude | fake
+    # picks a model. No "fake" backend: build_classifier raises on anything outside
+    # news_service.KNOWN_CLASSIFIERS, so a canned backend can only be injected by a
+    # test, never reached from config.
+    news_classifier: str = "none"  # none | ollama | claude
     news_model: str = ""
     news_ollama_url: str = "http://localhost:11434"
     news_claude_model: str = "claude-haiku-4-5"
