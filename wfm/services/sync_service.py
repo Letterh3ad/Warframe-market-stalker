@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from wfm.services import news_service
 from wfm.services.context import AppContext
 from wfm.sync.backfill import backfill_item
 from wfm.sync.catalog import SWEEP_NAME as CATALOG_SWEEP
@@ -20,12 +21,19 @@ async def sync(ctx: AppContext, force: bool = False, dry_run: bool = False) -> d
     result = await sync_catalog(
         ctx.new_client(), ctx.items, ctx.sweep_state, ctx.clock, force=force
     )
+    # A predicted Prime slug becomes real the moment the catalog carries it, and the
+    # catalog only moves here. Gated on `changed` so a no-op sync -- the common case,
+    # several times a day -- stays free.
+    reconciled = (
+        news_service.reconcile_synthetic_links(ctx) if result.changed else None
+    )
     return {
         "dry_run": False,
         "changed": result.changed,
         "version": result.version,
         "item_count": result.item_count,
         "requests_spent": result.requests_spent,
+        "news_reconciled": reconciled,
     }
 
 

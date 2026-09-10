@@ -20,7 +20,14 @@ from wfm.news.sources.forums import ForumsSource
 from wfm.news.sources.reddit import RedditSource
 from wfm.news.sources.warframe_news import WarframeNewsSource
 from wfm.news.triage import triage
-from wfm.news.types import Article, ArticleStatus, Candidate, ClassifyRequest, NewsSource
+from wfm.news.types import (
+    Article,
+    ArticleStatus,
+    Candidate,
+    ClassifyRequest,
+    LinkMethod,
+    NewsSource,
+)
 from wfm.services.context import AppContext
 
 EXCERPT_CANDIDATES = 3
@@ -301,3 +308,44 @@ async def _classify_article(ctx, article, classifier, catalog, summary) -> None:
     )
     summary["articles"] += 1
     summary["events"] += len(events)
+
+
+def reconcile_synthetic_links(ctx: AppContext) -> dict:
+    """Replace predicted Prime slugs with real ones once the catalog carries them.
+
+    No model call: the event is already classified and only its resolution changed,
+    which is exactly what keeping events and links in separate tables buys.
+    """
+    catalog = {item.slug: item for item in ctx.items.all()}
+    result = {"events": 0, "replaced": 0, "still_synthetic": 0}
+
+    for event in ctx.news.events_with_synthetic_links():
+        result["events"] += 1
+        synthetic = [
+            link
+            for link in ctx.news.links_for_event(event.id)
+            if link.link_method is LinkMethod.SYNTHETIC
+        ]
+        if not any(link.slug in catalog for link in synthetic):
+            result["still_synthetic"] += 1
+            continue
+
+        links = []
+        for link in ctx.news.links_for_event(event.id):
+            if link.link_method is not LinkMethod.SYNTHETIC:
+                links.append(link)
+                continue
+            links.extend(
+                build_links(
+                    event.event_type,
+                    event.direction,
+                    link.slug,
+                    event.subject_raw,
+                    link.link_score,
+                    catalog,
+                )
+            )
+        ctx.news.replace_links_for(event.id, links)
+        result["replaced"] += 1
+
+    return result
