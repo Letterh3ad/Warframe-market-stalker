@@ -150,3 +150,39 @@ def test_news_min_interval_from_the_environment_is_a_float(monkeypatch, tmp_path
 def test_news_max_bodies_from_the_environment_is_an_int(monkeypatch, tmp_path):
     monkeypatch.setenv("WFM_NEWS_MAX_BODIES_PER_POLL", "3")
     assert Config.load(tmp_path / "absent.toml").news_max_bodies_per_poll == 3
+
+
+def test_classifier_defaults_are_off_and_conservative():
+    cfg = Config()
+    assert cfg.news_classifier == "none"
+    assert cfg.news_claude_model == "claude-haiku-4-5"
+    assert cfg.news_ollama_url == "http://localhost:11434"
+    assert cfg.news_max_candidates_per_article == 25
+    assert cfg.news_store_raw_json is False
+    assert cfg.news_strength_map == {"minor": 0.3, "moderate": 0.6, "major": 0.9}
+    assert cfg.news_confidence_map == {"low": 0.4, "medium": 0.7, "high": 0.95}
+
+
+def test_label_maps_are_per_instance():
+    # A bare dict default on a frozen dataclass is shared mutable state: two Configs
+    # would edit each other's maps.
+    a, b = Config(), Config()
+    assert a.news_strength_map is not b.news_strength_map
+
+
+def test_env_overrides_the_scalar_classifier_knobs(monkeypatch):
+    monkeypatch.setenv("WFM_NEWS_CLASSIFIER", "ollama")
+    monkeypatch.setenv("WFM_NEWS_MODEL", "qwen3:4b-instruct")
+    monkeypatch.setenv("WFM_NEWS_MAX_CANDIDATES_PER_ARTICLE", "5")
+    monkeypatch.setenv("WFM_NEWS_STORE_RAW_JSON", "true")
+    cfg = Config.load(Path("does-not-exist.toml"))
+    assert cfg.news_classifier == "ollama"
+    assert cfg.news_model == "qwen3:4b-instruct"
+    assert cfg.news_max_candidates_per_article == 5
+    assert cfg.news_store_raw_json is True
+
+
+def test_label_maps_ignore_the_environment(monkeypatch):
+    monkeypatch.setenv("WFM_NEWS_STRENGTH_MAP", "nonsense")
+    cfg = Config.load(Path("does-not-exist.toml"))
+    assert cfg.news_strength_map == {"minor": 0.3, "moderate": 0.6, "major": 0.9}
