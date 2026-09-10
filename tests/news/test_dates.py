@@ -81,3 +81,15 @@ def test_dated_without_a_publish_date_still_parses_an_explicit_year():
 
 def test_dated_without_a_publish_date_cannot_infer_a_year():
     assert resolve_effective_at("dated", "September 20", None) is None
+
+
+def test_immediate_with_naive_publish_date_raises_value_error():
+    naive = datetime(2026, 9, 6, 14, 30)
+    with pytest.raises(ValueError, match="timezone-aware"):
+        resolve_effective_at("immediate", None, naive)
+
+
+def test_dated_with_naive_publish_date_raises_value_error():
+    naive = datetime(2026, 9, 6, 14, 30)
+    with pytest.raises(ValueError, match="timezone-aware"):
+        resolve_effective_at("dated", "September 20", naive)

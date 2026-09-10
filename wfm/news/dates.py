@@ -36,6 +36,10 @@ _DAY_FIRST = re.compile(
 def resolve_effective_at(
     timing: str, date_text: str | None, published_at: datetime | None
 ) -> datetime | None:
+    if published_at is not None and published_at.tzinfo is None:
+        raise ValueError(
+            "published_at must be timezone-aware or None; naive datetime is ambiguous"
+        )
     if timing == "immediate":
         return published_at
     if timing != "dated" or not date_text:
