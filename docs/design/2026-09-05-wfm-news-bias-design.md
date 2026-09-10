@@ -1085,7 +1085,7 @@ Measured on the live 3839-item catalog against the Update 43.5 fixture
 (`tests/fixtures/news/forums_updates.xml`, entry index 2, "Update 43.5: Amir's
 Shockwave", 37280 body chars after `strip_tags`), the 37KB note that produced the
 56-candidate problem. Reproduce: build the lexicon from `items`, run
-`find_candidates(title + "\n\n" + body, lexicon)`, then `triage(candidates, cap=25)`.
+`find_candidates(title + "\n\n" + body, lexicon)`, then `triage(candidates, cap=40)`, the shipped default.
 
 **The answer key.** Reading the note by hand, 36 of the 56 candidates carry a real,
 tradeable event:

@@ -95,6 +95,11 @@ def test_a_cap_of_zero_keeps_nothing_rather_than_everything():
     assert kept == [] and skipped == 1
 
 
+def test_a_negative_cap_keeps_nothing_rather_than_slicing_from_the_end():
+    kept, skipped = triage([cand("a", "enters the vault")], cap=-1)
+    assert kept == [] and skipped == 1
+
+
 def test_no_candidates_is_not_an_error():
     assert triage([], cap=25) == ([], 0)
 
