@@ -59,6 +59,8 @@ def test_a_slug_the_catalog_does_not_sell_is_synthetic():
     ) is LinkMethod.SYNTHETIC
 
 
+# "Mesa" is a subject the gate really emits: the base-alias lexicon entry carries the
+# base name. tests/news/test_gate_link_seam.py pins that end to end.
 def test_a_prime_set_reached_without_the_word_prime_is_a_base_alias():
     assert classify_method(
         "mesa_prime_set", "Mesa", 1.0, CATALOG

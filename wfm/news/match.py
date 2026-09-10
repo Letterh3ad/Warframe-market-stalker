@@ -137,7 +137,12 @@ def build_lexicon(items: Iterable[Item]) -> Lexicon:
             continue
         tokens = tuple(t for t, _ in normalize(item.name))
         if len(tokens) == 3 and tokens[1] == _PRIME_TOKEN and tokens[2] == _SET_SUFFIX:
-            entries.setdefault(tokens[:1], (item.slug, item.name))
+            # The BASE name ("Banshee"), not the catalog row's ("Banshee Prime Set").
+            # This entry only fires when the article wrote the bare frame name, and
+            # that string is what downstream reads as the article's own wording:
+            # link.classify_method decides BASE_ALIAS by the absence of "prime" in it,
+            # and the classifier is shown the subject the article actually named.
+            entries.setdefault(tokens[:1], (item.slug, item.name.split()[0]))
 
     buckets: dict[str, list[tuple[tuple[str, ...], str, str]]] = {}
     for tokens, (slug, name) in entries.items():

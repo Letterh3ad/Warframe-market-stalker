@@ -290,9 +290,11 @@ def test_a_base_frame_name_resolves_to_its_prime_set():
             )
         ]
     )
-    assert {c.slug for c in find_candidates("We revisited Banshee's kit.", lex)} == {
-        "banshee_prime_set"
-    }
+    found = find_candidates("We revisited Banshee's kit.", lex)
+    assert {c.slug for c in found} == {"banshee_prime_set"}
+    # The base name, not the catalog row's "Banshee Prime Set": this string is read
+    # downstream as the article's own wording. See tests/news/test_gate_link_seam.py.
+    assert found[0].name == "Banshee"
 
 
 def test_a_frame_with_no_prime_does_not_link():
