@@ -30,7 +30,7 @@ _EVENT_COLS = (
 _LINKED_EVENT_COLS = (
     'l.slug, l."rank", l.link_method, l.link_score, l.direction, l.weight, '
     "e.event_type, e.strength, e.confidence, e.subject_raw, e.effective_at, "
-    "a.id AS article_id, a.published_at, a.title, a.url, a.excerpt"
+    "a.id AS article_id, a.published_at, a.title, a.url, a.excerpt, a.source"
 )
 
 
@@ -495,6 +495,7 @@ def _to_linked_event(row: sqlite3.Row) -> LinkedEvent:
         article_title=row["title"],
         article_url=row["url"],
         excerpt=row["excerpt"],
+        source=NewsSource(row["source"]),
     )
 
 

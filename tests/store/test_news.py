@@ -640,6 +640,27 @@ def test_count_events_matches_the_filters_it_is_paged_with(conn):
     assert repo.count_events(event_type=EventType.BUFF) == 1
 
 
+def test_events_page_rows_carry_their_own_articles_source(conn):
+    # Catches the join silently picking up the wrong table's `source`-shaped column.
+    repo = NewsRepo(conn)
+    forums_id = repo.upsert_article(
+        _article(external_id="f1", source=NewsSource.FORUMS).hashed(), NOW
+    )
+    news_id = repo.upsert_article(
+        _article(external_id="w1", source=NewsSource.WARFRAME_NEWS).hashed(), NOW
+    )
+    (from_forums,) = repo.insert_events(forums_id, [_event()])
+    (from_news,) = repo.insert_events(news_id, [_event()])
+    repo.insert_links(from_forums, [_link("rage", LinkMethod.EXACT)])
+    repo.insert_links(from_news, [_link("fury", LinkMethod.EXACT)])
+
+    page = repo.events_page(limit=10, offset=0)
+
+    by_slug = {e.slug: e.source for e in page}
+    assert by_slug["rage"] == NewsSource.FORUMS
+    assert by_slug["fury"] == NewsSource.WARFRAME_NEWS
+
+
 def test_an_event_with_no_links_is_not_in_the_feed(conn):
     # The feed is link rows: an event the linker could not resolve has nothing to
     # click through to, and showing it would imply an item connection that failed.

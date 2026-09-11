@@ -392,6 +392,7 @@ def _linked_event_dict(event: LinkedEvent) -> dict:
         "article_id": event.article_id,
         "article_title": event.article_title,
         "article_url": event.article_url,
+        "source": event.source.value,
         "excerpt": event.excerpt,
     }
 

@@ -148,6 +148,7 @@ class LinkedEvent:
     article_id: int
     article_title: str
     article_url: str
+    source: NewsSource
     excerpt: str | None = None
 
 
