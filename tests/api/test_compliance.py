@@ -74,6 +74,14 @@ NEWS_FETCHER = SOURCE_ROOT / "news" / "fetch.py"
 NEWS_OLLAMA = SOURCE_ROOT / "news" / "classify" / "ollama.py"
 
 
+# The Claude classifier constructs anthropic.AsyncAnthropic, which is an HTTP client
+# this test could not otherwise see. Exempt for the same reason as Ollama: api.anthropic.com
+# is a separate upstream with its own limits, so it must not draw on the market budget.
+NEWS_CLAUDE = SOURCE_ROOT / "news" / "classify" / "claude.py"
+
+TRANSPORT_CONSTRUCTORS = ("httpx.AsyncClient(", "requests.", "AsyncAnthropic(")
+
+
 def test_only_the_client_and_discord_sink_construct_an_http_transport():
     offenders = []
     for path in SOURCE_ROOT.rglob("*.py"):
@@ -82,12 +90,20 @@ def test_only_the_client_and_discord_sink_construct_an_http_transport():
             or path == DISCORD_SINK
             or path == NEWS_FETCHER
             or path == NEWS_OLLAMA
+            or path == NEWS_CLAUDE
         ):
             continue
         text = path.read_text(encoding="utf-8")
-        if "httpx.AsyncClient(" in text or "requests." in text:
+        if any(marker in text for marker in TRANSPORT_CONSTRUCTORS):
             offenders.append(str(path))
     assert offenders == []
+
+
+def test_every_exempt_module_still_exists():
+    # An exemption that silently stops matching a moved file is how this test goes
+    # blind: it keeps passing while the rule it encodes stops being checked.
+    for path in (DISCORD_SINK, NEWS_FETCHER, NEWS_OLLAMA, NEWS_CLAUDE):
+        assert path.exists(), path
 
 
 def test_no_write_verb_reaches_the_transport_except_in_the_discord_sink():

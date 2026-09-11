@@ -51,6 +51,10 @@ class StubMessages:
 class StubClient:
     def __init__(self, messages):
         self.messages = messages
+        self.closed = False
+
+    async def close(self):
+        self.closed = True
 
 
 async def test_it_sends_the_schema_as_output_config_and_caches_the_system_prompt():
@@ -108,3 +112,20 @@ def test_importing_the_module_does_not_require_the_sdk():
     # The architecture test imports every module in wfm/news; `anthropic` is an
     # optional extra and is not installed in the dev venv.
     import wfm.news.classify.claude  # noqa: F401
+
+
+async def test_it_closes_the_sdk_client_like_the_ollama_backend_does():
+    # news_service closes a backend it owns behind hasattr(classifier, "aclose"),
+    # so a missing method is a silent leak rather than an error.
+    client = StubClient(StubMessages(Response(json.dumps(ANSWER))))
+    clf = ClaudeClassifier(client=client)
+    async with clf:
+        await clf.classify(REQ)
+    assert client.closed is True
+
+
+async def test_closing_a_client_without_close_is_not_an_error():
+    class Bare:
+        messages = StubMessages(Response(json.dumps(ANSWER)))
+
+    await ClaudeClassifier(client=Bare()).aclose()

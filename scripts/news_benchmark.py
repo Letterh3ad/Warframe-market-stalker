@@ -222,9 +222,12 @@ def cmd_label(args: argparse.Namespace) -> None:
     from wfm.news.classify.claude import ClaudeClassifier
 
     rows = _read_jsonl(args.infile)
-    classifier = ClaudeClassifier(model=args.model)
-    results = asyncio.run(_classify_rows(rows, classifier))
-    _write_jsonl(args.out, results)
+
+    async def go():
+        async with ClaudeClassifier(model=args.model) as clf:
+            return await _classify_rows(rows, clf)
+
+    _write_jsonl(args.out, asyncio.run(go()))
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -238,7 +241,8 @@ def cmd_run(args: argparse.Namespace) -> None:
                 return await _classify_rows(rows, clf)
         from wfm.news.classify.claude import ClaudeClassifier
 
-        return await _classify_rows(rows, ClaudeClassifier(model=args.model))
+        async with ClaudeClassifier(model=args.model) as clf:
+            return await _classify_rows(rows, clf)
 
     results = asyncio.run(go())
     _write_jsonl(args.out, results)

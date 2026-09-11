@@ -48,6 +48,19 @@ class ClaudeClassifier:
             ) from exc
         self._client = anthropic.AsyncAnthropic()
 
+    async def __aenter__(self) -> ClaudeClassifier:
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        # Matching Ollama's shape is not cosmetic: callers close the backend behind
+        # `hasattr(classifier, "aclose")`, so an absent method leaks the client.
+        close = getattr(self._client, "close", None)
+        if close is not None:
+            await close()
+
     async def classify(self, req: ClassifyRequest) -> ClassifyLabels:
         try:
             response = await self._client.messages.create(
