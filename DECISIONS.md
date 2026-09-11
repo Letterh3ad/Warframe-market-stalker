@@ -1538,3 +1538,51 @@ from `daemon_state` instead of a marker file (rejected: the launcher runs before
 anything, and the DB cannot distinguish "stopped on purpose" from "crashed" -- a hard
 kill leaves the status column saying `running`).
 
+
+## 2026-09-11 - The ES-module split ran all at once, in one plan
+
+**Context:** The 2026-09-05 vanilla-vs-Svelte entry recorded the exit condition and named
+the plan; it also said tabs would migrate "one at a time instead of in a single rewrite",
+leaving open how long a half-split state would last. The 1697-line file had tripped its
+own recorded exit condition.
+
+**Decision:** Eleven native ES modules (`lib/` + `tabs/`), no build step, the whole split
+done in this one plan: verbatim moves, one commit per module, cleanup only after the move
+that commit covers. `wfm/gui/static/app.js` went 1497 -> 71 lines.
+
+**Alternatives:** Svelte (rejected again: a build step for one personal dashboard).
+Spreading the split across "one tab at a time" over separate future plans (rejected: the
+two cross-cutting seams, `selectItem` and `selectTab`'s pane teardown, have to be designed
+the moment the first module leaves the file, and a half-split state applies them
+inconsistently for however long the rest takes to land).
+
+## 2026-09-11 - The News tab is an event feed, not an article feed
+
+**Context:** The first real local classifier run labelled 141 events and reported
+`confidence = high` on 133 of them, including rows labelled `other`/`unclear`; no accuracy
+measurement exists yet.
+
+**Decision:** The feed's unit is the link row (`GET /news/events`), so the tab answers "is
+the classifier right?" rather than "what happened this patch". This is also the surface a
+future gold-set labelling pass would use.
+
+**Alternatives:** The article feed the parent spec sketched (`GET /news?limit=&offset=
+&source=` with drill-down), rejected for now but kept reachable at
+`GET /news/articles/{id}`.
+
+## 2026-09-11 - News jobs are single-flight per process, and that is not airtight
+
+**Context:** The daemon tick and the GUI's two buttons run the same ingest/classify work.
+Both read the pending queue before either marks anything, so two overlapping classify
+runs would write every event twice.
+
+**Decision:** One `asyncio.Lock` plus a synchronous reservation in
+`wfm/services/news_jobs.py`, shared because the GUI runs inside the daemon process. The
+reservation (not the lock) is what makes a refusal race-free, since it is set with no
+`await` between the check and the claim.
+
+**Alternatives:** Claiming rows in the database (rejected: a migration for a race that
+needs a second terminal to hit). **The hole is recorded, not fixed:** the lock is
+per-process, so a `wfm news classify` run from a second terminal is outside it; closing
+that needs row claims in the database and therefore a migration, which this branch does
+not do.

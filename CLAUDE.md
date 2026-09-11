@@ -40,6 +40,12 @@ rebase reword).
   answers on its port. `wfm daemon start` writes the marker, `wfm daemon stop` deletes
   it: left running comes back, deliberately stopped stays down, crashed comes back.
   Remove with `Unregister-ScheduledTask -TaskName WFMStalkerAutostart`.
+- The News tab (`http://127.0.0.1:8420`) audits classifier output: it's an event feed,
+  not an article feed, so it answers "is the classifier right?" not "what happened this
+  patch". Its two buttons (refresh, classify) start the same jobs as the hourly tick and
+  take the same per-process lock (`wfm/services/news_jobs.py`).
+- `wfm/gui/static/` is native ES modules (`lib/`, `tabs/`), no build step: edit a file,
+  reload the page.
 - Tests: `.venv/Scripts/python.exe -m pytest -q`. `tests/test_clock.py::test_system_clock_sleeps`
   is a known wall-clock-timing flake; rerun once before treating a failure there as real.
 
