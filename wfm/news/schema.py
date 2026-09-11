@@ -9,10 +9,10 @@ and nothing constrains either of them.
 
 from __future__ import annotations
 
-from wfm.news.types import ClassifyLabels, ClassifyRequest, EventType
+from wfm.news.types import ClassifyLabels, ClassifyRequest, EventType, NewsDirection
 
 EVENT_TYPES = tuple(e.value for e in EventType)
-DIRECTIONS = ("up", "down", "unclear")
+DIRECTIONS = tuple(d.value for d in NewsDirection)
 STRENGTHS = ("minor", "moderate", "major")
 CONFIDENCES = ("low", "medium", "high")
 TIMINGS = ("immediate", "dated", "unknown")
@@ -98,6 +98,10 @@ def build_prompt(req: ClassifyRequest) -> str:
 
 def decode(payload: dict) -> ClassifyLabels:
     """Validate a raw payload into labels, raising ValueError on anything unexpected."""
+    # A JSON array answer would otherwise raise AttributeError from .get, which no
+    # caller catches: one malformed answer would abort a whole backfill.
+    if not isinstance(payload, dict):
+        raise ValueError(f"expected a JSON object, got {type(payload).__name__}")
     for field_name, allowed in _ENUMS.items():
         value = payload.get(field_name)
         if value not in allowed:

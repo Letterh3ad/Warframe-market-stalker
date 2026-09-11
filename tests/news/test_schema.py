@@ -104,3 +104,11 @@ def test_decode_rejects_an_out_of_enum_value(bad):
 def test_decode_rejects_a_missing_field():
     with pytest.raises(ValueError):
         schema.decode({"event_type": "buff"})
+
+
+def test_decode_rejects_a_non_object_payload_as_a_value_error():
+    # A JSON array would reach .get and raise AttributeError, which neither backend
+    # nor the classify loop catches: one bad answer would abort the whole run.
+    for payload in ([], "ok", 3, None):
+        with pytest.raises(ValueError):
+            schema.decode(payload)
