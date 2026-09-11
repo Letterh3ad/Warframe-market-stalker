@@ -19,6 +19,8 @@ goes wrong is a keyword, not a redesign.
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from wfm.news.types import Candidate
 
 SIGNAL_GROUPS: dict[str, tuple[str, ...]] = {
@@ -76,10 +78,23 @@ def signal_strength(context: str) -> int:
     )
 
 
-def triage(candidates: list[Candidate], cap: int) -> tuple[list[Candidate], int]:
-    """(candidates worth classifying, how many were skipped)."""
+class TriageResult(NamedTuple):
+    """The two drop reasons stay apart because they mean opposite things.
+
+    Dropping a candidate for zero signal is the normal case on every article, so a
+    combined count is unactionable. A cap drop means an article carried more
+    event-shaped candidates than the budget allows and real events may have been
+    lost, which is the number worth watching.
+    """
+
+    kept: list[Candidate]
+    no_signal: int
+    capped: int
+
+
+def triage(candidates: list[Candidate], cap: int) -> TriageResult:
     scored = [(signal_strength(c.context), c) for c in candidates]
     survivors = [(signal, c) for signal, c in scored if signal > 0]
     survivors.sort(key=lambda pair: (-pair[0], -pair[1].score, pair[1].slug))
     kept = [c for _, c in survivors[: max(cap, 0)]]
-    return kept, len(candidates) - len(kept)
+    return TriageResult(kept, len(candidates) - len(survivors), len(survivors) - len(kept))

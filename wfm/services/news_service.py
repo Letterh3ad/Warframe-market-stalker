@@ -227,6 +227,10 @@ def _empty_summary(enabled: bool) -> dict:
         "links": 0,
         "failed": 0,
         "candidates_seen": 0,
+        # Skipped means no event-shaped language, the normal case. Capped means the
+        # per-article budget cut candidates that did carry signal, which is the
+        # number that warrants a look.
+        "candidates_capped": 0,
         "candidates_skipped": 0,
         "errors": {},
     }
@@ -254,9 +258,12 @@ async def classify(ctx: AppContext, classifier=None, limit: int | None = None) -
 
 async def _classify_article(ctx, article, classifier, catalog, summary) -> None:
     candidates = ctx.news.candidates_for(article.id)
-    kept, skipped = triage(candidates, ctx.config.news_max_candidates_per_article)
+    kept, no_signal, capped = triage(
+        candidates, ctx.config.news_max_candidates_per_article
+    )
     summary["candidates_seen"] += len(candidates)
-    summary["candidates_skipped"] += skipped
+    summary["candidates_skipped"] += no_signal
+    summary["candidates_capped"] += capped
     now = ctx.clock.utcnow()
 
     events = []

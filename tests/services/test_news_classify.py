@@ -139,6 +139,7 @@ async def test_triage_keeps_a_zero_signal_candidate_out_of_the_model(ctx):
     summary = await news_service.classify(ctx, classifier=fake)
     assert fake.calls == []
     assert summary["candidates_skipped"] == 1
+    assert summary["candidates_capped"] == 0
     # Nothing to classify is not a failure, and it must not be retried forever.
     assert ctx.news.count_articles(ArticleStatus.PENDING) == 0
 
@@ -151,7 +152,9 @@ async def test_the_cap_bounds_the_calls_per_article(conn):
     fake = FakeClassifier(_labels())
     summary = await news_service.classify(ctx, classifier=fake)
     assert len(fake.calls) == 2
-    assert summary["candidates_skipped"] == 3
+    # Cut by the cap, not for lack of signal: these five all carry a balance keyword.
+    assert summary["candidates_skipped"] == 0
+    assert summary["candidates_capped"] == 3
 
 
 async def test_a_dead_backend_fails_the_article_and_writes_nothing(ctx):

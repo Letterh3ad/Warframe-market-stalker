@@ -1144,12 +1144,15 @@ keywords and this is the noise they buy. It is the right trade and it is not fre
 wasted model call costs one call, a missed event is invisible forever, so triage is
 deliberately biased toward keeping. Budget on this article is ~29% noise.
 
-**Reading `skipped` on a store-update note.** Every survivor here scores signal 1, so
-the ordering inside the survivor set is decided by gate score then slug — close to
-alphabetical. That means a non-zero `skipped` on an article of this shape indicates the
-article was *under-read*, not that noise was removed: whatever the cap cut was tied with
-what it kept. Task 13's reporting should treat `skipped > 0` on a store update as a
-flag, not as a success metric.
+**Reading the two drop counts on a store-update note.** `triage` reports them apart,
+and the `classify` summary carries both: `candidates_skipped` (no event-shaped
+language, the normal case on every article) and `candidates_capped` (survivors the
+per-article budget cut). Only the second is a flag. Every survivor here scores signal
+1, so the ordering inside the survivor set is decided by gate score then slug — close
+to alphabetical, which means a non-zero `candidates_capped` on an article of this
+shape says the article was *under-read*: whatever the cap cut was tied with what it
+kept. A non-zero `candidates_skipped` says nothing at all, which is why a combined
+count was unreadable.
 
 **Real events still dropped: 16.** All of them bare entries in the middle of the
 "Permanent Cred Offerings" bullet list (`deceptive_bond`, `power_of_three`,

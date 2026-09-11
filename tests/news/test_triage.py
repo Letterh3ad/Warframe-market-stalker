@@ -55,15 +55,15 @@ def test_a_bare_list_of_mod_names_still_carries_no_signal():
 
 
 def test_zero_signal_candidates_are_never_classified():
-    kept, skipped = triage([cand("rage", "Fixed Rage not applying.")], cap=25)
+    kept, no_signal, capped = triage([cand("rage", "Fixed Rage not applying.")], cap=25)
     assert kept == []
-    assert skipped == 1
+    assert (no_signal, capped) == (1, 0)
 
 
 def test_survivors_sort_by_signal_then_score_then_slug():
     weak = cand("b_weak", "Mesa Prime leaves the vault.")
     strong = cand("a_strong", "Unvaulted: increased drop chance for the relic.")
-    kept, _ = triage([weak, strong], cap=25)
+    kept = triage([weak, strong], cap=25).kept
     assert [c.slug for c in kept] == ["a_strong", "b_weak"]
 
 
@@ -71,37 +71,47 @@ def test_ties_break_on_score_then_slug_so_the_order_is_deterministic():
     a = cand("zzz", "Mesa Prime enters the vault.", score=1.0)
     b = cand("aaa", "Mesa Prime enters the vault.", score=1.0)
     c = cand("mmm", "Mesa Prime enters the vault.", score=0.9)
-    kept, _ = triage([a, b, c], cap=25)
+    kept = triage([a, b, c], cap=25).kept
     assert [x.slug for x in kept] == ["aaa", "zzz", "mmm"]
 
 
 def test_the_cap_truncates_and_reports_what_it_dropped():
     many = [cand(f"s{i:02d}", "Mesa Prime enters the vault.") for i in range(40)]
-    kept, skipped = triage(many, cap=25)
+    kept, no_signal, capped = triage(many, cap=25)
     assert len(kept) == 25
-    assert skipped == 15
+    assert (no_signal, capped) == (0, 15)
 
 
 def test_the_cap_drops_the_weakest_signal_first():
     strong = [cand(f"a{i}", "Unvaulted, with an increased drop chance.") for i in range(3)]
     weak = [cand(f"z{i}", "Mesa Prime returns to the vault.") for i in range(3)]
-    kept, skipped = triage(strong + weak, cap=3)
+    kept, no_signal, capped = triage(strong + weak, cap=3)
     assert {c.slug for c in kept} == {"a0", "a1", "a2"}
-    assert skipped == 3
+    assert (no_signal, capped) == (0, 3)
 
 
 def test_a_cap_of_zero_keeps_nothing_rather_than_everything():
-    kept, skipped = triage([cand("a", "enters the vault")], cap=0)
-    assert kept == [] and skipped == 1
+    kept, no_signal, capped = triage([cand("a", "enters the vault")], cap=0)
+    assert kept == [] and (no_signal, capped) == (0, 1)
 
 
 def test_a_negative_cap_keeps_nothing_rather_than_slicing_from_the_end():
-    kept, skipped = triage([cand("a", "enters the vault")], cap=-1)
-    assert kept == [] and skipped == 1
+    kept, no_signal, capped = triage([cand("a", "enters the vault")], cap=-1)
+    assert kept == [] and (no_signal, capped) == (0, 1)
 
 
 def test_no_candidates_is_not_an_error():
-    assert triage([], cap=25) == ([], 0)
+    assert triage([], cap=25) == ([], 0, 0)
+
+
+def test_a_zero_signal_drop_is_never_reported_as_a_cap_drop():
+    # The two counts answer different questions: a non-zero cap count means real
+    # events may have been lost, which a combined total cannot say.
+    noise = [cand(f"n{i}", "Fixed a typo.") for i in range(5)]
+    real = [cand(f"r{i}", "Enters the vault with an increased drop chance.") for i in range(4)]
+    kept, no_signal, capped = triage(noise + real, cap=2)
+    assert len(kept) == 2
+    assert (no_signal, capped) == (5, 2)
 
 
 @pytest.mark.parametrize("group", SIGNAL_GROUPS)
