@@ -1486,6 +1486,7 @@ document.addEventListener("DOMContentLoaded", () => {
   selectTab("catalog");
   pollDaemon();
   setInterval(pollDaemon, 10000);
+  document.getElementById("error-dismiss").addEventListener("click", clearError);
   window.addEventListener("resize", () => {
     const box = document.getElementById("price-chart");
     if (priceChart && box) priceChart.applyOptions({ width: box.clientWidth });
