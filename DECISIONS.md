@@ -1513,3 +1513,28 @@ queue, budget and breaker state behind a lock for no gain). A daily tick like th
 news failures halt the daemon like price failures do (rejected: it would stop price
 polling for an unrelated upstream's outage). Retrying failures every tick (rejected: a
 permanently-failing article would burn model calls hourly forever).
+
+## 2026-09-11 - Logon autostart for the daemon and Ollama
+
+**Context** The daemon had been dead since 2026-09-07 and nothing noticed; Ollama was
+down too, so the classifier would have failed every article even if the tick had
+existed. Neither survives a reboot on its own, and 9b's clock only runs while both do.
+
+**Decision** A per-user logon scheduled task (`WFMStalkerAutostart`, no elevation)
+runs `scripts/autostart_launcher.py`. The launcher starts the daemon only when the
+`wfm.autostart` marker file exists AND no live process holds the pid file, so a daemon
+left running comes back, one deliberately stopped stays down, and one that crashed
+comes back. `wfm daemon start` writes the marker and `wfm daemon stop` deletes it, so
+the GUI's Stop button clears it too. When the configured classifier is `ollama` and
+nothing answers on its port, the launcher starts `ollama serve` first and waits up to
+30s for it: the first news tick fires on the daemon's first loop iteration, and an
+Ollama that is still loading then costs that tick's articles a failure. The decisions
+live in `wfm/daemon/autostart.py` as pure functions; the script only executes them.
+
+**Alternatives** A Windows service (rejected: needs elevation and a service wrapper for
+a single-user tool). Starting unconditionally at logon (rejected: it would override a
+deliberate stop, which is the one thing an autostart must never do). Reading liveness
+from `daemon_state` instead of a marker file (rejected: the launcher runs before
+anything, and the DB cannot distinguish "stopped on purpose" from "crashed" -- a hard
+kill leaves the status column saying `running`).
+

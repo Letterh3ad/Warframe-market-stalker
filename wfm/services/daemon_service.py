@@ -59,6 +59,11 @@ async def start(
 
     daemon = Daemon(ctx)
     control.write_pid(ctx.config.pid_file, os.getpid())
+    # Written on start and deleted by stop(), so the marker records INTENT, not
+    # liveness: a daemon left running comes back after a reboot, one deliberately
+    # stopped stays down, and one that crashed comes back. The pid file cannot say
+    # this -- start() and the crash both leave it behind.
+    control.set_autostart(ctx.config.pid_file)
     loop = asyncio.get_running_loop()
     for signal_name in ("SIGINT", "SIGTERM"):
         handler = getattr(signal, signal_name, None)
@@ -125,6 +130,9 @@ def stop(ctx: AppContext) -> dict:
         return {"stopped": False, "reason": "no running daemon"}
     if not ctx.daemon_state.request_stop(when=ctx.clock.utcnow()):
         return {"stopped": False, "reason": "no running daemon"}
+    # Before the daemon has even noticed: stopping is a decision about the next boot
+    # too, and the GUI's Stop button goes through here.
+    control.clear_autostart(ctx.config.pid_file)
     return {
         "stopped": True,
         "pid": pid,

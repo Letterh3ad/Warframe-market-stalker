@@ -33,6 +33,13 @@ rebase reword).
   ingest, requeue failures every `news_retry_interval_s`, then classify. News never
   halts the loop; the price side keeps polling through a dead feed or a stopped Ollama.
   `wfm news ingest | classify | retry | relink | status` do the same work by hand.
+- Autostart: a logon scheduled task (`WFMStalkerAutostart`, installed by
+  `scripts/install_autostart.ps1`) runs `scripts/autostart_launcher.py`, which starts
+  the daemon only if the `wfm.autostart` marker exists and no live daemon holds the
+  pid file, and starts Ollama first when the classifier is `ollama` and nothing
+  answers on its port. `wfm daemon start` writes the marker, `wfm daemon stop` deletes
+  it: left running comes back, deliberately stopped stays down, crashed comes back.
+  Remove with `Unregister-ScheduledTask -TaskName WFMStalkerAutostart`.
 - Tests: `.venv/Scripts/python.exe -m pytest -q`. `tests/test_clock.py::test_system_clock_sleeps`
   is a known wall-clock-timing flake; rerun once before treating a failure there as real.
 

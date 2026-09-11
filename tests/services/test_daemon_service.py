@@ -276,3 +276,36 @@ async def test_start_surfaces_a_gui_bind_failure_instead_of_crashing(ctx, monkey
     assert result["started"] is True
     assert "gui_error" in result
     assert "1" in result["gui_error"]
+
+
+# --- the autostart marker: intent, which the pid file cannot express ---
+
+async def test_start_records_the_intent_to_be_running(ctx, monkeypatch):
+    _daily_work_already_done(ctx)
+    _bounded_daemon(monkeypatch)
+
+    await daemon_service.start(ctx)
+
+    # Outlives the run deliberately: the pid file is cleared on exit, and a crash
+    # leaves no trace at all, so only this says "bring it back".
+    assert control.autostart_enabled(ctx.config.pid_file) is True
+
+
+def test_stop_withdraws_that_intent(ctx):
+    control.write_pid(ctx.config.pid_file, os.getpid())
+    control.set_autostart(ctx.config.pid_file)
+    ctx.daemon_state.mark_started(pid=os.getpid(), when=START)
+
+    daemon_service.stop(ctx)
+
+    assert control.autostart_enabled(ctx.config.pid_file) is False
+
+
+def test_a_refused_stop_leaves_the_intent_alone(ctx):
+    # No daemon to stop means no decision was made about the next boot either.
+    control.set_autostart(ctx.config.pid_file)
+    control.write_pid(ctx.config.pid_file, 9_999_999)
+
+    daemon_service.stop(ctx)
+
+    assert control.autostart_enabled(ctx.config.pid_file) is True

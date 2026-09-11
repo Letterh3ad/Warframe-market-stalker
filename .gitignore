@@ -16,3 +16,4 @@ __pycache__/
 *.bak-*
 wfm.toml
 wfm.pid
+wfm.autostart
