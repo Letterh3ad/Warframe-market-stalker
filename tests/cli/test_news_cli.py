@@ -94,6 +94,16 @@ def test_classify_dispatches_to_classify(wired, capsys, monkeypatch):
     assert json.loads(capsys.readouterr().out)["articles"] == 2
 
 
+def test_retry_is_a_mode():
+    assert build_parser().parse_args(["news", "retry"]).news_command == "retry"
+
+
+def test_retry_dispatches_to_the_requeue(wired, capsys, monkeypatch):
+    monkeypatch.setattr(news_service, "retry_failed", lambda ctx: {"requeued": 3})
+    assert main(["--json", "news", "retry"]) == 0
+    assert json.loads(capsys.readouterr().out)["requeued"] == 3
+
+
 def test_relink_dispatches_to_reconcile(wired, capsys, monkeypatch):
     monkeypatch.setattr(
         news_service, "reconcile_synthetic_links",

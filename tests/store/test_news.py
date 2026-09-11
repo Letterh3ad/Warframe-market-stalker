@@ -545,3 +545,32 @@ def test_count_articles_counts_without_materialising(conn):
     assert repo.count_articles(ArticleStatus.PENDING) == 1
     assert repo.count_articles(ArticleStatus.CLASSIFIED) == 1
     assert first is not None
+
+
+def test_requeue_failed_returns_failed_articles_to_the_queue(conn):
+    repo, article_id = _repo_with_article(conn)
+    repo.mark(article_id, ArticleStatus.FAILED, "ollama", "qwen3:4b", when=NOW)
+
+    assert repo.requeue_failed() == 1
+    assert [a.id for a in repo.pending()] == [article_id]
+    # The classifier fields described a classification that never happened.
+    article = repo.recent_articles()[0]
+    assert article.classifier_name is None and article.classifier_version is None
+
+
+def test_requeue_failed_leaves_every_other_status_alone(conn):
+    repo, failed_id = _repo_with_article(conn)
+    repo.mark(failed_id, ArticleStatus.FAILED, when=NOW)
+    classified_id = repo.upsert_article(_article(external_id="a2").hashed(), NOW)
+    repo.mark(classified_id, ArticleStatus.CLASSIFIED, "ollama", "qwen3:4b", when=NOW)
+    no_match_id = repo.upsert_article(_article(external_id="a3").hashed(), NOW)
+    repo.mark(no_match_id, ArticleStatus.NO_MATCH, when=NOW)
+
+    assert repo.requeue_failed() == 1
+    assert repo.count_articles(ArticleStatus.CLASSIFIED) == 1
+    assert repo.count_articles(ArticleStatus.NO_MATCH) == 1
+
+
+def test_requeue_failed_on_a_clean_corpus_is_zero_not_an_error(conn):
+    repo, _ = _repo_with_article(conn)
+    assert repo.requeue_failed() == 0

@@ -117,6 +117,26 @@ class NewsRepo:
                 ),
             )
 
+    def requeue_failed(self) -> int:
+        """FAILED -> PENDING, returning how many moved.
+
+        A classifier failure says nothing about the article: a dead Ollama, a 429 or
+        one unparseable answer fails every article it touches. Without this the only
+        way back into the queue is the source re-publishing changed content, so a
+        five-minute outage silently removes that window's articles from the corpus
+        forever.
+
+        classifier_name/version are cleared with the status: they described a
+        classification that did not happen.
+        """
+        with transaction(self._conn):
+            cursor = self._conn.execute(
+                "UPDATE news_articles SET status=?, classifier_name=NULL, "
+                "classifier_version=NULL, classified_at=NULL WHERE status=?",
+                (ArticleStatus.PENDING.value, ArticleStatus.FAILED.value),
+            )
+            return cursor.rowcount
+
     def insert_candidates(self, article_id: int, candidates: list[Candidate]) -> int:
         """The gate's output: which catalog items this article mentions, and the text
         around each. This is the classifier's input, stored so the pipeline can stay
