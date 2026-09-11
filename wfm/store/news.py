@@ -289,6 +289,12 @@ class NewsRepo:
         )
         return [_to_article(r) for r in rows]
 
+    def article(self, article_id: int) -> Article | None:
+        row = self._conn.execute(
+            f"SELECT {_ARTICLE_COLS} FROM news_articles WHERE id=?", (article_id,)
+        ).fetchone()
+        return _to_article(row) if row else None
+
     def recent_articles(
         self, limit: int = 50, offset: int = 0, source: NewsSource | None = None
     ) -> list[Article]:

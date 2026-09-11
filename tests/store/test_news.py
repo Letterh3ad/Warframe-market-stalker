@@ -487,6 +487,12 @@ def _repo_with_article(conn):
     return repo, article_id
 
 
+def test_article_round_trips_by_id_and_answers_none_for_a_stranger(conn):
+    repo, article_id = _repo_with_article(conn)
+    assert repo.article(article_id).external_id == "a1"
+    assert repo.article(9999) is None
+
+
 def test_events_for_article_round_trips_ids_and_effective_at(conn):
     repo, article_id = _repo_with_article(conn)
     ids = repo.insert_events(article_id, [_event(), _event(event_type=EventType.NERF)])

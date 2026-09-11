@@ -397,6 +397,50 @@ def _linked_event_dict(event: LinkedEvent) -> dict:
     }
 
 
+def article_detail(ctx: AppContext, article_id: int) -> dict | None:
+    """The article plus its classified events and their links, for the article view.
+
+    None when the id is unknown, so the route can turn that into a 404 without
+    reaching into the store itself.
+    """
+    article = ctx.news.article(article_id)
+    if article is None:
+        return None
+    return {
+        "article": {
+            "id": article.id,
+            "source": article.source.value,
+            "title": article.title,
+            "url": article.url,
+            "published_at": article.published_at,
+            "status": article.status.value,
+        },
+        "events": [
+            {
+                "id": event.id,
+                "event_type": event.event_type.value,
+                "subject_raw": event.subject_raw,
+                "direction": event.direction.value,
+                "strength": event.strength,
+                "confidence": event.confidence,
+                "rationale": event.rationale,
+                "effective_at": event.effective_at,
+                "links": [
+                    {
+                        "slug": link.slug,
+                        "rank": link.rank,
+                        "link_method": link.link_method.value,
+                        "weight": link.weight,
+                        "direction": link.direction.value,
+                    }
+                    for link in ctx.news.links_for_event(event.id)
+                ],
+            }
+            for event in ctx.news.events_for_article(article_id)
+        ],
+    }
+
+
 def retry_failed(ctx: AppContext) -> dict:
     """Return failed articles to the pending queue.
 
