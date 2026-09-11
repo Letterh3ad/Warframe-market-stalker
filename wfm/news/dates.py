@@ -52,16 +52,16 @@ def _parse(text: str, published_at: datetime | None) -> datetime | None:
     if iso is not None:
         return _build(int(iso.group(1)), int(iso.group(2)), int(iso.group(3)))
 
-    month_first = _MONTH_FIRST.search(text)
-    if month_first is not None:
+    # Every match, not just the first: "on Update 43 the vault opens September 20"
+    # matches "Update 43" first, and stopping there abandons a real date behind it.
+    for month_first in _MONTH_FIRST.finditer(text):
         month = _MONTHS.get(month_first.group(1).lower())
         if month is not None:
             return _with_year(
                 month, int(month_first.group(2)), month_first.group(3), published_at
             )
 
-    day_first = _DAY_FIRST.search(text)
-    if day_first is not None:
+    for day_first in _DAY_FIRST.finditer(text):
         month = _MONTHS.get(day_first.group(2).lower())
         if month is not None:
             return _with_year(

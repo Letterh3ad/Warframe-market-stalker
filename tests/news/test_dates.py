@@ -93,3 +93,17 @@ def test_dated_with_naive_publish_date_raises_value_error():
     naive = datetime(2026, 9, 6, 14, 30)
     with pytest.raises(ValueError, match="timezone-aware"):
         resolve_effective_at("dated", "September 20", naive)
+
+
+def test_a_non_month_word_before_the_date_does_not_abandon_the_parse():
+    # "Update 43" matches the month-first shape first; stopping at it lost the real
+    # date behind it, which is how a dated event silently became undated.
+    assert resolve_effective_at(
+        "dated", "on Update 43 the vault opens September 20", PUB
+    ) == datetime(2026, 9, 20, tzinfo=timezone.utc)
+
+
+def test_a_non_month_word_before_a_day_first_date_does_not_abandon_the_parse():
+    assert resolve_effective_at(
+        "dated", "Hotfix 43 lands, vault opens 20 September", PUB
+    ) == datetime(2026, 9, 20, tzinfo=timezone.utc)
