@@ -1,13 +1,15 @@
-"""Ingest orchestration: fetch, gate, store. Nothing classifies anything yet.
+"""Ingest, classify, link: the whole news pipeline's orchestration.
 
-The pipeline is asynchronous by design. This service writes articles and the gate's
-candidates; a later plan's classifier reads the pending queue and the stored contexts.
-Article bodies are held only for the length of one loop iteration and are never written.
+The pipeline is asynchronous by design. `ingest` writes articles and the gate's
+candidates; `classify` reads the pending queue and the stored contexts later, so the
+two never have to succeed in the same breath. Article bodies are held only for the
+length of one loop iteration and are never written.
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Callable
 
 from wfm.news.classify.base import ClassifierError, to_event
 from wfm.news.classify.claude import ClaudeClassifier
@@ -236,7 +238,20 @@ def _empty_summary(enabled: bool) -> dict:
     }
 
 
-async def classify(ctx: AppContext, classifier=None, limit: int | None = None) -> dict:
+async def classify(
+    ctx: AppContext,
+    classifier=None,
+    limit: int | None = None,
+    on_progress: Callable[[str, int], None] | None = None,
+) -> dict:
+    """Classify the pending queue, one candidate per model call.
+
+    on_progress runs after each article with its external id and the count so far.
+    The daemon uses it to heartbeat and to notice a stop: a backfill is minutes long,
+    which is indistinguishable from a wedged loop otherwise. It may raise to end the
+    run early; everything already written stays written, because each article is
+    committed as it completes.
+    """
     owned = classifier is None
     if owned:
         classifier = build_classifier(ctx)
@@ -248,8 +263,10 @@ async def classify(ctx: AppContext, classifier=None, limit: int | None = None) -
         # One read, not one per article: the catalog cannot change mid-run.
         catalog = {item.slug: item for item in ctx.items.all()}
         batch = limit if limit is not None else ctx.config.news_classify_batch
-        for article in ctx.news.pending(batch):
+        for done, article in enumerate(ctx.news.pending(batch), start=1):
             await _classify_article(ctx, article, classifier, catalog, summary)
+            if on_progress is not None:
+                on_progress(article.external_id, done)
         return summary
     finally:
         if owned and hasattr(classifier, "aclose"):
@@ -322,6 +339,16 @@ async def _classify_article(ctx, article, classifier, catalog, summary) -> None:
     )
     summary["articles"] += 1
     summary["events"] += len(events)
+
+
+def retry_failed(ctx: AppContext) -> dict:
+    """Return failed articles to the pending queue.
+
+    Failure is terminal without this: `pending()` reads status='pending' only, so an
+    article that failed while the backend was down never gets another look unless the
+    source republishes it with changed content.
+    """
+    return {"requeued": ctx.news.requeue_failed()}
 
 
 def reconcile_synthetic_links(ctx: AppContext) -> dict:

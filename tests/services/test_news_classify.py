@@ -233,3 +233,42 @@ def test_status_reports_the_classifier_and_the_counts(conn):
                                            news_model="qwen3:4b"))
     assert got["classifier"] == "ollama:qwen3:4b"
     assert got["classified"] == 0 and got["failed"] == 0
+
+
+async def test_on_progress_reports_each_article_as_it_completes(ctx):
+    _pending_article_with_candidates(ctx, [("rage", "Rage", 1.0, "Reduced Rage.")])
+    seen = []
+    await news_service.classify(
+        ctx, classifier=FakeClassifier(_labels()), on_progress=lambda eid, n: seen.append((eid, n))
+    )
+    assert [n for _, n in seen] == [1]
+
+
+async def test_a_raising_progress_callback_keeps_what_was_already_written(ctx):
+    # The daemon's callback raises to answer a stop mid-backfill. Each article is
+    # committed as it completes, so the run ends early rather than losing work.
+    _pending_article_with_candidates(ctx, [("rage", "Rage", 1.0, "Reduced Rage.")])
+
+    def stop(external_id, done):
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        await news_service.classify(ctx, classifier=FakeClassifier(_labels()), on_progress=stop)
+    assert ctx.news.count_articles(ArticleStatus.CLASSIFIED) == 1
+
+
+async def test_retry_failed_puts_a_failed_article_back_in_the_queue(ctx):
+    article_id = _pending_article_with_candidates(
+        ctx, [("rage", "Rage", 1.0, "Reduced Rage.")]
+    )
+    fake = FakeClassifier(_labels(), fail_with=ClassifierError("ollama is down"))
+    await news_service.classify(ctx, classifier=fake)
+    assert ctx.news.count_articles(ArticleStatus.FAILED) == 1
+
+    assert news_service.retry_failed(ctx) == {"requeued": 1}
+
+    # And the second attempt, against a live backend, classifies it.
+    summary = await news_service.classify(ctx, classifier=FakeClassifier(_labels()))
+    assert summary["articles"] == 1 and summary["failed"] == 0
+    assert [a.id for a in ctx.news.pending()] == []
+    assert article_id is not None

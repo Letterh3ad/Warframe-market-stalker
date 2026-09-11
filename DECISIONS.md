@@ -1486,3 +1486,30 @@ does fit (rejected: its Modelfile is `TEMPLATE {{ .Prompt }}`, i.e. no chat temp
 `/api/chat` results would be meaningless). Naming no default at all (rejected: a default
 that demonstrably runs is more useful than none while the accuracy question waits, and
 `news_enabled=false` keeps it inert either way).
+
+## 2026-09-11 - The daemon's news tick: interval, retry cadence, and a non-halting catch
+
+**Context** `wfm/daemon/` had zero references to news: build-order step 5 shipped the
+service and the CLI but never the tick, so the corpus only grew when someone typed
+`wfm news ingest`. The daemon had also been dead since 2026-09-07 with nothing
+accumulating, which is what surfaced it. 9b's event study needs ~6 months of parallel
+news and price data, so every day without a tick is a day added to that clock.
+
+**Decision** The tick runs hourly (`news_poll_interval_s = 3600`), inside the existing
+poll loop rather than as a second task, gated on `own_state` like the sweep and the
+digest. It ingests, requeues failed articles every six hours
+(`news_retry_interval_s = 21600`), then classifies. Its catch is deliberately broad
+where the loop's own catch halts the daemon: news is a different upstream with its own
+budget and the classifier is a local process outside the market breaker, so a
+warframe.com 500 or a stopped Ollama costs that tick and nothing else. The interval is
+stamped before the work, so a failing tick waits it out instead of retrying on every
+loop iteration. `classify` gained an `on_progress` callback, which the daemon uses to
+heartbeat and to hear a stop mid-backfill: the same shape `run_sweep` already uses, and
+for the same reason (a 15-minute staleness threshold against a multi-minute run).
+
+**Alternatives** A separate asyncio task (rejected: concurrency is 1, and it would put
+queue, budget and breaker state behind a lock for no gain). A daily tick like the sweep
+(rejected: `mark_daily_done` needs a migration per kind, and news moves hourly). Letting
+news failures halt the daemon like price failures do (rejected: it would stop price
+polling for an unrelated upstream's outage). Retrying failures every tick (rejected: a
+permanently-failing article would burn model calls hourly forever).

@@ -8,6 +8,7 @@ from datetime import date, datetime
 
 from wfm.api.errors import ApiError, CircuitOpen
 from wfm.features import price as price_features
+from wfm.services import news_service
 from wfm.services.alert_service import deliver, operational, run_digest
 from wfm.services.analysis_service import analyze_item_records, signal_payload
 from wfm.services.context import AppContext
@@ -33,6 +34,14 @@ WATCHLIST_REFRESH_S = 60.0
 # whole wait, which is exactly the unclean shutdown the design exists to avoid.
 # Chunking the sleep and re-checking between chunks bounds that to one chunk.
 MAX_SLEEP_CHUNK_S = 10.0
+
+
+class _NewsInterrupted(Exception):
+    """Raised out of the news tick's progress callback when a stop is requested.
+
+    Same reason as _SweepInterrupted: a backfill of the pending queue is minutes of
+    model calls, and a stop must not wait it out.
+    """
 
 
 class _SweepInterrupted(Exception):
@@ -87,6 +96,11 @@ class Daemon:
         )
         self._market = None
         self._last_watchlist_refresh: float | None = None
+        # Monotonic, like _last_watchlist_refresh: a restart re-runs the tick once
+        # immediately, which costs one fetch per source and writes nothing when the
+        # feeds are unchanged.
+        self._last_news_tick: float | None = None
+        self._last_news_retry: float | None = None
 
     def request_stop(self) -> None:
         self._stop.set()
@@ -145,6 +159,12 @@ class Daemon:
                         ctx.daemon_state.mark_daily_done("sweep", now.date())
                         sweeps += 1
 
+                # Gated on own_state for the same reason as the sweep and the
+                # digest: a foreground `wfm scan --once` shares this DB and must not
+                # do the real daemon's corpus work.
+                if self._own_state and ctx.config.news_enabled:
+                    await self._run_news()
+
                 self._maybe_refresh_queue()
                 item = self._queue.pop_due()
                 if item is None:
@@ -157,7 +177,7 @@ class Daemon:
                     await self.poll_once(item)
                     polls += 1
                     self._heartbeat(f"polled {item.slug}")
-            except _SweepInterrupted:
+            except (_SweepInterrupted, _NewsInterrupted):
                 stop_requested = True
                 break
             except CircuitOpen as exc:
@@ -329,6 +349,56 @@ class Daemon:
         # that moves on a daily timescale.
         self._market = market_context(ctx)
         return result
+
+    async def _run_news(self) -> None:
+        """Ingest, requeue failures, classify. Never halts the daemon.
+
+        News is a different upstream with a different budget, and the classifier is a
+        local process outside the market breaker entirely. A warframe.com 500 or a
+        stopped Ollama must cost this tick and nothing else, so the catch here is
+        broad where the loop's own catch halts: the price side is still healthy and
+        must keep polling.
+        """
+        ctx = self._ctx
+        now = ctx.clock.now()
+        if (
+            self._last_news_tick is not None
+            and now - self._last_news_tick < ctx.config.news_poll_interval_s
+        ):
+            return
+        # Stamped before the work, not after: a failing tick waits out the interval
+        # rather than retrying on every iteration of the poll loop.
+        self._last_news_tick = now
+        try:
+            ingested = await news_service.ingest(ctx)
+            self._heartbeat(f"news: {ingested['articles_stored']} new articles")
+            if ctx.config.news_classifier == "none":
+                return
+            if self._news_retry_due(now):
+                self._last_news_retry = now
+                requeued = news_service.retry_failed(ctx)["requeued"]
+                if requeued:
+                    log.info("news: requeued %d failed articles", requeued)
+            summary = await news_service.classify(ctx, on_progress=self._news_progress)
+            self._heartbeat(
+                f"news: {summary['events']} events from {summary['articles']} articles"
+            )
+        except _NewsInterrupted:
+            raise
+        except Exception as exc:
+            log.warning("news tick failed: %s", exc)
+            self._heartbeat(f"news tick failed: {exc}")
+
+    def _news_retry_due(self, now: float) -> bool:
+        return (
+            self._last_news_retry is None
+            or now - self._last_news_retry >= self._ctx.config.news_retry_interval_s
+        )
+
+    def _news_progress(self, external_id: str, done: int) -> None:
+        if self._stop.is_set() or self._ctx.daemon_state.stop_requested():
+            raise _NewsInterrupted
+        self._heartbeat(f"news {done}: {external_id}")
 
     def _maybe_refresh_queue(self) -> None:
         now = self._ctx.clock.now()

@@ -20,6 +20,7 @@ def register(parser) -> None:
     modes.add_parser(
         "relink", help="re-resolve predicted Prime slugs against the current catalog"
     )
+    modes.add_parser("retry", help="return failed articles to the pending queue")
     modes.add_parser("status", help="corpus size, pending count and backend")
     parser.set_defaults(handler=run)
 
@@ -44,6 +45,8 @@ async def run(args) -> int:
             # content, so exiting 0 on a run that classified nothing is how a user
             # finds out weeks later.
             return 1 if summary["failed"] else 0
+        elif args.news_command == "retry":
+            emit(news_service.retry_failed(ctx), args.json)
         elif args.news_command == "relink":
             emit(news_service.reconcile_synthetic_links(ctx), args.json)
         else:

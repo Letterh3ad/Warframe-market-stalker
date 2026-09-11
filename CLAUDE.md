@@ -27,7 +27,12 @@ rebase reword).
   must share the daemon's process so both draw from one rate-limit budget).
 - `wfm daemon stop` sets a DB flag (`daemon_state.status='stopping'`); the loop
   exits on its own. This is the only stop mechanism that works on Windows.
-- `wfm daemon status`.
+- `wfm daemon status`. Read `pid_alive` and `stale`, not `status`: a hard-killed
+  daemon leaves the status column saying `running` forever.
+- The daemon runs a news tick (`news_poll_interval_s`, hourly) when `news_enabled`:
+  ingest, requeue failures every `news_retry_interval_s`, then classify. News never
+  halts the loop; the price side keeps polling through a dead feed or a stopped Ollama.
+  `wfm news ingest | classify | retry | relink | status` do the same work by hand.
 - Tests: `.venv/Scripts/python.exe -m pytest -q`. `tests/test_clock.py::test_system_clock_sleeps`
   is a known wall-clock-timing flake; rerun once before treating a failure there as real.
 
