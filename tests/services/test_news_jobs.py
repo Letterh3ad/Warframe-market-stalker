@@ -145,3 +145,16 @@ async def test_a_failing_job_records_the_error_and_releases_the_lock(ctx, monkey
 
 def test_an_unknown_kind_is_refused_before_anything_starts(ctx):
     assert news_jobs.spawn(ctx, "reticulate")["started"] is False
+
+
+async def test_a_caller_supplied_progress_callback_also_fires(ctx, monkeypatch):
+    seen = []
+
+    async def classify_with_progress(context, on_progress=None):
+        on_progress("news:1", 1)
+        return {"articles": 1, "events": 0}
+
+    monkeypatch.setattr(news_service, "classify", classify_with_progress)
+    await news_jobs.run(ctx, "classify", on_progress=lambda eid, n: seen.append((eid, n)))
+
+    assert seen == [("news:1", 1)]
