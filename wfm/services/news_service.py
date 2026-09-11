@@ -333,6 +333,10 @@ def reconcile_synthetic_links(ctx: AppContext) -> dict:
     catalog = {item.slug: item for item in ctx.items.all()}
     result = {"events": 0, "replaced": 0, "still_synthetic": 0}
 
+    # Every event, not a page: an unresolvable synthetic link is the expected
+    # long-lived state, so a capped query returns the same stuck rows forever and
+    # never reaches newer resolvable ones. Past a few thousand this needs paging by
+    # id, which needs an index on link_method.
     for event in ctx.news.events_with_synthetic_links():
         result["events"] += 1
         current = ctx.news.links_for_event(event.id)

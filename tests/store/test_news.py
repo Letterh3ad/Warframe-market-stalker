@@ -518,6 +518,16 @@ def test_an_event_is_listed_once_however_many_synthetic_links_it_has(conn):
     assert len(repo.events_with_synthetic_links()) == 1
 
 
+def test_synthetic_events_are_unbounded_by_default(conn):
+    # A slug that never ships stays synthetic forever. Under a default page the
+    # stuck rows fill it and every newer event behind them starves.
+    repo, article_id = _repo_with_article(conn)
+    ids = repo.insert_events(article_id, [_event() for _ in range(250)])
+    for event_id in ids:
+        repo.insert_links(event_id, [_link("x_prime_set", LinkMethod.SYNTHETIC)])
+    assert len(repo.events_with_synthetic_links()) == 250
+
+
 def test_synthetic_events_respect_the_limit(conn):
     repo, article_id = _repo_with_article(conn)
     ids = repo.insert_events(article_id, [_event() for _ in range(5)])

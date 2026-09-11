@@ -341,18 +341,27 @@ class NewsRepo:
         )
         return [_to_event(r) for r in rows]
 
-    def events_with_synthetic_links(self, limit: int = 200) -> list[ExtractedEvent]:
+    def events_with_synthetic_links(
+        self, limit: int | None = None
+    ) -> list[ExtractedEvent]:
         """Events still holding a predicted slug, oldest first.
 
         The reconciliation pass on catalog refresh reads this and then calls
         links_for_event to see which slugs to re-resolve. DISTINCT because an event
         can hold several synthetic links and is one unit of work either way.
+
+        Unbounded by default. A slug that never ships is the expected long-lived
+        state, so a default page would fill with permanently stuck rows and starve
+        every newer event behind them.
         """
         rows = self._conn.execute(
             f"SELECT DISTINCT {', '.join('e.' + c for c in _EVENT_COLS.split(', '))} "
             "FROM news_events e JOIN news_item_links l ON l.event_id = e.id "
-            "WHERE l.link_method=? ORDER BY e.id LIMIT ?",
-            (LinkMethod.SYNTHETIC.value, limit),
+            "WHERE l.link_method=? ORDER BY e.id"
+            + ("" if limit is None else " LIMIT ?"),
+            (LinkMethod.SYNTHETIC.value,)
+            if limit is None
+            else (LinkMethod.SYNTHETIC.value, limit),
         )
         return [_to_event(r) for r in rows]
 
