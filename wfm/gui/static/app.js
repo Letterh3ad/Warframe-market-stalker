@@ -7,10 +7,11 @@ import watchlistTab from "./tabs/watchlist.js";
 import ledgerTab from "./tabs/ledger.js";
 import signalsTab, { stopSignalsSocket } from "./tabs/signals.js";
 import groupsTab, { invalidate as invalidateGroups } from "./tabs/groups.js";
+import newsTab from "./tabs/news.js";
 
 // Order here is the order in the rail. Built from the modules themselves, so a tab
 // cannot advertise a label whose render function has drifted away from it.
-const TABS = [catalogTab, watchlistTab, signalsTab, groupsTab, daemonTab, ledgerTab];
+const TABS = [catalogTab, watchlistTab, signalsTab, groupsTab, daemonTab, ledgerTab, newsTab];
 
 let activeTab = null;
 
