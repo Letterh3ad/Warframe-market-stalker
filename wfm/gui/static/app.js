@@ -1,3 +1,5 @@
+import { api } from "./lib/api.js";
+import { el, showError, clearError, humanAge } from "./lib/dom.js";
 
 // --- shared UI state -----------------------------------------------------
 // state.catalog is read by the Catalog tab (below) and the detail pane (Task 7).
@@ -12,56 +14,8 @@ const state = {
 let lastDaemonStatus = null;
 let daemonStopping = false;
 
-// --- fetch helper -----------------------------------------------------------
-// Returns parsed JSON (null for 204). Throws Error on non-2xx, using the
-// backend's {"error": "..."} message when present, else "<status> <statusText>".
-async function api(path, options) {
-  const response = await fetch(path, options);
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    try { const body = await response.json(); if (body.error) message = body.error; }
-    catch (_) { /* non-JSON error body; keep the status line */ }
-    throw new Error(message);
-  }
-  return response.status === 204 ? null : response.json();
-}
 
-// --- error banner ---------------------------------------------------------
-function showError(message) {
-  document.getElementById("error-msg").textContent = message;
-  document.getElementById("error-banner").hidden = false;
-}
-function clearError() {
-  document.getElementById("error-banner").hidden = true;
-  document.getElementById("error-msg").textContent = "";
-}
 
-// --- DOM builder --------------------------------------------------------------
-// el(tag, attrs, ...children). attrs: class/className -> class attr, dataset ->
-// data-* attrs, on* -> event listeners, anything else -> setAttribute.
-// Children: strings become text nodes, nodes appended as-is, nullish skipped.
-function el(tag, attrs, ...children) {
-  const node = document.createElement(tag);
-  if (attrs) {
-    for (const [key, value] of Object.entries(attrs)) {
-      if (value == null) continue;
-      if (key === "class" || key === "className") {
-        node.className = value;
-      } else if (key === "dataset") {
-        for (const [dk, dv] of Object.entries(value)) node.dataset[dk] = dv;
-      } else if (key.startsWith("on") && typeof value === "function") {
-        node.addEventListener(key.slice(2).toLowerCase(), value);
-      } else {
-        node.setAttribute(key, value);
-      }
-    }
-  }
-  for (const child of children) {
-    if (child == null) continue;
-    node.append(typeof child === "string" ? document.createTextNode(child) : child);
-  }
-  return node;
-}
 
 // --- null-honest formatter -------------------------------------------------
 // CONTRACT: fmt ALWAYS returns a STRING (never an Element).
@@ -91,17 +45,6 @@ function detailEmpty() {
   );
 }
 
-// Human staleness for book_age_seconds. null -> "never fetched".
-function humanAge(seconds) {
-  if (seconds == null) return "never fetched";
-  if (seconds < 45) return "just now";
-  const mins = Math.round(seconds / 60);
-  if (mins < 60) return `${mins} ${mins === 1 ? "minute" : "minutes"} old`;
-  const hours = Math.round(seconds / 3600);
-  if (hours < 48) return `${hours} ${hours === 1 ? "hour" : "hours"} old`;
-  const days = Math.round(seconds / 86400);
-  return `${days} ${days === 1 ? "day" : "days"} old`;
-}
 
 // One line per entirely-absent block (from provenance.missing), naming it and the
 // relevant sample counts from provenance.samples. NOT a grid of unavailable rows.
