@@ -1,6 +1,7 @@
 import { api } from "./lib/api.js";
 import { el, showError, clearError, humanAge } from "./lib/dom.js";
 import { fmt, missingLine, statTable, signClass, numTd, statLine } from "./lib/fmt.js";
+import { claimList, isCurrentList } from "./lib/panes.js";
 
 // --- shared UI state -----------------------------------------------------
 // state.catalog is read by the Catalog tab (below) and the detail pane (Task 7).
@@ -376,10 +377,6 @@ function renderDetail(body, ref) {
 
 let catalogDebounce = null;
 let catalogReqSeq = 0;
-// One monotonic counter shared by the simple list loaders (watchlist, ledger,
-// groups): a fast remove-then-refetch can otherwise interleave two responses and
-// paint the older one last.
-let listSeq = 0;
 
 function renderCatalog() {
   const pane = document.getElementById("list-pane");
@@ -501,18 +498,18 @@ function renderWatchlist() {
 async function loadWatchlist() {
   const body = document.getElementById("watchlist-body");
   if (!body) return;
-  const seq = ++listSeq;
+  const seq = claimList();
   body.replaceChildren(el("p", { class: "muted" }, "loading..."));
   let rows;
   try {
     rows = await api("/watchlist");
   } catch (e) {
-    if (seq !== listSeq) return;
+    if (!isCurrentList(seq)) return;
     body.replaceChildren(el("p", { class: "muted" }, "could not load watchlist."));
     showError(e.message);
     return;
   }
-  if (seq !== listSeq) return;
+  if (!isCurrentList(seq)) return;
   paintWatchlist(body, rows || []);
 }
 
@@ -583,7 +580,7 @@ async function loadLedger() {
   const hBox = document.getElementById("ledger-holdings");
   const pBox = document.getElementById("ledger-pnl");
   if (!hBox || !pBox) return;
-  const seq = ++listSeq;
+  const seq = claimList();
   hBox.replaceChildren(el("h2", null, "Holdings"), el("p", { class: "muted" }, "loading..."));
   pBox.replaceChildren(el("h2", null, "P&L"), el("p", { class: "muted" }, "loading..."));
 
@@ -591,14 +588,14 @@ async function loadLedger() {
   try {
     [holdings, pnl] = await Promise.all([api("/ledger/holdings"), api("/ledger/pnl")]);
   } catch (e) {
-    if (seq !== listSeq) return;
+    if (!isCurrentList(seq)) return;
     hBox.replaceChildren(el("h2", null, "Holdings"),
       el("p", { class: "muted" }, "could not load ledger."));
     pBox.replaceChildren();
     showError(e.message);
     return;
   }
-  if (seq !== listSeq) return;
+  if (!isCurrentList(seq)) return;
   const nameMap = {};
   for (const r of holdings || []) nameMap[r.slug] = r.name || r.slug;
   for (const r of (pnl && pnl.open_positions) || []) nameMap[r.slug] = r.name || r.slug;
@@ -893,18 +890,18 @@ function renderGroups() {
 async function loadGroups() {
   const box = document.getElementById("groups-list");
   if (!box) return;
-  const seq = ++listSeq;
+  const seq = claimList();
   box.replaceChildren(el("p", { class: "muted" }, "loading..."));
   let groups;
   try {
     groups = await api("/groups");
   } catch (e) {
-    if (seq !== listSeq) return;
+    if (!isCurrentList(seq)) return;
     box.replaceChildren(el("p", { class: "muted" }, "could not load groups."));
     showError(e.message);
     return;
   }
-  if (seq !== listSeq) return;
+  if (!isCurrentList(seq)) return;
   paintGroups(box, Array.isArray(groups) ? groups : []);
 }
 
