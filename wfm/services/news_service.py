@@ -27,6 +27,8 @@ from wfm.news.types import (
     ArticleStatus,
     Candidate,
     ClassifyRequest,
+    EventType,
+    LinkedEvent,
     LinkMethod,
     NewsSource,
 )
@@ -339,6 +341,59 @@ async def _classify_article(ctx, article, classifier, catalog, summary) -> None:
     )
     summary["articles"] += 1
     summary["events"] += len(events)
+
+
+MAX_EVENTS_PAGE = 200
+
+
+def events_page(
+    ctx: AppContext,
+    limit: int = 50,
+    offset: int = 0,
+    event_type: str | None = None,
+    source: str | None = None,
+) -> dict:
+    """The audit feed, shaped like catalog_service.browse so the GUI pages it the same way.
+
+    Unknown filter values answer an empty page rather than raising: the value comes
+    from a query string a human can edit, and a typo there is not a server error.
+    """
+    limit = max(1, min(int(limit), MAX_EVENTS_PAGE))
+    offset = max(0, int(offset))
+    try:
+        parsed_type = EventType(event_type) if event_type else None
+        parsed_source = NewsSource(source) if source else None
+    except ValueError:
+        return {"total": 0, "limit": limit, "offset": offset, "events": []}
+    return {
+        "total": ctx.news.count_events(parsed_type, parsed_source),
+        "limit": limit,
+        "offset": offset,
+        "events": [
+            _linked_event_dict(e)
+            for e in ctx.news.events_page(limit, offset, parsed_type, parsed_source)
+        ],
+    }
+
+
+def _linked_event_dict(event: LinkedEvent) -> dict:
+    return {
+        "slug": event.slug,
+        "rank": event.rank,
+        "event_type": event.event_type.value,
+        "direction": event.direction.value,
+        "strength": event.strength,
+        "confidence": event.confidence,
+        "weight": event.weight,
+        "link_method": event.link_method.value,
+        "subject_raw": event.subject_raw,
+        "effective_at": event.effective_at,
+        "published_at": event.published_at,
+        "article_id": event.article_id,
+        "article_title": event.article_title,
+        "article_url": event.article_url,
+        "excerpt": event.excerpt,
+    }
 
 
 def retry_failed(ctx: AppContext) -> dict:
