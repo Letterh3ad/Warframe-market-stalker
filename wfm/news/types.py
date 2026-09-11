@@ -56,6 +56,12 @@ class LinkMethod(str, Enum):
     FUZZY = "fuzzy"
     SET_EXPANSION = "set_expansion"
     CURATED = "curated"
+    # The slug is a prediction: an announced Prime the catalog does not sell yet.
+    # Replaced by a real link once `wfm sync` sees the slug appear.
+    SYNTHETIC = "synthetic"
+    # Reached through a base warframe name ("Banshee" -> banshee_prime_set), which
+    # is weaker evidence than the article writing "Banshee Prime".
+    BASE_ALIAS = "base_alias"
 
 
 @dataclass(frozen=True)
@@ -73,6 +79,9 @@ class Article:
     excerpt: str | None = None
     status: ArticleStatus = ArticleStatus.PENDING
     content_hash: str = ""
+    classifier_name: str | None = None
+    classifier_version: str | None = None
+    classified_at: datetime | None = None
     id: int | None = None
 
     def hashed(self) -> Article:
@@ -156,6 +165,40 @@ class Candidate:
     context: str
     start: int
     end: int
+
+
+@dataclass(frozen=True)
+class ClassifyRequest:
+    """One candidate, its surrounding sentences, and the article's publish date.
+
+    One request is one model call. Handing a small model a whole hotfix note and
+    asking for a list of events is hard extraction and it is unreliable at that; the
+    gate already knows which item is named and where, which turns the job into
+    constrained classification of a single subject.
+    """
+
+    subject: str
+    context: str
+    published_at: datetime | None
+
+
+@dataclass(frozen=True)
+class ClassifyLabels:
+    """Exactly what a model is allowed to say. All strings, on purpose.
+
+    Small models cannot produce calibrated probabilities: asked for a 0-to-1
+    confidence a 4B answers 0.8 for almost everything. Asked to pick one of three
+    labels it is reliable. Code maps labels to numbers through config, so retuning
+    that mapping after the backtest reclassifies nothing.
+    """
+
+    event_type: str
+    direction: str
+    strength: str
+    confidence: str
+    timing: str
+    date_text: str | None = None
+    rationale: str | None = None
 
 
 def content_hash(title: str, body: str) -> str:

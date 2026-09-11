@@ -23,12 +23,32 @@ CATALOG = [
     Item(slug="savage_silence", name="Savage Silence", url_name="c"),
     Item(slug="rage", name="Rage", url_name="d"),
     Item(slug="adaptation", name="Adaptation", url_name="e"),
+    # Vectis and Athodai are weapons, not frames, so they carry no "warframe" tag and
+    # register no base alias.
     Item(slug="vectis_prime_set", name="Vectis Prime Set", url_name="f", is_set=True),
     Item(slug="athodai_prime_set", name="Athodai Prime Set", url_name="g", is_set=True),
     Item(slug="athodai_set", name="Athodai Set", url_name="h", is_set=True),
-    Item(slug="banshee_prime_set", name="Banshee Prime Set", url_name="i", is_set=True),
-    Item(slug="baruuk_prime_set", name="Baruuk Prime Set", url_name="j", is_set=True),
-    Item(slug="yareli_prime_set", name="Yareli Prime Set", url_name="k", is_set=True),
+    Item(
+        slug="banshee_prime_set",
+        name="Banshee Prime Set",
+        url_name="i",
+        tags=("set", "prime", "warframe"),
+        is_set=True,
+    ),
+    Item(
+        slug="baruuk_prime_set",
+        name="Baruuk Prime Set",
+        url_name="j",
+        tags=("set", "prime", "warframe"),
+        is_set=True,
+    ),
+    Item(
+        slug="yareli_prime_set",
+        name="Yareli Prime Set",
+        url_name="k",
+        tags=("set", "prime", "warframe"),
+        is_set=True,
+    ),
     Item(slug="steflos_set", name="Steflos Set", url_name="l", is_set=True),
     Item(slug="corufell_set", name="Corufell Set", url_name="m", is_set=True),
 ]
@@ -45,7 +65,7 @@ def slugs(title: str, body: str) -> set[str]:
     return {c.slug for c in find_candidates(f"{title}\n\n{body}", LEXICON)}
 
 
-def test_hotfix_4353_finds_the_prime_variants_it_names():
+def test_hotfix_4353_now_reaches_the_base_frame_names_it_mentions():
     title, body = forum_items()[0]
     found = slugs(title, body)
     # "Athodai Prime's unique trait" and "the Vectis (Prime) not having a fully
@@ -53,10 +73,10 @@ def test_hotfix_4353_finds_the_prime_variants_it_names():
     # really are "vectis prime".
     assert "athodai_prime_set" in found
     assert "vectis_prime_set" in found
-    # Named in the same note but not matched, and this is the honest part: the article
-    # says "Banshee's Silence" and "Hildryn", while the catalog sells "Banshee Prime
-    # Set". Base frames are not tradeable, so news prose and catalog names disagree.
-    assert "banshee_prime_set" not in found
+    # This used to assert `"banshee_prime_set" not in found`, and that miss was the
+    # honest part of plan 2's measurement: the note says "Banshee's Silence" while
+    # the catalog sells "Banshee Prime Set". The base-name alias closes it.
+    assert "banshee_prime_set" in found
 
 
 def test_the_base_athodai_is_not_matched_when_the_text_says_athodai_prime():
@@ -64,13 +84,18 @@ def test_the_base_athodai_is_not_matched_when_the_text_says_athodai_prime():
     assert "athodai_set" not in slugs(title, body)
 
 
-def test_hotfix_4354_names_frames_the_catalog_only_sells_as_primes():
+def test_hotfix_4354_now_reaches_the_frames_it_names():
     title, body = forum_items()[1]
     found = slugs(title, body)
-    # The note names Yareli, Merulina, Baruuk and Daiku. None resolves: the catalog
-    # entries are "Yareli Prime Set", "Baruuk Prime Set" and "Merulina Guardian", and
-    # Daiku is not in the catalog at all.
-    assert found == set()
+    # Was `found == {"daiku_prime_set"}`. Yareli and Baruuk now resolve through their
+    # Prime sets ("Fixed Yareli being unable to..." and "a crash related to Baruuk's
+    # Elude"). Merulina still resolves to nothing: the note only says the bare word
+    # "Merulina" ("...if Merulina had died..."), never "Merulina Guardian", and the
+    # catalog's two-token item name needs both tokens adjacent. Daiku is still not in
+    # the catalog at all, but the note does say "Daiku Prime" ("Fixed Daiku and Daiku
+    # Prime's animations..."), which is exactly the case synthesis exists for: an
+    # unreleased frame's Prime, predicted rather than silently dropped.
+    assert found == {"yareli_prime_set", "baruuk_prime_set", "daiku_prime_set"}
 
 
 def test_the_big_update_note_finds_archon_continuity():
@@ -85,20 +110,21 @@ def test_a_reddit_workshop_finds_the_augment_mods_it_names():
     assert "savage_silence" in slugs(banshee.title, strip_tags(banshee.body_html))
 
 
-def test_a_prime_access_announcement_links_nothing_because_the_items_are_unreleased():
+def test_a_prime_access_announcement_predicts_the_slugs_it_announces():
     from wfm.news.html import extract_element_text
 
     html = (FIXTURES / "warframe_article.html").read_text(encoding="utf-8")
     body = extract_element_text(html, "post-body")
     found = slugs("Citrine Prime Access", body)
 
-    # The single most important measured result in this plan. The article is about
-    # Citrine Prime, Steflos Prime and Corufell Prime. None of the three is in the
-    # catalog on announcement day, because none has been released. Before the
-    # trailing-Prime guard the gate answered {steflos_set, corufell_set}, linking a
-    # Prime Access event to the BASE weapons, which move differently and arguably in
-    # the opposite direction. Empty is the correct answer, and the gap is real.
-    assert found == set()
+    # This assertion used to be `found == set()`, and that emptiness was the single
+    # most important measured result of plan 2: none of the three announced items is
+    # in the catalog on announcement day, and the gate's earlier answer
+    # ({steflos_set, corufell_set}) attached the event to the BASE weapons, which
+    # move in the opposite direction. Silence was better than that. Predicting the
+    # set slug is better than silence: the event and its date get recorded, and the
+    # reconciliation pass on `wfm sync` replaces the guess once the real slug ships.
+    assert found == {"citrine_prime_set", "steflos_prime_set", "corufell_prime_set"}
 
 
 def test_an_empty_body_matches_nothing_and_does_not_raise():

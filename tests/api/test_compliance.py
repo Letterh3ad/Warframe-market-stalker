@@ -69,26 +69,53 @@ DISCORD_SINK = SOURCE_ROOT / "alerts" / "discord.py"
 # budget per upstream prevents the market budget from being corrupted.
 NEWS_FETCHER = SOURCE_ROOT / "news" / "fetch.py"
 
+# The Ollama classifier talks to localhost only, so it needs its own transport too:
+# it touches no upstream budget at all, market or otherwise.
+NEWS_OLLAMA = SOURCE_ROOT / "news" / "classify" / "ollama.py"
+
+
+# The Claude classifier constructs anthropic.AsyncAnthropic, which is an HTTP client
+# this test could not otherwise see. Exempt for the same reason as Ollama: api.anthropic.com
+# is a separate upstream with its own limits, so it must not draw on the market budget.
+NEWS_CLAUDE = SOURCE_ROOT / "news" / "classify" / "claude.py"
+
+TRANSPORT_CONSTRUCTORS = ("httpx.AsyncClient(", "requests.", "AsyncAnthropic(")
+
 
 def test_only_the_client_and_discord_sink_construct_an_http_transport():
     offenders = []
     for path in SOURCE_ROOT.rglob("*.py"):
-        if path.name == "client.py" or path == DISCORD_SINK or path == NEWS_FETCHER:
+        if (
+            path.name == "client.py"
+            or path == DISCORD_SINK
+            or path == NEWS_FETCHER
+            or path == NEWS_OLLAMA
+            or path == NEWS_CLAUDE
+        ):
             continue
         text = path.read_text(encoding="utf-8")
-        if "httpx.AsyncClient(" in text or "requests." in text:
+        if any(marker in text for marker in TRANSPORT_CONSTRUCTORS):
             offenders.append(str(path))
     assert offenders == []
+
+
+def test_every_exempt_module_still_exists():
+    # An exemption that silently stops matching a moved file is how this test goes
+    # blind: it keeps passing while the rule it encodes stops being checked.
+    for path in (DISCORD_SINK, NEWS_FETCHER, NEWS_OLLAMA, NEWS_CLAUDE):
+        assert path.exists(), path
 
 
 def test_no_write_verb_reaches_the_transport_except_in_the_discord_sink():
     # Matched against the transport rather than the bare verb, so that a cache put or
     # a dict pop cannot be mistaken for an HTTP write. Narrowed, not deleted: the
-    # Discord sink is exempt and pinned down separately.
+    # Discord sink is exempt and pinned down separately. The Ollama classifier is
+    # exempt too: /api/chat is a POST by Ollama's own design, and localhost is not
+    # warframe.market's budget to protect.
     pattern = re.compile(r"(?:_http|httpx|requests|session|client)\.(?:post|put|patch|delete)\(")
     offenders = []
     for path in SOURCE_ROOT.rglob("*.py"):
-        if path == DISCORD_SINK:
+        if path == DISCORD_SINK or path == NEWS_OLLAMA:
             continue
         for match in pattern.finditer(path.read_text(encoding="utf-8")):
             offenders.append(f"{path}: {match.group(0)}")

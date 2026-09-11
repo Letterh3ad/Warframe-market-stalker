@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from wfm.services import news_service
 from wfm.services.context import AppContext
 from wfm.sync.backfill import backfill_item
 from wfm.sync.catalog import SWEEP_NAME as CATALOG_SWEEP
@@ -20,12 +21,26 @@ async def sync(ctx: AppContext, force: bool = False, dry_run: bool = False) -> d
     result = await sync_catalog(
         ctx.new_client(), ctx.items, ctx.sweep_state, ctx.clock, force=force
     )
+    # A predicted Prime slug becomes real the moment the catalog carries it, and the
+    # catalog only moves here. Gated on "is there work", not on "did the catalog
+    # change": a reconciliation that fails after `sync_catalog` already committed its
+    # write would otherwise strand a shipped slug until some unrelated future version
+    # bump happened to rescue it. events_with_synthetic_links is an unindexed scan of
+    # news_item_links (m0004 indexes (slug, "rank") and (event_id), not link_method),
+    # which is cheap at this corpus size -- a few hundred links. An index on
+    # link_method is 9b work, along with the migration that would carry it.
+    reconciled = (
+        news_service.reconcile_synthetic_links(ctx)
+        if result.changed or ctx.news.events_with_synthetic_links()
+        else None
+    )
     return {
         "dry_run": False,
         "changed": result.changed,
         "version": result.version,
         "item_count": result.item_count,
         "requests_spent": result.requests_spent,
+        "news_reconciled": reconciled,
     }
 
 

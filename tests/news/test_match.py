@@ -1,5 +1,5 @@
 from wfm.models import Item
-from wfm.news.match import build_lexicon, normalize
+from wfm.news.match import SYNTHETIC_SCORE, build_lexicon, normalize
 
 CATALOG = [
     Item(slug="mesa_prime_set", name="Mesa Prime Set", url_name="mesa_prime_set", is_set=True),
@@ -180,11 +180,17 @@ def test_a_base_item_does_not_match_when_the_text_says_prime():
     # Verified against the live catalog: on announcement day "Steflos Prime" is not in
     # the catalog and "Steflos Set" is, so without this guard a Prime Access article
     # links to the base weapon, which moves differently from the Prime.
+    #
+    # The guard's intent is unchanged: the base slug must never appear. What changed is
+    # that the answer is no longer empty — synthesis (added after this guard) now
+    # predicts steflos_prime_set instead of reporting nothing, so the assertion checks
+    # the base slug's absence rather than an empty result.
     lexicon = build_lexicon(
         [Item(slug="steflos_set", name="Steflos Set", url_name="steflos_set", is_set=True)]
     )
     text = "Steflos Prime enters Prime Access on September 23."
-    assert find_candidates(text, lexicon) == []
+    found = {c.slug for c in find_candidates(text, lexicon)}
+    assert "steflos_set" not in found
 
 
 def test_a_prime_entry_still_matches_text_that_says_prime():
@@ -217,3 +223,186 @@ def test_the_guard_looks_at_the_next_token_not_the_rest_of_the_sentence():
     )
     (found,) = find_candidates("The Steflos is cheaper than any Prime shotgun.", lexicon)
     assert found.slug == "steflos_set"
+
+
+def test_an_announced_prime_weapon_gets_a_predicted_set_slug():
+    lex = build_lexicon([Item(slug="steflos_set", name="Steflos Set", url_name="a", is_set=True)])
+    found = {c.slug: c for c in find_candidates("The Steflos Prime arrives soon.", lex)}
+    assert "steflos_prime_set" in found
+    assert "steflos_set" not in found
+    assert found["steflos_prime_set"].name == "Steflos Prime"
+    assert found["steflos_prime_set"].score == SYNTHETIC_SCORE
+
+
+def test_a_released_prime_is_matched_normally_not_synthesised():
+    lex = build_lexicon(
+        [
+            Item(slug="mesa_prime_set", name="Mesa Prime Set", url_name="a", is_set=True),
+            Item(slug="mesa_set", name="Mesa Set", url_name="b", is_set=True),
+        ]
+    )
+    found = {c.slug for c in find_candidates("Mesa Prime enters the vault.", lex)}
+    assert found == {"mesa_prime_set"}
+
+
+def test_a_multi_token_base_predicts_a_multi_token_slug():
+    lex = build_lexicon(
+        [Item(slug="dual_keres_set", name="Dual Keres Set", url_name="a", is_set=True)]
+    )
+    found = {c.slug for c in find_candidates("Dual Keres Prime is coming.", lex)}
+    assert found == {"dual_keres_prime_set"}
+
+
+def test_a_name_absent_from_the_catalog_still_predicts_a_slug():
+    # The frame case: Citrine has no Prime, so decision 2 registers no alias for it,
+    # and the base frame is not tradeable so it is not in the catalog either.
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = {c.slug for c in find_candidates("Citrine Prime Access is live.", lex)}
+    assert found == {"citrine_prime_set"}
+
+
+def test_a_lowercase_word_before_prime_predicts_nothing():
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    assert find_candidates("cheaper than any prime shotgun", lex) == []
+
+
+def test_prime_access_as_a_brand_is_not_read_as_an_item():
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = {c.slug for c in find_candidates("Warframe Prime Access returns.", lex)}
+    assert found == set()
+
+
+def test_the_context_of_a_synthetic_candidate_is_the_surrounding_sentence():
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = find_candidates("Citrine Prime enters the vault on the 20th.", lex)
+    assert "vault" in found[0].context
+
+
+def test_a_base_frame_name_resolves_to_its_prime_set():
+    lex = build_lexicon(
+        [
+            Item(
+                slug="banshee_prime_set",
+                name="Banshee Prime Set",
+                url_name="a",
+                tags=("set", "prime", "warframe"),
+                is_set=True,
+            )
+        ]
+    )
+    found = find_candidates("We revisited Banshee's kit.", lex)
+    assert {c.slug for c in found} == {"banshee_prime_set"}
+    # The base name, not the catalog row's "Banshee Prime Set": this string is read
+    # downstream as the article's own wording. See tests/news/test_gate_link_seam.py.
+    assert found[0].name == "Banshee"
+
+
+def test_a_frame_with_no_prime_does_not_link():
+    # Guard 1, and it is free: Dagath is a real catalog warframe tagged "warframe",
+    # but her slug is not "..._prime_set" so the alias pass (which only fires on
+    # `<name> prime set`) never registers an alias for her. She still matches as
+    # herself, which is what proves nothing was synthesized: a buggy pass that
+    # fabricated "dagath_prime_set" for any warframe-tagged item would add a second,
+    # wrong candidate here.
+    lex = build_lexicon(
+        [
+            Item(
+                slug="banshee_prime_set",
+                name="Banshee Prime Set",
+                url_name="a",
+                tags=("set", "prime", "warframe"),
+                is_set=True,
+            ),
+            Item(slug="dagath", name="Dagath", url_name="b", tags=("warframe",)),
+        ]
+    )
+    found = find_candidates("We revisited Dagath's kit.", lex)
+    assert {c.slug for c in found} == {"dagath"}
+
+
+def test_a_prime_weapon_set_does_not_register_a_base_alias():
+    # Warframes only. "Braton" has far more non-Prime meanings than "Banshee".
+    lex = build_lexicon(
+        [
+            Item(
+                slug="braton_prime_set",
+                name="Braton Prime Set",
+                url_name="a",
+                tags=("set", "prime", "weapon", "primary"),
+                is_set=True,
+            )
+        ]
+    )
+    assert find_candidates("Braton damage was adjusted.", lex) == []
+
+
+def test_an_english_collision_frame_needs_mid_sentence_position():
+    lex = build_lexicon(
+        [
+            Item(
+                slug="ember_prime_set",
+                name="Ember Prime Set",
+                url_name="a",
+                tags=("set", "prime", "warframe"),
+                is_set=True,
+            )
+        ]
+    )
+    assert find_candidates("Ember damage now scales.", lex) == []
+    assert {c.slug for c in find_candidates("We reworked Ember this update.", lex)} == {
+        "ember_prime_set"
+    }
+
+
+def test_an_explicit_prime_still_beats_the_base_alias():
+    lex = build_lexicon(
+        [
+            Item(
+                slug="banshee_prime_set",
+                name="Banshee Prime Set",
+                url_name="a",
+                tags=("set", "prime", "warframe"),
+                is_set=True,
+            )
+        ]
+    )
+    found = find_candidates("Banshee Prime enters the vault.", lex)
+    assert [c.slug for c in found] == ["banshee_prime_set"]
+    assert found[0].name == "Banshee Prime Set"  # the real entry, not a synthetic one
+
+
+def test_a_cosmetic_phrase_does_not_synthesize():
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = find_candidates("Sphatika Prime Syandana looks great.", lex)
+    assert found == []
+
+
+def test_suppression_is_per_occurrence_not_per_name():
+    # Load-bearing: the two-token cosmetic-noun lookahead only stays safe if it
+    # suppresses the one occurrence next to a cosmetic noun, not the name everywhere.
+    # A clean mention of the same name elsewhere must still synthesize.
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = {
+        c.slug
+        for c in find_candidates(
+            "Sphatika Prime Syandana looks great. Sphatika Prime arrives next week.", lex
+        )
+    }
+    assert found == {"sphatika_prime_set"}
+
+
+def test_the_cosmetic_noun_lookahead_does_not_cross_a_sentence_boundary():
+    # Regression: "Citrine Prime." is a clean, standalone sentence. A stop-word
+    # starting the NEXT sentence must not suppress synthesis just because it falls
+    # within the two-token lookahead window.
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = {c.slug for c in find_candidates("Citrine Prime. Bundle deals available soon.", lex)}
+    assert found == {"citrine_prime_set"}
+
+
+def test_the_adjacency_guard_alone_blocks_a_pack_list():
+    lex = build_lexicon([Item(slug="rage", name="Rage", url_name="a")])
+    found = find_candidates(
+        "Select from the Weapons, Prime, Complete and Accessories Packs.", lex
+    )
+    assert found == []

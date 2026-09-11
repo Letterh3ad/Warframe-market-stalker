@@ -1348,3 +1348,141 @@ the line makes a latent requirement explicit. The rule stands for everything els
 minimal tz table (rejected: a hand-maintained DST table is exactly what `zoneinfo` +
 `tzdata` exists to stop anyone writing). The `platform_system == 'Windows'` marker keeps
 `tzdata` off Linux/macOS, where adding it would shadow the system database.
+
+## 2026-09-08 - Prime Access announcements synthesize a set-level future slug
+
+**Context:** The fuzzy gate cannot see a Prime Access announcement's subject: DE names
+"Steflos Prime" / "Corufell Prime", none of which exist in the warframe.market catalog
+until release day. After the Task 7 trailing-`Prime` guard the gate correctly produces no
+candidate rather than attaching the event to the base weapon. But `prime_access` is the
+event type the design leans on hardest, so the classifier queue structurally excludes its
+highest-signal event on announcement day.
+
+**Decision:** On `"<Name> Prime"` with no catalog hit, the gate emits a candidate carrying
+a predicted **set** slug (`steflos_prime_set`: lowercase, spaces to underscores, `_set`
+suffix). `link_method = 'synthetic'`, `role = set` by construction → `prime_access`
+direction `down`, weight 1.0. If the real slug already exists, link normally instead. A
+reconciliation pass on `refresh-items` re-runs linkage for events still holding a
+synthetic link; once the real slug appears it is replaced and set-expanded to parts and
+relics. If the slug has not appeared within ~30 days of a known release the News tab shows
+the event unresolved. Set level only: part slugs are not predictable enough to guess, and
+the 9b event study only needs the set.
+
+**Alternatives:** Accept the gap for v1 (rejected: guts the top event class for six
+months, though 9b linkage could resolve it retroactively). Predict part/relic slugs too
+(rejected: barrel/receiver/stock, blade/handle etc. are not reliably derivable). A
+hand-maintained unreleased-items catalog (rejected: a manual data file to keep current,
+out of scope for 9a).
+
+## 2026-09-08 - Base warframe names alias to the Prime set
+
+**Context:** News prose says "Banshee", "Yareli", "Baruuk"; the catalog sells "Banshee
+Prime Set". A rework or buff/nerf to a base frame is a real market event for the Prime
+set, but the gate misses it unless the article writes "Prime". Recall on frame-subject
+articles is near zero.
+
+**Decision:** Add every base warframe name to the gate lexicon aliased to
+`<name>_prime_set`. The alias resolves only if that slug exists in the catalog (frames
+with no Prime do not link; no synthesis, since a base frame has no release date to
+reconcile against). The existing single-token discriminator applies unchanged, and the
+English-collision names (`Ember`, `Frost`, `Volt`, `Mag`, `Nova`, `Ash`, plus any a
+catalog pass finds) join `_AMBIGUOUS_SINGLE_TOKENS` so they also require non-sentence-
+initial position. `link_method = 'base_alias'`, weight ~0.9. Precision on non-event
+mentions is the classifier's job (`sign = 0` for a non-event `event_type`); the gate
+stays recall-first. Warframes only: weapon base names are far more ambiguous and are a
+separate decision.
+
+**Alternatives:** No extra guard, rely only on capitalization (rejected: "Frost"/"Volt"
+are constant in patch prose as element/ability words). Context-gated aliasing on a nearby
+rework/buff keyword (rejected: new mechanism in a deliberately pure gate, duplicates the
+classifier, still misses trigger-free phrasing). Accept near-zero recall for v1
+(rejected: frame reworks are frequent and highly tradeable).
+
+## 2026-09-09 - Per-article candidate triage, then a hard cap
+
+**Context:** Per-candidate prompting turns one 37KB update note into 56 model calls.
+The gate measurement flagged the cost and left the control to this plan. A score
+floor cannot serve: the gate scores exact token matches 1.0 and effectively all 56
+are exact, so any floor keeps all or none.
+
+**Decision:** `wfm/news/triage.py` scores each candidate's context by how many
+distinct event-signal keyword groups it contains (vault, release, balance, drop,
+rework, supply). Zero-signal candidates are never classified; survivors sort by
+`(-signal, -score, slug)` and truncate to `news_max_candidates_per_article`
+(default 40). Skips are reported by ingest and `wfm news status`, never silent.
+
+The recall cost is measured on the real note, not assumed, and recorded in the design
+doc under `## Triage measurement 2026-09-09`. The first measurement kept 7 of 56 and
+lost 34 of the article's 36 real events, all of them bulk store-availability changes,
+so the `supply` group was added in this phase rather than deferred: recall 2/36 ->
+20/36, precision 2/7 -> 20/28, 28 model calls instead of 7. This is the plan's
+pre-committed remedy (when recall measures badly the fix is a keyword group, not a
+redesign) and it is now demonstrated rather than asserted. A remaining 16 real events
+are unreachable by any keyword because their stored 200-char context holds no prose;
+that needs a gate context-width change plus a re-ingest and is deferred past plan 3,
+quantified in the design doc.
+
+The cap is 40, not the 25 the plan first named. 25 predated any measurement; the largest
+real article leaves 28 survivors, and at 25 the cap cut three of them, one a real event
+(`vile_discharge`) lost to an alphabetical tie-break among candidates all tied at signal
+1. That is the arbitrary N-of-M choice a cap-only design was rejected for. 40 sits above
+the corpus maximum, so the cap is a backstop against a pathological article and triage
+does the filtering, which is what the plan intended. The measured precision cost of the
+broader keywords is recorded too: 8 of the 28 kept candidates on that article carry no
+event.
+
+**Alternatives:** A bare cap (rejected: with scores tied at 1.0 the gate order is
+alphabetical, so it drops real events to keep `Adaptation`). A score floor (rejected:
+cannot discriminate a field of exact matches). Classify everything (rejected: ~56
+calls per big note makes a local backfill a weekend job and a Claude backfill an
+unbudgeted cost). A cheap first-pass model to pre-filter (rejected: a second model to
+tune and benchmark, for a job six keyword groups do). Widening the gate context window
+instead of adding keywords (rejected here: stored contexts mean a re-ingest, which is a
+data decision of its own).
+
+## 2026-09-10 - qwen3:4b-instruct-2507-q8_0 is the provisional news classifier, on operational grounds only
+
+**Context:** Task 17 was specified as a measured model choice: build a gold set with
+`claude-opus-5`, hand-correct it, score every candidate backend against it. The user
+declined the API spend and asked for local models only. That removes the ruler.
+**There is therefore no accuracy measurement of any kind for this classifier, and this
+decision is not a validated comparison.** It is the answer to a narrower question:
+which model can actually run this job on an 8GB RTX 5060 Laptop.
+
+**Decision:** `news_classifier = "ollama"`, `news_model = "qwen3:4b-instruct-2507-q8_0"`
+as the *provisional operational default*. The tag was confirmed by an actual `ollama
+pull`, not from memory. Measured over 50 candidates sampled from the 358 stored in
+`wfm_market.db` (read-only), it loads 100% on GPU at 5.0 GB, returns schema-valid output
+that `decode()` accepts on 50 of 50 calls, averages 2.12 s per call over two passes, and
+is byte-for-byte reproducible at `temperature: 0`. At that rate the largest real article
+(28 candidates after triage) costs ~59 s and the whole stored corpus ~12.6 minutes, so a
+local backfill is neither an overnight nor a weekend job.
+
+**None of that says a single label is correct.** The one prompt-compliance defect that
+*is* checkable without a ruler is recorded: 37 of 50 answers put an ISO date in
+`date_text` copied from the article's `Published:` header, 0 of 37 quoted from the
+article, against a prompt that says never to compute a date. It degrades to
+`published_at`, which is the safe side, but the forward-dated pathway never fired.
+Confidence is `high` on 45 of 50 answers, which is the small-model overconfidence the
+label-not-float design anticipated; whether it is misplaced is unknowable here.
+
+Numbers, method and reproduction steps: `docs/design/2026-09-09-classifier-benchmark.md`.
+`news_enabled` stays `false` until the 9b backtest; nothing in plan 3 moves a bias or a
+Signal. Settings live in the user's gitignored `wfm.toml`, not in the repo.
+
+**To validate this later** the gold set is required: `news_benchmark.py label` over the
+same `gold_input.jsonl`, hand-corrected, then `score`. Because this backend is
+deterministic the local output file from this session can be scored as-is; only the
+Claude labelling half remains to be paid for. Until that exists, do not call this a
+chosen model.
+
+**Alternatives:** The full benchmark with an Opus-labelled gold set (rejected by the
+user: API spend). `claude-haiku-4-5` as the production backend, which the spec proposed
+(not evaluated at all — it needs the API). `gemma4:12b` as a ceiling check (rejected: it
+exists locally but is 8.9 GB resident and `ollama ps` shows a 33%/67% CPU/GPU spill, so
+it does not fit and benchmarking it would measure the wrong machine). The 30B/32B local
+library (rejected: 18-19 GB, same reason). `general-heretic:latest`, a 4B Q8 qwen3 that
+does fit (rejected: its Modelfile is `TEMPLATE {{ .Prompt }}`, i.e. no chat template, so
+`/api/chat` results would be meaningless). Naming no default at all (rejected: a default
+that demonstrably runs is more useful than none while the accuracy question waits, and
+`news_enabled=false` keeps it inert either way).

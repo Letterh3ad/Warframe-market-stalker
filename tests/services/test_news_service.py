@@ -158,8 +158,11 @@ def test_status_reports_the_corpus(ctx):
         "enabled": True,
         "sources": ["warframe_news", "forums"],
         "unknown_sources": [],
+        "classifier": "none",
         "articles": 0,
         "pending": 0,
+        "classified": 0,
+        "failed": 0,
     }
 
 
@@ -190,3 +193,27 @@ async def test_status_counts_what_ingest_stored(ctx):
     reported = news_service.status(ctx)
     assert reported["articles"] == 1
     assert reported["pending"] == 1
+
+
+def test_status_reports_the_model_of_the_configured_backend(conn):
+    # news_model is the Ollama tag and survives a switch to claude, so reporting the
+    # first truthy of the two names a model the run will never call.
+    ctx = AppContext(
+        Config(
+            news_classifier="claude",
+            news_model="qwen3:4b-instruct-2507-q8_0",
+            news_claude_model="claude-haiku-4-5",
+        ),
+        conn=conn,
+        clock=FakeClock(NOW),
+    )
+    assert news_service.status(ctx)["classifier"] == "claude:claude-haiku-4-5"
+
+
+def test_status_reports_the_ollama_tag_under_the_ollama_backend(conn):
+    ctx = AppContext(
+        Config(news_classifier="ollama", news_model="qwen3:4b"),
+        conn=conn,
+        clock=FakeClock(NOW),
+    )
+    assert news_service.status(ctx)["classifier"] == "ollama:qwen3:4b"

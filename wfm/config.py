@@ -14,6 +14,10 @@ CONTACT_URL = "https://github.com/Faye/Warframe-market-stalker"
 
 _ENV_PREFIX = "WFM_"
 
+# Fields with no sensible one-line env encoding. Without this they fall through to
+# the int() branch and a stray env var raises instead of being ignored.
+_TOML_ONLY = ("news_strength_map", "news_confidence_map")
+
 
 @dataclass(frozen=True)
 class Config:
@@ -52,6 +56,30 @@ class Config:
     # warframe.com is the only source needing a request per article. The listing holds
     # ten, so this covers a full page and the rest wait for the next poll.
     news_max_bodies_per_poll: int = 10
+    # "none" until the benchmark (docs/design/2026-09-09-classifier-benchmark.md)
+    # picks a model. No "fake" backend: build_classifier raises on anything outside
+    # news_service.KNOWN_CLASSIFIERS, so a canned backend can only be injected by a
+    # test, never reached from config.
+    news_classifier: str = "none"  # none | ollama | claude
+    news_model: str = ""
+    news_ollama_url: str = "http://localhost:11434"
+    news_claude_model: str = "claude-haiku-4-5"
+    news_classify_batch: int = 25
+    # A backstop against a pathological article, not a second filter: triage does the
+    # filtering. 40 because the largest article in the corpus (Update 43.5, 56
+    # candidates) leaves 28 survivors, and at 25 the cap was cutting real events out of
+    # a field tied at signal 1. See wfm/news/triage.py and the design doc's
+    # "Triage measurement 2026-09-09".
+    news_max_candidates_per_article: int = 40
+    news_store_raw_json: bool = False
+    # Label -> number. Retunable from the backtest with no reclassification, which is
+    # the whole reason the model is never asked for a float.
+    news_strength_map: dict = field(
+        default_factory=lambda: {"minor": 0.3, "moderate": 0.6, "major": 0.9}
+    )
+    news_confidence_map: dict = field(
+        default_factory=lambda: {"low": 0.4, "medium": 0.7, "high": 0.95}
+    )
     analyzers: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -91,6 +119,8 @@ class Config:
             raw = os.environ.get(_ENV_PREFIX + name.upper())
             if raw is None:
                 continue
+            if name in _TOML_ONLY:
+                continue
             if name in ("db_path", "pid_file"):
                 out[name] = Path(raw)
             elif name in (
@@ -106,9 +136,18 @@ class Config:
                 "news_min_interval_s",
             ):
                 out[name] = float(raw)
-            elif name in ("crossplay", "persist_features", "news_enabled"):
+            elif name in ("crossplay", "persist_features", "news_enabled", "news_store_raw_json"):
                 out[name] = raw.strip().lower() in ("1", "true", "yes")
-            elif name in ("platform", "language", "discord_webhook_url", "gui_host"):
+            elif name in (
+                "platform",
+                "language",
+                "discord_webhook_url",
+                "gui_host",
+                "news_classifier",
+                "news_model",
+                "news_ollama_url",
+                "news_claude_model",
+            ):
                 out[name] = raw
             elif name == "news_sources":
                 out[name] = tuple(p.strip() for p in raw.split(",") if p.strip())

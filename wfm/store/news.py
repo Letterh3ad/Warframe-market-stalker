@@ -22,6 +22,11 @@ _ARTICLE_COLS = (
     "excerpt, status, classifier_name, classifier_version, classified_at"
 )
 
+_EVENT_COLS = (
+    "id, article_id, event_type, subject_raw, direction, strength, confidence, "
+    "rationale, effective_at, raw_json"
+)
+
 
 class NewsRepo:
     def __init__(self, conn: sqlite3.Connection) -> None:
@@ -329,6 +334,46 @@ class NewsRepo:
         )
         return [_to_linked_event(r) for r in rows]
 
+    def events_for_article(self, article_id: int) -> list[ExtractedEvent]:
+        rows = self._conn.execute(
+            f"SELECT {_EVENT_COLS} FROM news_events WHERE article_id=? ORDER BY id",
+            (article_id,),
+        )
+        return [_to_event(r) for r in rows]
+
+    def events_with_synthetic_links(
+        self, limit: int | None = None
+    ) -> list[ExtractedEvent]:
+        """Events still holding a predicted slug, oldest first.
+
+        The reconciliation pass on catalog refresh reads this and then calls
+        links_for_event to see which slugs to re-resolve. DISTINCT because an event
+        can hold several synthetic links and is one unit of work either way.
+
+        Unbounded by default. A slug that never ships is the expected long-lived
+        state, so a default page would fill with permanently stuck rows and starve
+        every newer event behind them.
+        """
+        rows = self._conn.execute(
+            f"SELECT DISTINCT {', '.join('e.' + c for c in _EVENT_COLS.split(', '))} "
+            "FROM news_events e JOIN news_item_links l ON l.event_id = e.id "
+            "WHERE l.link_method=? ORDER BY e.id"
+            + ("" if limit is None else " LIMIT ?"),
+            (LinkMethod.SYNTHETIC.value,)
+            if limit is None
+            else (LinkMethod.SYNTHETIC.value, limit),
+        )
+        return [_to_event(r) for r in rows]
+
+    def count_articles(self, status: ArticleStatus | None = None) -> int:
+        if status is None:
+            row = self._conn.execute("SELECT COUNT(*) FROM news_articles").fetchone()
+        else:
+            row = self._conn.execute(
+                "SELECT COUNT(*) FROM news_articles WHERE status=?", (status.value,)
+            ).fetchone()
+        return int(row[0])
+
 
 def _to_article(row: sqlite3.Row) -> Article:
     return Article(
@@ -343,6 +388,13 @@ def _to_article(row: sqlite3.Row) -> Article:
         excerpt=row["excerpt"],
         status=ArticleStatus(row["status"]),
         content_hash=row["content_hash"],
+        classifier_name=row["classifier_name"],
+        classifier_version=row["classifier_version"],
+        classified_at=(
+            datetime.fromisoformat(row["classified_at"])
+            if row["classified_at"]
+            else None
+        ),
     )
 
 
@@ -367,4 +419,19 @@ def _to_linked_event(row: sqlite3.Row) -> LinkedEvent:
         article_title=row["title"],
         article_url=row["url"],
         excerpt=row["excerpt"],
+    )
+
+
+def _to_event(row: sqlite3.Row) -> ExtractedEvent:
+    return ExtractedEvent(
+        id=row["id"],
+        article_id=row["article_id"],
+        event_type=EventType(row["event_type"]),
+        subject_raw=row["subject_raw"],
+        direction=NewsDirection(row["direction"]),
+        strength=row["strength"],
+        confidence=row["confidence"],
+        rationale=row["rationale"],
+        effective_at=datetime.fromisoformat(row["effective_at"]) if row["effective_at"] else None,
+        raw_json=row["raw_json"],
     )

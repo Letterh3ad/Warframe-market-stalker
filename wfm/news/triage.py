@@ -1,0 +1,100 @@
+"""Which candidates are worth a model call.
+
+Per-candidate prompting turned one 37KB update note into 56 candidates, i.e. 56 model
+calls, most of them for bug-fix lines that mention a mod in passing. A score floor
+cannot help: the gate scores an exact token match 1.0 and essentially all 56 are
+exact, so any floor either keeps everything or nothing. The discriminator has to be
+the context, not the score.
+
+Two stages. Candidates whose context shows no event-shaped language are dropped
+outright; survivors are ordered by how much evidence they carry and truncated to a
+hard cap, so a pathological article cannot spend an unbounded budget. The cap alone
+would be worse than useless: with scores tied at 1.0 the gate's own order is
+alphabetical, so a bare cap drops real events to keep Adaptation.
+
+The cost is recall on real events phrased without any keyword here. That cost is
+measured in the design doc (## Triage measurement 2026-09-09), and the fix when it
+goes wrong is a keyword, not a redesign.
+"""
+
+from __future__ import annotations
+
+from typing import NamedTuple
+
+from wfm.news.types import Candidate
+
+SIGNAL_GROUPS: dict[str, tuple[str, ...]] = {
+    "vault": ("vault", "unvault", "resurgence"),
+    "release": (
+        "prime access",
+        "arrives",
+        "launch",
+        "introducing",
+        "released",
+        "release",
+    ),
+    "balance": (
+        "increase",
+        "decrease",
+        "reduced",
+        "buff",
+        "nerf",
+        "adjust",
+        "rebalance",
+        "improved",
+        "no longer",
+        "now deals",
+        "now grants",
+    ),
+    "drop": ("drop rate", "drop chance", "drop table", "rarity", "refinement"),
+    "rework": ("rework", "revisit", "overhaul", "changes to"),
+    # Bulk availability changes: a mod moving into or out of a shop is a supply event
+    # and the largest price mover in a store-update note. Measured before this group
+    # existed, Update 43.5 scored 2 of its 36 real events; see the design doc.
+    # "now available" moved here from "release": it is an availability claim, and a
+    # phrase in two groups would count one piece of evidence twice. "no longer" is
+    # deliberately absent for the same reason, it already scores under "balance".
+    "supply": (
+        "cred offerings",
+        "now available",
+        "permanent addition",
+        "added the following",
+        "rotation",
+    ),
+}
+
+
+def signal_strength(context: str) -> int:
+    """How many distinct kinds of event evidence the context shows.
+
+    Distinct groups, not occurrences: three vault words is still one kind of
+    evidence, and counting hits would rank a repetitive sentence above a
+    corroborated one.
+    """
+    lowered = context.lower()
+    return sum(
+        any(keyword in lowered for keyword in keywords)
+        for keywords in SIGNAL_GROUPS.values()
+    )
+
+
+class TriageResult(NamedTuple):
+    """The two drop reasons stay apart because they mean opposite things.
+
+    Dropping a candidate for zero signal is the normal case on every article, so a
+    combined count is unactionable. A cap drop means an article carried more
+    event-shaped candidates than the budget allows and real events may have been
+    lost, which is the number worth watching.
+    """
+
+    kept: list[Candidate]
+    no_signal: int
+    capped: int
+
+
+def triage(candidates: list[Candidate], cap: int) -> TriageResult:
+    scored = [(signal_strength(c.context), c) for c in candidates]
+    survivors = [(signal, c) for signal, c in scored if signal > 0]
+    survivors.sort(key=lambda pair: (-pair[0], -pair[1].score, pair[1].slug))
+    kept = [c for _, c in survivors[: max(cap, 0)]]
+    return TriageResult(kept, len(candidates) - len(survivors), len(survivors) - len(kept))

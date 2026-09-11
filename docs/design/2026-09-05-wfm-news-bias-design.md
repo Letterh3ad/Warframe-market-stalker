@@ -1029,3 +1029,166 @@ over the captured fixtures against the live 3839-item catalog.
 3. **One update note produced 56 candidates.** Per-candidate prompting means a big
    hotfix note is ~56 model calls. The classifier plan needs a per-article cap or a
    score floor; the cost belongs where it is spent, so it is not capped here.
+
+## Gate decisions 2026-09-08
+
+Findings 1 and 2 above are now decided (user, 2026-09-08). Finding 3 stays with plan 3.
+
+### 1. Prime Access announcements: synthesize a set-level future slug
+
+On seeing `"<Name> Prime"` with no catalog hit, the gate emits a candidate carrying the
+**predicted set slug** (`"Steflos Prime"` → `steflos_prime_set`: lowercase, spaces to
+underscores, append `_set`). That candidate existing is also what pulls the article into
+the classifier queue, so the `prime_access` event and its `date_text` are recorded even
+if the slug guess later proves wrong.
+
+- **Set level only.** Part slugs are not predictable (barrel/receiver/stock, blade/handle,
+  blueprint/chassis/neuroptics/systems, and DE's market names occasionally differ). The
+  set is one clean prediction and it is all the 9b event study needs.
+- **`link_method = 'synthetic'`.** Direction cannot come from `Item.tags` (no catalog
+  row), so synthetic links assume `role = set` (true by construction) → `prime_access`
+  row → `down`, weight 1.0.
+- **Check before synthesizing.** If `<name>_prime_set` already exists (Prime released
+  between announcement and ingest), link normally instead.
+- **Two guards against non-item "<Name> Prime" text.** Punctuation between the name and
+  "Prime" means a list, not a name (`"Weapons, Prime, Complete and Accessories Packs"`).
+  A cosmetic/bundle noun in either of the two tokens after "Prime"
+  (`NEVER_PRIME_FOLLOWED_BY`: syandana, decoration, accessory, earpiece, …) means the
+  thing named is a cosmetic slot, not a tradeable set (`"Spinele Prime Facial
+  Accessory"`). That noun list is **maintained data, not a heuristic** — DE adds new
+  cosmetic slot types over time, and each new one surfaces as a synthesized slug that
+  never resolves until its noun is added here.
+- **Reconciliation pass.** On catalog refresh (`refresh-items`), re-run linkage for any
+  event still holding a synthetic link. Once the real slug exists, replace the synthetic
+  link with a real one and run normal set-expansion to parts and relics. This is the
+  design's re-runnable linkage (`replace_links_for`) with a trigger.
+- **Staleness flag.** If the slug has not appeared within ~30 days of a known release, the
+  News tab shows the event as unresolved rather than trusting the guess indefinitely.
+
+**Plan 3 must check** whether `news_candidates` / `news_item_links` carry a FK to
+`items(slug)` in `m0004`. A synthetic slug would violate it; if so, drop the FK or add a
+nullable `is_synthetic` flag.
+
+### 2. Base warframe names: alias to the Prime set, reusing the single-token discriminator
+
+Add every base warframe name to the lexicon, aliased to `<name>_prime_set`.
+
+- **Guard 1: alias resolves only if `<name>_prime_set` exists in the catalog.** Frames
+  with no Prime yet (Dagath, Qorvex, Kullervo, …) simply do not link. No synthesis here,
+  unlike decision 1: a base frame has no announced release date to reconcile against.
+- **Guard 2: the existing single-token rule applies unchanged.** The English-collision
+  names (`Ember`, `Frost`, `Volt`, `Mag`, `Nova`, `Ash`, plus any a catalog pass turns
+  up) join `_AMBIGUOUS_SINGLE_TOKENS`, so they also require non-sentence-initial position.
+- **`link_method = 'base_alias'`, weight ≈ 0.9** (a bare name is weaker evidence than an
+  explicit "Banshee Prime").
+- Precision on non-event mentions ("Frost damage was adjusted") is the classifier's job:
+  such a mention gets an `event_type` that yields `sign = 0`. The gate stays recall-first.
+
+**Scope: warframes only.** Weapons ("Braton" → Braton Prime) have far more non-Prime
+entries and worse ambiguity; a separate decision if the corpus later shows it matters.
+
+## Triage measurement 2026-09-09
+
+Measured on the live 3839-item catalog against the Update 43.5 fixture
+(`tests/fixtures/news/forums_updates.xml`, entry index 2, "Update 43.5: Amir's
+Shockwave", 37280 body chars after `strip_tags`), the 37KB note that produced the
+56-candidate problem. Reproduce: build the lexicon from `items`, run
+`find_candidates(title + "\n\n" + body, lexicon)`, then `triage(candidates, cap=40)`, the shipped default.
+
+**The answer key.** Reading the note by hand, 36 of the 56 candidates carry a real,
+tradeable event:
+
+- 27 mods in the "Permanent Cred Offerings" list (19 auras: Corrosive Projection ...
+  Steel Charge; 8 warframe mods: Deceptive Bond ... Singularity). The section says they
+  "are now available at all times in the Cred Offerings Store — in other words, they are
+  no longer part of the store rotations": a permanent supply increase, and the most
+  price-relevant thing in the whole note.
+- 4 weapon arcanes added to the rotation under "New Cred Offerings" (Biotic Rounds,
+  Leaded Gas, Sentient Surge, Vile Discharge), plus Clip Delegation, whose duplicate was
+  removed from that rotation.
+- 4 newly introduced reward mods (Prototype Shock Coils / EFV-8 Mars, Overpressured
+  Rounds / EFV-5 Jupiter).
+
+The other 20 are bug-fix lines, Nightwave act names that collide with mod names
+(`fury`, `guardian`, `sanctuary`, `bounty_hunter`, `howl`, `hunt`, `reach`, `twitch`),
+and two skin-list mentions whose subject is a skin, not the weapon (`cedo_set`,
+`vesper_77_set`).
+
+### As shipped (six groups, cap 40)
+
+| | Candidates | Real events kept (of 36) |
+|---|---|---|
+| Gate output | 56 | 36 |
+| After the signal filter | 28 | 20 |
+| After the cap (40) | 28 | 20 |
+
+Signal-group hits over all 56: vault 1, release 0, balance 6, drop 0, rework 0,
+**supply 21**. Recall 20/36; precision 20/28. Cost: 56 -> 28 calls, a 50% reduction.
+
+**The cap does not engage**, which is the intent: triage does the filtering and the cap
+is a backstop against a pathological article. It is 40, not the 25 the plan first named,
+because 25 was chosen before anyone had run the filter over a real article and the
+largest article in the corpus leaves 28 survivors. At 25 the cap was measured cutting
+three of them, and because every survivor scores signal 1 the tie-break decided which:
+the two lowest gate scores (`kill_switch` 0.90, `secondary_wind` 0.89, both noise) and
+then the alphabetically last of the tied 1.0s, `vile_discharge` — a real event, lost to
+alphabetical order. That is precisely the arbitrary N-of-M choice the plan rejected when
+it refused a cap-only design. 40 restores the plan's stated intent, a ceiling rather
+than a guillotine.
+
+**The precision cost, stated plainly.** 8 of the 28 kept candidates (29%) carry no
+event: `bounty_hunter`, `fury`, `guardian`, `primed_chamber`, `sanctuary`, `kill_switch`,
+`secondary_wind`, `vesper_77_set` — Nightwave act names that collide with mod names,
+bug-fix lines, and one skin-list mention. `"rotation"` and `"cred offerings"` are broad
+keywords and this is the noise they buy. It is the right trade and it is not free: a
+wasted model call costs one call, a missed event is invisible forever, so triage is
+deliberately biased toward keeping. Budget on this article is ~29% noise.
+
+**Reading the two drop counts on a store-update note.** `triage` reports them apart,
+and the `classify` summary carries both: `candidates_skipped` (no event-shaped
+language, the normal case on every article) and `candidates_capped` (survivors the
+per-article budget cut). Only the second is a flag. Every survivor here scores signal
+1, so the ordering inside the survivor set is decided by gate score then slug — close
+to alphabetical, which means a non-zero `candidates_capped` on an article of this
+shape says the article was *under-read*: whatever the cap cut was tied with what it
+kept. A non-zero `candidates_skipped` says nothing at all, which is why a combined
+count was unreadable.
+
+**Real events still dropped: 16.** All of them bare entries in the middle of the
+"Permanent Cred Offerings" bullet list (`deceptive_bond`, `power_of_three`,
+`prism_guard`, `purging_slash`, `purifying_flames`, `recharge_barrier`,
+`rifle_scavenger`, `rumbled`, `shield_disruption`, `shotgun_scavenger`, `singularity`,
+`sniper_scavenger`, `sprint_boost`, `steel_charge`) plus the two new-reward mods
+(`prototype_shock_coils`, `efv_8_mars_set`). **No keyword can reach them**: their
+200-character context window contains only other mod names, no prose at all. See the
+known hole below.
+
+### Before `supply` existed (five groups), and why the group exists
+
+The first pass measured the same article with the original five groups: 56 -> **7**
+survivors, the cap never engaging, **recall 2/36** and precision 2/7. Only
+`overpressured_rounds` and `efv_5_jupiter_set` survived, and only because their windows
+happened to contain "decrease Spread"; every candidate in both Cred Offerings lists
+scored zero. An 87% call reduction that loses 34 of 36 real events is not a cost
+control, it is a mute button, and a store-update note is exactly where bulk supply
+events live. The plan pre-committed to the remedy — when recall measures badly the fix
+is data, not architecture — so a sixth `supply` group was added rather than a redesign.
+It moved recall 2/36 -> 20/36 and precision 2/7 -> 20/28, at the price of 21 more model
+calls on this note.
+
+Two group-membership choices worth recording: `"now available"` moved from `release` to
+`supply` (it is an availability claim, and one phrase scoring under two groups would
+count a single piece of evidence twice), and the bare `"no longer"` was deliberately
+not added to `supply` for the same reason — it already scores under `balance`, so it
+costs nothing in recall to leave it there.
+
+### Known hole: context width, deferred past plan 3
+
+16 of the 36 real events on Update 43.5 are unreachable by any keyword, because their
+200-character context window contains no prose — the gate cut them out of the middle of
+a 30-name bullet list. Fixing that means widening or making section-aware
+`find_candidates(context_chars=...)`, which is a gate change, not a triage one: `context`
+is captured and stored at ingest, so the 358 candidates already in the database were all
+cut at the current width and would need a re-ingest to benefit. That is a data change
+and deserves its own argument. Deferred past plan 3, with the number recorded here so it
+does not have to be rediscovered.
