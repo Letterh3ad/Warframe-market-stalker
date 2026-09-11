@@ -171,7 +171,14 @@ def _excerpt(candidates: list[Candidate]) -> str | None:
 
 
 def status(ctx: AppContext) -> dict:
-    model = ctx.config.news_model or ctx.config.news_claude_model
+    # Branch on the backend, not on truthiness: news_model is the Ollama tag and
+    # stays set after a local benchmark, so a `or` chain reports an Ollama tag
+    # under the claude backend.
+    model = (
+        ctx.config.news_claude_model
+        if ctx.config.news_classifier == "claude"
+        else ctx.config.news_model
+    )
     return {
         "enabled": ctx.config.news_enabled,
         "sources": _resolved_sources(ctx),
