@@ -56,6 +56,14 @@ class Config:
     # warframe.com is the only source needing a request per article. The listing holds
     # ten, so this covers a full page and the rest wait for the next poll.
     news_max_bodies_per_poll: int = 10
+    # How often the daemon runs the news tick. Hourly because these feeds move on a
+    # human publishing schedule, and an unchanged article costs one conditional-less
+    # fetch and no write (upsert_article returns None when the digest matches).
+    news_poll_interval_s: float = 3600.0
+    # How often that tick returns failed articles to the queue. A classifier failure
+    # says nothing about the article, so retrying is right; six hours keeps a
+    # permanently-failing article from burning a model call every hour.
+    news_retry_interval_s: float = 21600.0
     # "none" until the benchmark (docs/design/2026-09-09-classifier-benchmark.md)
     # picks a model. No "fake" backend: build_classifier raises on anything outside
     # news_service.KNOWN_CLASSIFIERS, so a canned backend can only be injected by a
@@ -134,6 +142,8 @@ class Config:
                 "w_pin",
                 "score_saturation",
                 "news_min_interval_s",
+                "news_poll_interval_s",
+                "news_retry_interval_s",
             ):
                 out[name] = float(raw)
             elif name in ("crossplay", "persist_features", "news_enabled", "news_store_raw_json"):
