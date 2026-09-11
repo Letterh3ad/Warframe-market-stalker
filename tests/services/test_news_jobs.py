@@ -64,6 +64,31 @@ async def test_a_second_start_is_refused_while_one_is_in_flight(ctx, monkeypatch
     await news_jobs.wait()
 
 
+async def test_two_spawns_in_the_same_tick_the_second_is_refused(ctx, monkeypatch):
+    """spawn() must reserve the slot synchronously. If the reservation happens only
+    inside the task body (after the first await point), two spawn() calls made back
+    to back, with no await between them, both see the slot free and both answer
+    started=True -- the second's task then self-refuses and does nothing, but the
+    caller was told it started."""
+    release = asyncio.Event()
+
+    async def slow_ingest(context):
+        await release.wait()
+        return {"articles_stored": 0}
+
+    monkeypatch.setattr(news_service, "ingest", slow_ingest)
+
+    first = news_jobs.spawn(ctx, "ingest")
+    second = news_jobs.spawn(ctx, "classify")
+
+    assert first["started"] is True
+    assert second["started"] is False
+    assert "ingest" in second["reason"]
+
+    release.set()
+    await news_jobs.wait()
+
+
 async def test_the_tick_and_a_spawned_job_cannot_overlap(ctx, monkeypatch):
     order = []
     release = asyncio.Event()

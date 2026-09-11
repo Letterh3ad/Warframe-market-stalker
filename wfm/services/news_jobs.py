@@ -23,13 +23,15 @@ KINDS = ("ingest", "classify")
 _lock = asyncio.Lock()
 _job: dict | None = None
 _task: asyncio.Task | None = None
+_reserved: str | None = None
 
 
 def reset() -> None:
-    """Test seam: drops the slot and the task handle. Never called in production."""
-    global _job, _task
+    """Test seam: drops the slot, the task handle, and the reservation."""
+    global _job, _task, _reserved
     _job = None
     _task = None
+    _reserved = None
 
 
 def current() -> dict | None:
@@ -42,44 +44,65 @@ async def wait() -> None:
         await _task
 
 
+def _reserve(kind: str) -> dict | None:
+    """Claim the slot, or hand back the refusal. No await in this function, so two
+    calls made back to back (spawn(); spawn();) cannot both see the slot free --
+    the reservation is what makes spawn()'s answer true, not the lock, which is
+    only acquired once the reserved task actually starts running its body."""
+    global _reserved
+    if kind not in KINDS:
+        return {"started": False, "reason": f"unknown job {kind!r}; expected one of {KINDS}"}
+    if _reserved is not None:
+        return {"started": False, "reason": f"{_reserved} already running"}
+    _reserved = kind
+    return None
+
+
+async def _run_reserved(ctx: AppContext, kind: str) -> dict:
+    """The reserved job's body. Always clears the reservation on the way out,
+    including when the exception comes from outside the news_service call (e.g.
+    count_articles), so an outage can never wedge the slot past this run."""
+    global _job, _reserved
+    try:
+        async with _lock:
+            total = ctx.news.count_articles(ArticleStatus.PENDING) if kind == "classify" else 0
+            _job = {
+                "kind": kind,
+                "running": True,
+                "done": 0,
+                "total": total,
+                "started_at": ctx.clock.utcnow(),
+                "finished_at": None,
+                "result": None,
+                "error": None,
+            }
+            try:
+                if kind == "ingest":
+                    result = await news_service.ingest(ctx)
+                else:
+                    result = await news_service.classify(ctx, on_progress=_progress)
+                _job["result"] = result
+                return result
+            except Exception as exc:  # noqa: BLE001 - the slot is the error's destination
+                _job["error"] = str(exc)
+                return {"error": str(exc)}
+            finally:
+                _job["running"] = False
+                _job["finished_at"] = ctx.clock.utcnow()
+    finally:
+        _reserved = None
+
+
 async def run(ctx: AppContext, kind: str) -> dict:
     """Run one job to completion. Returns its result, or a refusal.
 
     A refusal is a dict with started=False rather than an exception: a manual run
     that loses the race is not an error, it is a run the tick will do anyway.
     """
-    global _job
-    if kind not in KINDS:
-        return {"started": False, "reason": f"unknown job {kind!r}; expected one of {KINDS}"}
-    if _lock.locked():
-        running = _job["kind"] if _job else "a job"
-        return {"started": False, "reason": f"{running} already running"}
-
-    async with _lock:
-        total = ctx.news.count_articles(ArticleStatus.PENDING) if kind == "classify" else 0
-        _job = {
-            "kind": kind,
-            "running": True,
-            "done": 0,
-            "total": total,
-            "started_at": ctx.clock.utcnow(),
-            "finished_at": None,
-            "result": None,
-            "error": None,
-        }
-        try:
-            if kind == "ingest":
-                result = await news_service.ingest(ctx)
-            else:
-                result = await news_service.classify(ctx, on_progress=_progress)
-            _job["result"] = result
-            return result
-        except Exception as exc:  # noqa: BLE001 - the slot is the error's destination
-            _job["error"] = str(exc)
-            return {"error": str(exc)}
-        finally:
-            _job["running"] = False
-            _job["finished_at"] = ctx.clock.utcnow()
+    refusal = _reserve(kind)
+    if refusal is not None:
+        return refusal
+    return await _run_reserved(ctx, kind)
 
 
 def spawn(ctx: AppContext, kind: str) -> dict:
@@ -88,12 +111,10 @@ def spawn(ctx: AppContext, kind: str) -> dict:
     Ingest is ~30s and classify is minutes; neither belongs inside a request.
     """
     global _task
-    if kind not in KINDS:
-        return {"started": False, "reason": f"unknown job {kind!r}; expected one of {KINDS}"}
-    if _lock.locked():
-        running = _job["kind"] if _job else "a job"
-        return {"started": False, "reason": f"{running} already running"}
-    _task = asyncio.create_task(run(ctx, kind))
+    refusal = _reserve(kind)
+    if refusal is not None:
+        return refusal
+    _task = asyncio.create_task(_run_reserved(ctx, kind))
     return {"started": True, "kind": kind}
 
 
