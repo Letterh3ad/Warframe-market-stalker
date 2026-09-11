@@ -202,5 +202,5 @@ function stopSignalsSocket(e) {
   }
 }
 
-export { startSignalsSocket, stopSignalsSocket };
+export { stopSignalsSocket };
 export default { id: "signals", label: "Signals", render: renderSignals };

@@ -1,24 +1,16 @@
-import { api } from "./lib/api.js";
-import { el, showError, clearError } from "./lib/dom.js";
-import { fmt, missingLine, statTable, numTd, statLine } from "./lib/fmt.js";
-import { claimList, isCurrentList } from "./lib/panes.js";
-import { selectItem, empty as detailEmpty, dispose as disposePriceChart, invalidate as invalidateDetail } from "./lib/detail.js";
+import { el, clearError } from "./lib/dom.js";
+import { dispose as disposePriceChart, invalidate as invalidateDetail } from "./lib/detail.js";
 import * as daemonStatus from "./lib/daemon_status.js";
 import daemonTab from "./tabs/daemon.js";
 import catalogTab from "./tabs/catalog.js";
 import watchlistTab from "./tabs/watchlist.js";
 import ledgerTab from "./tabs/ledger.js";
-import signalsTab, { startSignalsSocket, stopSignalsSocket } from "./tabs/signals.js";
+import signalsTab, { stopSignalsSocket } from "./tabs/signals.js";
 import groupsTab, { invalidate as invalidateGroups } from "./tabs/groups.js";
 
-const TABS = [
-  { id: "catalog",   label: "Catalog",   render: catalogTab.render },
-  { id: "watchlist", label: "Watchlist", render: watchlistTab.render },
-  { id: "signals",   label: "Signals",   render: signalsTab.render },
-  { id: "groups",    label: "Groups",    render: groupsTab.render },
-  { id: "daemon",    label: "Daemon",    render: daemonTab.render },
-  { id: "ledger",    label: "Ledger",    render: ledgerTab.render },
-];
+// Order here is the order in the rail. Built from the modules themselves, so a tab
+// cannot advertise a label whose render function has drifted away from it.
+const TABS = [catalogTab, watchlistTab, signalsTab, groupsTab, daemonTab, ledgerTab];
 
 let activeTab = null;
 
