@@ -52,3 +52,55 @@ def test_every_module_parses_as_an_es_module(module):
         text=True,
     )
     assert result.returncode == 0, f"{module.name}: {result.stderr.strip()}"
+
+
+def _top_level_args(source: str, open_index: int) -> list[str]:
+    """The argument texts of the call whose "(" sits at `open_index`.
+
+    Nested calls collapse into their own argument, so `el("h1", null, x)` passed as
+    an argument does not look like a nullish argument of the OUTER call.
+    """
+    depth = 0
+    args: list[str] = []
+    current: list[str] = []
+    for ch in source[open_index:]:
+        if ch in "([{":
+            depth += 1
+            if depth == 1:
+                continue
+        elif ch in ")]}":
+            depth -= 1
+            if depth == 0:
+                args.append("".join(current))
+                return args
+        if depth == 1 and ch == ",":
+            args.append("".join(current))
+            current = []
+        else:
+            current.append(ch)
+    return args
+
+
+_NATIVE_APPEND = re.compile(r"\.(replaceChildren|append|prepend)\(")
+
+
+@pytest.mark.parametrize("module", _modules(), ids=lambda p: p.name)
+def test_no_nullish_child_reaches_a_native_append(module):
+    """`el()` skips nullish children; the native DOM methods render "null" as text.
+
+    So `cond ? el(...) : null` is correct inside `el(...)` and a visible bug inside
+    `box.replaceChildren(...)` -- which is how a literal "null" once appeared above
+    the News tab's buttons. Use `.filter(Boolean)` on the child list instead.
+    """
+    source = module.read_text(encoding="utf-8")
+    for match in _NATIVE_APPEND.finditer(source):
+        for arg in _top_level_args(source, match.end() - 1):
+            stripped = arg.strip()
+            assert stripped not in ("null", "undefined") and not stripped.endswith(
+                (": null", ": undefined")
+            ), f"{module.name}: {match.group(1)}() is passed a nullish child: {stripped!r}"
+            if stripped.startswith("...["):
+                assert ".filter(" in stripped, (
+                    f"{module.name}: {match.group(1)}() spreads an unfiltered array; "
+                    "a nullish element would render as the text \"null\""
+                )

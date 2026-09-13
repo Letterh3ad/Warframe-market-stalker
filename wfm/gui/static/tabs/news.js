@@ -79,13 +79,21 @@ function paintStatus(status) {
   const job = status.job;
   const busy = !!(job && job.running);
 
+  // Disabled on the click, not on the next poll: the status strip only repaints
+  // every JOB_POLL_MS, and until then a second click POSTs a job the lock refuses
+  // and puts a red banner up for what is only impatience.
+  const startAndLock = (kind) => {
+    refreshBtn.disabled = true;
+    classifyBtn.disabled = true;
+    startJob(kind);
+  };
   const refreshBtn = el("button", {
     class: "btn", type: "button",
-    onclick: () => startJob("refresh"),
+    onclick: () => startAndLock("refresh"),
   }, "Refresh");
   const classifyBtn = el("button", {
     class: "btn", type: "button",
-    onclick: () => startJob("classify"),
+    onclick: () => startAndLock("classify"),
   }, "Classify");
   refreshBtn.disabled = busy;
   classifyBtn.disabled = busy;
@@ -94,7 +102,9 @@ function paintStatus(status) {
   const backend = colonIdx === -1 ? status.classifier : status.classifier.slice(0, colonIdx);
   const model = colonIdx === -1 ? null : status.classifier.slice(colonIdx + 1);
 
-  box.replaceChildren(
+  // replaceChildren is the native method, which renders a null child as the text
+  // "null" -- unlike el(), which skips nullish children. Hence the filter.
+  box.replaceChildren(...[
     el("div", { class: "kv" }, el("span", { class: "k" }, "backend"), el("span", { class: "v" }, backend)),
     el("div", { class: "kv" }, el("span", { class: "k" }, "model"), el("span", { class: "v" }, model || "—")),
     el("div", { class: "kv" }, el("span", { class: "k" }, "articles"), fmtSpan("v", "", status.articles)),
@@ -104,7 +114,7 @@ function paintStatus(status) {
           el("span", { class: "v" }, `${job.kind} running (${job.done}/${job.total})`))
       : null,
     el("div", { class: "detail-actions" }, refreshBtn, classifyBtn),
-  );
+  ].filter(Boolean));
 }
 
 async function startJob(kind) {
@@ -113,10 +123,12 @@ async function startJob(kind) {
     body = await api(`/news/${kind}`, { method: "POST" });
   } catch (e) {
     showError(e.message);
+    loadStatus(); // the buttons were locked on the click; give them the truth back
     return;
   }
   if (body.started === false) {
     showError(body.reason);
+    loadStatus();
     return;
   }
   pollJob();
@@ -204,15 +216,20 @@ function paintEvent(ev) {
   );
   const excerpt = el("div", { class: "muted" }, ev.excerpt || "(no excerpt)");
 
-  const slugLink = el("a", {
-    href: "#",
-    onclick: (e) => {
-      e.preventDefault();
-      selectItem(ev.slug, ev.rank, null);
-    },
-  }, ev.slug);
+  // A synthetic slug is a prediction -- an announced Prime the catalog does not
+  // sell yet -- so there is nothing for selectItem to open. Plain text, not a link
+  // that can only ever answer "could not load item."
+  const slugNode = ev.link_method === "synthetic"
+    ? el("span", { class: "muted", title: "not in the catalog yet" }, ev.slug)
+    : el("a", {
+        href: "#",
+        onclick: (e) => {
+          e.preventDefault();
+          selectItem(ev.slug, ev.rank, null);
+        },
+      }, ev.slug);
   const linkLine = el("div", null,
-    slugLink,
+    slugNode,
     el("span", { class: "tag-pill" }, ev.link_method),
     fmtSpan("mono", " weight ", ev.weight),
   );
