@@ -30,3 +30,17 @@ def test_disconnecting_unsubscribes_the_client(conn):
     with client.websocket_connect("/ws/signals"):
         assert client.ctx.broadcaster.subscriber_count == 1
     assert client.ctx.broadcaster.subscriber_count == 0
+
+
+def test_a_client_message_does_not_end_the_feed(conn):
+    """The feed reads the socket only to notice a disconnect.
+
+    A client that says anything at all -- a keepalive, a stray frame -- must not be
+    mistaken for one and dropped off the feed.
+    """
+    client = _client(conn)
+    with client.websocket_connect("/ws/signals") as websocket:
+        websocket.send_text("ping")
+        client.ctx.broadcaster.publish({"slug": "x", "rank": 0, "analyzer": "flip"})
+        received = websocket.receive_json()
+    assert received == {"slug": "x", "rank": 0, "analyzer": "flip"}

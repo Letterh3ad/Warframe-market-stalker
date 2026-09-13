@@ -309,3 +309,29 @@ def test_a_refused_stop_leaves_the_intent_alone(ctx):
     daemon_service.stop(ctx)
 
     assert control.autostart_enabled(ctx.config.pid_file) is True
+
+
+async def test_the_gui_server_is_given_a_finite_graceful_shutdown_timeout(ctx, monkeypatch):
+    """Backstop for the class of bug, not the instance.
+
+    uvicorn's default graceful shutdown waits on open connections forever, so one
+    handler that misses its disconnect (as the signals feed once did) leaves the
+    daemon alive with its pid file already cleared. A finite timeout bounds that:
+    stop always ends the process, at worst cutting a connection short.
+    """
+    _daily_work_already_done(ctx)
+    _bounded_daemon(monkeypatch)
+    fake_servers = []
+
+    def fake_server(config):
+        server = _FakeServer(config)
+        fake_servers.append(server)
+        return server
+
+    monkeypatch.setattr("wfm.services.daemon_service.uvicorn.Server", fake_server)
+
+    await daemon_service.start(ctx, serve_gui=True, app=object())
+
+    timeout = fake_servers[0].config.timeout_graceful_shutdown
+    assert timeout is not None, "an unset timeout is uvicorn's wait-forever default"
+    assert 0 < timeout <= 60

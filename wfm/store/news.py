@@ -27,6 +27,12 @@ _EVENT_COLS = (
     "rationale, effective_at, raw_json"
 )
 
+_LINKED_EVENT_COLS = (
+    'l.slug, l."rank", l.link_method, l.link_score, l.direction, l.weight, '
+    "e.event_type, e.strength, e.confidence, e.subject_raw, e.effective_at, "
+    "a.id AS article_id, a.published_at, a.title, a.url, a.excerpt, a.source"
+)
+
 
 class NewsRepo:
     def __init__(self, conn: sqlite3.Connection) -> None:
@@ -283,6 +289,12 @@ class NewsRepo:
         )
         return [_to_article(r) for r in rows]
 
+    def article(self, article_id: int) -> Article | None:
+        row = self._conn.execute(
+            f"SELECT {_ARTICLE_COLS} FROM news_articles WHERE id=?", (article_id,)
+        ).fetchone()
+        return _to_article(row) if row else None
+
     def recent_articles(
         self, limit: int = 50, offset: int = 0, source: NewsSource | None = None
     ) -> list[Article]:
@@ -341,10 +353,7 @@ class NewsRepo:
             params.append(to_utc_iso(as_of))
 
         rows = self._conn.execute(
-            'SELECT l.slug, l."rank", l.link_method, l.link_score, l.direction, '
-            "l.weight, e.event_type, e.strength, e.confidence, e.subject_raw, "
-            "e.effective_at, a.id AS article_id, a.published_at, a.title, a.url, "
-            "a.excerpt "
+            f"SELECT {_LINKED_EVENT_COLS} "
             "FROM news_item_links l "
             "JOIN news_events e ON e.id = l.event_id "
             "JOIN news_articles a ON a.id = e.article_id "
@@ -360,6 +369,59 @@ class NewsRepo:
             (article_id,),
         )
         return [_to_event(r) for r in rows]
+
+    def events_page(
+        self,
+        limit: int,
+        offset: int,
+        event_type: EventType | None = None,
+        source: NewsSource | None = None,
+    ) -> list[LinkedEvent]:
+        """One page of the audit feed: link rows, newest first, fully joined.
+
+        Link rows rather than events: a row the reader can click is the unit, and an
+        event with no resolved link has nothing to offer. `source` lives on the
+        article, so filtering by it uses the join that is already here.
+        """
+        clauses, params = self._event_filter(event_type, source)
+        rows = self._conn.execute(
+            f"SELECT {_LINKED_EVENT_COLS} "
+            "FROM news_item_links l "
+            "JOIN news_events e ON e.id = l.event_id "
+            "JOIN news_articles a ON a.id = e.article_id "
+            f"{clauses} "
+            'ORDER BY COALESCE(e.effective_at, a.published_at) DESC, e.id DESC, l."rank" '
+            "LIMIT ? OFFSET ?",
+            (*params, limit, offset),
+        )
+        return [_to_linked_event(r) for r in rows]
+
+    def count_events(
+        self, event_type: EventType | None = None, source: NewsSource | None = None
+    ) -> int:
+        clauses, params = self._event_filter(event_type, source)
+        row = self._conn.execute(
+            "SELECT COUNT(*) FROM news_item_links l "
+            "JOIN news_events e ON e.id = l.event_id "
+            "JOIN news_articles a ON a.id = e.article_id "
+            f"{clauses}",
+            params,
+        ).fetchone()
+        return int(row[0])
+
+    @staticmethod
+    def _event_filter(
+        event_type: EventType | None, source: NewsSource | None
+    ) -> tuple[str, tuple]:
+        """Shared so the count can never drift from the page it counts."""
+        clauses, params = [], []
+        if event_type is not None:
+            clauses.append("e.event_type = ?")
+            params.append(event_type.value)
+        if source is not None:
+            clauses.append("a.source = ?")
+            params.append(source.value)
+        return ("WHERE " + " AND ".join(clauses) if clauses else "", tuple(params))
 
     def events_with_synthetic_links(
         self, limit: int | None = None
@@ -439,6 +501,7 @@ def _to_linked_event(row: sqlite3.Row) -> LinkedEvent:
         article_title=row["title"],
         article_url=row["url"],
         excerpt=row["excerpt"],
+        source=NewsSource(row["source"]),
     )
 
 

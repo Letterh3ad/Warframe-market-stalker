@@ -150,7 +150,11 @@ def test_mark_records_the_classifier(conn):
 from wfm.news.types import ExtractedEvent, EventType, ItemLink, LinkMethod, NewsDirection
 
 
-def _event(subject="Mesa Prime", event_type=EventType.VAULT_OUT):
+def _event(
+    subject="Mesa Prime",
+    event_type=EventType.VAULT_OUT,
+    effective_at=datetime(2026, 9, 20, tzinfo=timezone.utc),
+):
     return ExtractedEvent(
         event_type=event_type,
         subject_raw=subject,
@@ -158,7 +162,7 @@ def _event(subject="Mesa Prime", event_type=EventType.VAULT_OUT):
         strength=0.8,
         confidence=0.9,
         rationale="Unvaulting floods supply",
-        effective_at=datetime(2026, 9, 20, tzinfo=timezone.utc),
+        effective_at=effective_at,
     )
 
 
@@ -483,6 +487,12 @@ def _repo_with_article(conn):
     return repo, article_id
 
 
+def test_article_round_trips_by_id_and_answers_none_for_a_stranger(conn):
+    repo, article_id = _repo_with_article(conn)
+    assert repo.article(article_id).external_id == "a1"
+    assert repo.article(9999) is None
+
+
 def test_events_for_article_round_trips_ids_and_effective_at(conn):
     repo, article_id = _repo_with_article(conn)
     ids = repo.insert_events(article_id, [_event(), _event(event_type=EventType.NERF)])
@@ -574,3 +584,93 @@ def test_requeue_failed_leaves_every_other_status_alone(conn):
 def test_requeue_failed_on_a_clean_corpus_is_zero_not_an_error(conn):
     repo, _ = _repo_with_article(conn)
     assert repo.requeue_failed() == 0
+
+
+def test_events_page_returns_newest_first_with_their_links(conn):
+    repo, article_id = _repo_with_article(conn)
+    older, newer = repo.insert_events(
+        article_id,
+        [
+            _event(effective_at=datetime(2026, 9, 1, tzinfo=timezone.utc)),
+            _event(effective_at=datetime(2026, 9, 5, tzinfo=timezone.utc)),
+        ],
+    )
+    repo.insert_links(older, [_link("rage", LinkMethod.EXACT)])
+    repo.insert_links(newer, [_link("mesa_prime_set", LinkMethod.SET_EXPANSION)])
+
+    page = repo.events_page(limit=10, offset=0)
+
+    assert [e.slug for e in page] == ["mesa_prime_set", "rage"]
+
+
+def test_events_page_filters_by_event_type(conn):
+    repo, article_id = _repo_with_article(conn)
+    buff, nerf = repo.insert_events(
+        article_id, [_event(event_type=EventType.BUFF), _event(event_type=EventType.NERF)]
+    )
+    repo.insert_links(buff, [_link("rage", LinkMethod.EXACT)])
+    repo.insert_links(nerf, [_link("fury", LinkMethod.EXACT)])
+
+    page = repo.events_page(limit=10, offset=0, event_type=EventType.NERF)
+
+    assert [e.slug for e in page] == ["fury"]
+
+
+def test_events_page_filters_by_source_which_lives_on_the_article(conn):
+    repo = NewsRepo(conn)
+    forums_id = repo.upsert_article(
+        _article(external_id="f1", source=NewsSource.FORUMS).hashed(), NOW
+    )
+    news_id = repo.upsert_article(
+        _article(external_id="w1", source=NewsSource.WARFRAME_NEWS).hashed(), NOW
+    )
+    (from_forums,) = repo.insert_events(forums_id, [_event()])
+    (from_news,) = repo.insert_events(news_id, [_event()])
+    repo.insert_links(from_forums, [_link("rage", LinkMethod.EXACT)])
+    repo.insert_links(from_news, [_link("fury", LinkMethod.EXACT)])
+
+    page = repo.events_page(limit=10, offset=0, source=NewsSource.FORUMS)
+
+    assert [e.slug for e in page] == ["rage"]
+
+
+def test_count_events_matches_the_filters_it_is_paged_with(conn):
+    repo, article_id = _repo_with_article(conn)
+    buff, nerf = repo.insert_events(
+        article_id, [_event(event_type=EventType.BUFF), _event(event_type=EventType.NERF)]
+    )
+    repo.insert_links(buff, [_link("rage", LinkMethod.EXACT)])
+    repo.insert_links(nerf, [_link("fury", LinkMethod.EXACT)])
+
+    assert repo.count_events() == 2
+    assert repo.count_events(event_type=EventType.BUFF) == 1
+
+
+def test_events_page_rows_carry_their_own_articles_source(conn):
+    # Catches the join silently picking up the wrong table's `source`-shaped column.
+    repo = NewsRepo(conn)
+    forums_id = repo.upsert_article(
+        _article(external_id="f1", source=NewsSource.FORUMS).hashed(), NOW
+    )
+    news_id = repo.upsert_article(
+        _article(external_id="w1", source=NewsSource.WARFRAME_NEWS).hashed(), NOW
+    )
+    (from_forums,) = repo.insert_events(forums_id, [_event()])
+    (from_news,) = repo.insert_events(news_id, [_event()])
+    repo.insert_links(from_forums, [_link("rage", LinkMethod.EXACT)])
+    repo.insert_links(from_news, [_link("fury", LinkMethod.EXACT)])
+
+    page = repo.events_page(limit=10, offset=0)
+
+    by_slug = {e.slug: e.source for e in page}
+    assert by_slug["rage"] == NewsSource.FORUMS
+    assert by_slug["fury"] == NewsSource.WARFRAME_NEWS
+
+
+def test_an_event_with_no_links_is_not_in_the_feed(conn):
+    # The feed is link rows: an event the linker could not resolve has nothing to
+    # click through to, and showing it would imply an item connection that failed.
+    repo, article_id = _repo_with_article(conn)
+    repo.insert_events(article_id, [_event()])
+
+    assert repo.events_page(limit=10, offset=0) == []

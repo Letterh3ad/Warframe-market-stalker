@@ -16,11 +16,20 @@ from wfm.config import Config
 from wfm.daemon.runner import Daemon
 from wfm.models import Item
 from wfm.news.types import Article, ArticleStatus, NewsSource
-from wfm.services import news_service
+from wfm.services import news_jobs, news_service
 from wfm.services.context import AppContext
 
 START = datetime(2026, 9, 11, 5, 0, tzinfo=timezone.utc)
 VERSIONS = {"collections": {"items": "v42"}}
+
+
+@pytest.fixture(autouse=True)
+def _reset_news_jobs():
+    # news_jobs holds module-level state; a leftover reservation from one test
+    # makes the next test's tick silently refuse instead of running.
+    news_jobs.reset()
+    yield
+    news_jobs.reset()
 
 
 @pytest.fixture
@@ -190,3 +199,41 @@ async def test_a_stop_during_a_long_classify_is_heard_before_it_finishes(
     # stop was recorded.
     assert seen == [1]
     assert ctx.daemon_state.get()["status"] == "stopped"
+
+
+async def test_the_tick_goes_through_the_job_lock(ctx, monkeypatch):
+    # Otherwise the GUI and the tick can classify the same pending batch at once,
+    # and every event lands twice.
+    kinds = []
+
+    async def fake_run(context, kind, on_progress=None):
+        kinds.append(kind)
+        return {}
+
+    monkeypatch.setattr(news_jobs, "run", fake_run)
+    await Daemon(ctx).run(max_iterations=1)
+    assert kinds == ["ingest", "classify"]
+
+
+async def test_a_tick_that_loses_the_job_lock_says_so(ctx, monkeypatch):
+    """A refusal and a quiet tick both return zero counts.
+
+    A GUI-started classify runs for minutes and can span the whole tick interval,
+    so "0 new articles" would hide a tick that never ran at all.
+    """
+    details = []
+    original = Daemon._heartbeat
+
+    def spy(self, detail, status="running"):
+        details.append(detail)
+        return original(self, detail, status)
+
+    monkeypatch.setattr(Daemon, "_heartbeat", spy)
+
+    async def refuse(context, kind, on_progress=None):
+        return {"started": False, "reason": f"{kind} already running"}
+
+    monkeypatch.setattr(news_jobs, "run", refuse)
+    await Daemon(ctx).run(max_iterations=1)
+
+    assert any("already running" in d for d in details), details

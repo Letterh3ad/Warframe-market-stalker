@@ -27,6 +27,8 @@ from wfm.news.types import (
     ArticleStatus,
     Candidate,
     ClassifyRequest,
+    EventType,
+    LinkedEvent,
     LinkMethod,
     NewsSource,
 )
@@ -339,6 +341,104 @@ async def _classify_article(ctx, article, classifier, catalog, summary) -> None:
     )
     summary["articles"] += 1
     summary["events"] += len(events)
+
+
+MAX_EVENTS_PAGE = 200
+
+
+def events_page(
+    ctx: AppContext,
+    limit: int = 50,
+    offset: int = 0,
+    event_type: str | None = None,
+    source: str | None = None,
+) -> dict:
+    """The audit feed, shaped like catalog_service.browse so the GUI pages it the same way.
+
+    Unknown filter values answer an empty page rather than raising: the value comes
+    from a query string a human can edit, and a typo there is not a server error.
+    """
+    limit = max(1, min(int(limit), MAX_EVENTS_PAGE))
+    offset = max(0, int(offset))
+    try:
+        parsed_type = EventType(event_type) if event_type else None
+        parsed_source = NewsSource(source) if source else None
+    except ValueError:
+        return {"total": 0, "limit": limit, "offset": offset, "events": []}
+    return {
+        "total": ctx.news.count_events(parsed_type, parsed_source),
+        "limit": limit,
+        "offset": offset,
+        "events": [
+            _linked_event_dict(e)
+            for e in ctx.news.events_page(limit, offset, parsed_type, parsed_source)
+        ],
+    }
+
+
+def _linked_event_dict(event: LinkedEvent) -> dict:
+    return {
+        "slug": event.slug,
+        "rank": event.rank,
+        "event_type": event.event_type.value,
+        "direction": event.direction.value,
+        "strength": event.strength,
+        "confidence": event.confidence,
+        "weight": event.weight,
+        "link_method": event.link_method.value,
+        "subject_raw": event.subject_raw,
+        "effective_at": event.effective_at,
+        "published_at": event.published_at,
+        "article_id": event.article_id,
+        "article_title": event.article_title,
+        "article_url": event.article_url,
+        "source": event.source.value,
+        "excerpt": event.excerpt,
+    }
+
+
+def article_detail(ctx: AppContext, article_id: int) -> dict | None:
+    """The article plus its classified events and their links, for the article view.
+
+    None when the id is unknown, so the route can turn that into a 404 without
+    reaching into the store itself.
+    """
+    article = ctx.news.article(article_id)
+    if article is None:
+        return None
+    return {
+        "article": {
+            "id": article.id,
+            "source": article.source.value,
+            "title": article.title,
+            "url": article.url,
+            "published_at": article.published_at,
+            "status": article.status.value,
+        },
+        "events": [
+            {
+                "id": event.id,
+                "event_type": event.event_type.value,
+                "subject_raw": event.subject_raw,
+                "direction": event.direction.value,
+                "strength": event.strength,
+                "confidence": event.confidence,
+                "rationale": event.rationale,
+                "effective_at": event.effective_at,
+                "links": [
+                    {
+                        "slug": link.slug,
+                        "rank": link.rank,
+                        "link_method": link.link_method.value,
+                        "weight": link.weight,
+                        "direction": link.direction.value,
+                    }
+                    for link in ctx.news.links_for_event(event.id)
+                ],
+            }
+            for event in ctx.news.events_for_article(article_id)
+        ],
+    }
 
 
 def retry_failed(ctx: AppContext) -> dict:

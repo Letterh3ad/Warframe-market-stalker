@@ -1538,3 +1538,142 @@ from `daemon_state` instead of a marker file (rejected: the launcher runs before
 anything, and the DB cannot distinguish "stopped on purpose" from "crashed" -- a hard
 kill leaves the status column saying `running`).
 
+
+## 2026-09-11 - The ES-module split ran all at once, in one plan
+
+**Context:** The 2026-09-05 vanilla-vs-Svelte entry recorded the exit condition and named
+the plan; it also said tabs would migrate "one at a time instead of in a single rewrite",
+leaving open how long a half-split state would last. The 1697-line file had tripped its
+own recorded exit condition.
+
+**Decision:** Eleven native ES modules (`lib/` + `tabs/`), no build step, the whole split
+done in this one plan: verbatim moves, one commit per module, cleanup only after the move
+that commit covers. `wfm/gui/static/app.js` went 1497 -> 71 lines.
+
+**Alternatives:** Svelte (rejected again: a build step for one personal dashboard).
+Spreading the split across "one tab at a time" over separate future plans (rejected: the
+two cross-cutting seams, `selectItem` and `selectTab`'s pane teardown, have to be designed
+the moment the first module leaves the file, and a half-split state applies them
+inconsistently for however long the rest takes to land).
+
+## 2026-09-11 - The News tab is an event feed, not an article feed
+
+**Context:** The first real local classifier run labelled 141 events and reported
+`confidence = high` on 133 of them, including rows labelled `other`/`unclear`; no accuracy
+measurement exists yet.
+
+**Decision:** The feed's unit is the link row (`GET /news/events`), so the tab answers "is
+the classifier right?" rather than "what happened this patch". This is also the surface a
+future gold-set labelling pass would use.
+
+**Alternatives:** The article feed the parent spec sketched (`GET /news?limit=&offset=
+&source=` with drill-down), rejected for now but kept reachable at
+`GET /news/articles/{id}`.
+
+## 2026-09-11 - News jobs are single-flight per process, and that is not airtight
+
+**Context:** The daemon tick and the GUI's two buttons run the same ingest/classify work.
+Both read the pending queue before either marks anything, so two overlapping classify
+runs would write every event twice.
+
+**Decision:** One `asyncio.Lock` plus a synchronous reservation in
+`wfm/services/news_jobs.py`, shared because the GUI runs inside the daemon process. The
+reservation (not the lock) is what makes a refusal race-free, since it is set with no
+`await` between the check and the claim.
+
+**Alternatives:** Claiming rows in the database (rejected: a migration for a race that
+needs a second terminal to hit). **The hole is recorded, not fixed:** the lock is
+per-process, so a `wfm news classify` run from a second terminal is outside it; closing
+that needs row claims in the database and therefore a migration, which this branch does
+not do.
+
+## 2026-09-13 - The signals feed reads its socket, and the GUI server has a shutdown deadline
+
+**Context:** The three browser checks owed before merging `phase-9a-news-tab` turned up a
+worse bug than any of them tested for. `wfm daemon stop` never finished once anything had
+opened the Signals tab: the feed handler only ever awaited the broadcaster queue, so it
+never read the `websocket.disconnect` message, and uvicorn's graceful shutdown waited on
+that connection forever. Measured: no client, the daemon exits in 7s; one client, it was
+still alive at 69s (and >150s in the browser case). `daemon_service.start` clears the pid
+file before that hang, so `wfm daemon status` reports nothing running while a zombie still
+holds port 8420 and only a hard kill clears it. Pre-existing since `1b1750e` (phase 8),
+not introduced by this branch. TestClient cancels the handler task when its `with` block
+exits, which is why 1247 green tests never saw it.
+
+**Decision:** Two layers. The handler races `queue.get()` against `websocket.receive()`
+and returns when the receive wins, which is the actual fix. `uvicorn.Config` also carries
+`timeout_graceful_shutdown=10`, which bounds the same failure for any future handler that
+makes the same mistake: stop always ends the process, at worst cutting a connection short.
+The regression test has to boot a real `uvicorn.Server`, so it lives in
+`tests/gui/test_real_server_smoke.py` beside the other bug TestClient could not see.
+
+**Alternatives:** The timeout alone (rejected: it turns a hang into a 10s delay on every
+stop and leaves the handler leaking). Watching `server.should_exit` from the handler
+(rejected: couples a route to the process that serves it, and still misses a client that
+simply closes its tab).
+
+## 2026-09-13 - Nullish children are a static-test rule, not a habit
+
+**Context:** The same click-through found a literal "null" rendered above the News tab's
+two buttons. `el()` skips nullish children, so `cond ? el(...) : null` is correct
+everywhere in the codebase except the one place that passes it to the native
+`replaceChildren`, which stringifies it.
+
+**Decision:** `paintStatus` filters its child list, and
+`tests/gui/test_static_modules.py` grows a parser-free guard over every static module: no
+top-level argument of `.replaceChildren(`/`.append(`/`.prepend(` may be nullish, and a
+spread array argument must carry a `.filter(`. Same philosophy as that file's import
+check -- a regex over source that catches the failure class without pretending to parse
+JavaScript.
+
+**Alternatives:** A DOM-level JS test (rejected: needs jsdom and an npm install, and the
+static tree's whole premise is no build step). Wrapping every `replaceChildren` in a
+nullish-filtering helper (rejected for now: one call site had the bug, and the guard
+catches the next one).
+
+## 2026-09-13 - The job slot holds a job's failures, not the caller's control flow
+
+**Context:** The pre-merge review of `phase-9a-news-tab` found that `news_jobs`'
+`except Exception` swallowed `_NewsInterrupted`, which the daemon raises from its progress
+callback to abort a long classify on `wfm daemon stop`. The runner's
+`except _NewsInterrupted: raise` and the poll loop's own catch were dead for the news
+path: a stop during a classify heartbeated a false success, then ran one more poll, and a
+breaker trip in that poll would have reported `halted` and alerted instead of a clean
+`stopped`. Confirmed with a test before fixing (`run()` returned a dict instead of
+raising).
+
+**Decision:** `_chain_progress` records what the caller's callback raised, and the body
+re-raises that exact exception object while still routing every other failure into the
+slot. Identity, not type: `news_jobs` has no business knowing about `_NewsInterrupted`.
+Two smaller fixes landed with it: `count_articles` moved inside the try (a failure there
+used to escape past the slot entirely, which under `spawn()` means the user sees a
+re-enabled button and no error), and a lock refusal now heartbeats
+`"news tick skipped: ..."` instead of reading as a quiet tick with zero counts.
+
+**Alternatives:** A dedicated `JobInterrupted` type the daemon must raise (rejected:
+couples the daemon's control flow to the job runner's vocabulary). Not stamping
+`_last_news_tick` on a refusal so the tick retries next iteration (rejected for now: it
+makes a long GUI classify spin the tick, and the existing rule is that a tick which does
+not run waits out its interval -- the refusal is now visible, which was the actual
+complaint).
+
+**Also decided, deliberately not fixed:** `news_jobs.wait()` stays uncalled at shutdown.
+Draining a classify would put `wfm daemon stop` back to minutes, which is the thing fixed
+earlier the same day. A job killed mid-run loses only the article in flight. The docstring
+now says so instead of claiming it is "for a clean shutdown".
+
+## 2026-09-13 - A synthetic slug is text, not a link
+
+**Context:** Same review. The News feed rendered every link row's slug as an anchor into
+the detail pane, including `link_method = "synthetic"` rows -- an announced Prime the
+catalog does not sell yet, which by construction has no `items` row. Reproduced in the
+browser: clicking `steflos_prime_set` gave "could not load item." and an error banner.
+Three such rows exist in the local corpus today.
+
+**Decision:** Synthetic rows render as plain muted text with a `not in the catalog yet`
+title. Verified in the browser both ways: the synthetic row is no longer an anchor, and an
+`exact` row still opens (Banshee Prime Set, no banner).
+
+**Alternatives:** Leaving the link and catching the failure more gently (rejected: the
+click has nowhere to go, so the honest UI is not to offer it). Linking to the article
+instead (rejected: the row already carries the article link in its footer).

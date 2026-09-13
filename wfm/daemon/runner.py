@@ -8,7 +8,7 @@ from datetime import date, datetime
 
 from wfm.api.errors import ApiError, CircuitOpen
 from wfm.features import price as price_features
-from wfm.services import news_service
+from wfm.services import news_jobs, news_service
 from wfm.services.alert_service import deliver, operational, run_digest
 from wfm.services.analysis_service import analyze_item_records, signal_payload
 from wfm.services.context import AppContext
@@ -370,8 +370,10 @@ class Daemon:
         # rather than retrying on every iteration of the poll loop.
         self._last_news_tick = now
         try:
-            ingested = await news_service.ingest(ctx)
-            self._heartbeat(f"news: {ingested['articles_stored']} new articles")
+            ingested = await news_jobs.run(ctx, "ingest")
+            if self._news_refused(ingested):
+                return
+            self._heartbeat(f"news: {ingested.get('articles_stored', 0)} new articles")
             if ctx.config.news_classifier == "none":
                 return
             if self._news_retry_due(now):
@@ -379,15 +381,29 @@ class Daemon:
                 requeued = news_service.retry_failed(ctx)["requeued"]
                 if requeued:
                     log.info("news: requeued %d failed articles", requeued)
-            summary = await news_service.classify(ctx, on_progress=self._news_progress)
+            summary = await news_jobs.run(ctx, "classify", on_progress=self._news_progress)
+            if self._news_refused(summary):
+                return
             self._heartbeat(
-                f"news: {summary['events']} events from {summary['articles']} articles"
+                f"news: {summary.get('events', 0)} events from {summary.get('articles', 0)} articles"
             )
         except _NewsInterrupted:
             raise
         except Exception as exc:
             log.warning("news tick failed: %s", exc)
             self._heartbeat(f"news tick failed: {exc}")
+
+    def _news_refused(self, outcome: dict) -> bool:
+        """A job the lock turned down, reported rather than counted.
+
+        A refusal and a quiet tick both carry zero counts, so without this a GUI
+        classify that spans the interval reads as "0 new articles" -- a tick that
+        never ran, indistinguishable from one with nothing to do.
+        """
+        if outcome.get("started") is not False:
+            return False
+        self._heartbeat(f"news tick skipped: {outcome.get('reason', 'job refused')}")
+        return True
 
     def _news_retry_due(self, now: float) -> bool:
         return (

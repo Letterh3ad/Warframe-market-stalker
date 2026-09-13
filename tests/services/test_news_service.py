@@ -217,3 +217,12 @@ def test_status_reports_the_ollama_tag_under_the_ollama_backend(conn):
         clock=FakeClock(NOW),
     )
     assert news_service.status(ctx)["classifier"] == "ollama:qwen3:4b"
+
+
+def test_events_page_answers_an_empty_page_for_an_unknown_filter(ctx):
+    # The value comes from a query string a human can edit.
+    assert news_service.events_page(ctx, event_type="explodes")["events"] == []
+
+
+def test_events_page_clamps_an_absurd_limit(ctx):
+    assert news_service.events_page(ctx, limit=100000)["limit"] == news_service.MAX_EVENTS_PAGE
