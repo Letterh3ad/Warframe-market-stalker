@@ -20,6 +20,9 @@ STALE_AFTER_S = 15 * 60
 
 GUI_START_TIMEOUT_S = 3.0
 GUI_START_POLL_INTERVAL_S = 0.01
+# uvicorn waits on open connections forever by default, so one handler that misses
+# its disconnect would keep the process alive after the pid file is already gone.
+GUI_SHUTDOWN_TIMEOUT_S = 10
 
 
 async def _serve_gui(server: uvicorn.Server) -> None:
@@ -84,7 +87,11 @@ async def start(
         if app is None:
             raise ValueError("serve_gui=True requires an app (build one with wfm.gui.app.build_app)")
         uvicorn_config = uvicorn.Config(
-            app, host=ctx.config.gui_host, port=ctx.config.gui_port, log_level="warning"
+            app,
+            host=ctx.config.gui_host,
+            port=ctx.config.gui_port,
+            log_level="warning",
+            timeout_graceful_shutdown=GUI_SHUTDOWN_TIMEOUT_S,
         )
         server = uvicorn.Server(uvicorn_config)
         server_task = asyncio.create_task(_serve_gui(server))

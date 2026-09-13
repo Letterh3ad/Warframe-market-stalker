@@ -17,12 +17,14 @@ though the same routes returned 200 under TestClient's own thread model.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import inspect
 import socket
 from datetime import datetime, timezone
 
 import httpx
 import uvicorn
+import websockets
 from fastapi.routing import APIRoute
 
 from tests.fakes.clock import FakeClock
@@ -34,6 +36,10 @@ from wfm.store.db import connect
 from wfm.store.migrate import migrate
 
 NOW = datetime(2026, 9, 6, 12, 0, tzinfo=timezone.utc)
+
+# Generous next to a healthy shutdown (well under a second); the failure it guards
+# against is unbounded, so the exact number does not matter.
+SHUTDOWN_TIMEOUT_S = 10.0
 
 
 def _free_port() -> int:
@@ -132,4 +138,42 @@ async def test_every_router_answers_over_a_real_server_not_500(tmp_path):
     finally:
         server.should_exit = True
         await server_task
+        conn.close()
+
+
+async def test_the_server_shuts_down_while_a_signals_websocket_is_open(tmp_path):
+    """A client parked on the signals feed must not outlive `should_exit`.
+
+    The feed handler waits on the broadcaster queue. If it never also watches for
+    the disconnect, uvicorn's graceful shutdown waits on that connection forever
+    and `daemon_service.start`'s `await server_task` never returns: the daemon
+    leaves its poll loop, clears the pid file, and lives on as a zombie still
+    holding the port. `wfm daemon stop` is the only stop path on Windows, so this
+    is the test that has to boot a real server -- TestClient cancels the handler
+    task on its own when the `with` block exits, which hides it.
+    """
+    conn = connect(tmp_path / "shutdown.db")
+    migrate(conn)
+    ctx = AppContext(Config(pid_file=tmp_path / "wfm.pid"), conn=conn, clock=FakeClock(start_utc=NOW))
+
+    app = build_app(ctx)
+    port = _free_port()
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+    server_task = asyncio.create_task(server.serve())
+    try:
+        for _ in range(200):
+            if server.started or server_task.done():
+                break
+            await asyncio.sleep(0.01)
+        assert server.started, "server failed to start"
+
+        async with websockets.connect(f"ws://127.0.0.1:{port}/ws/signals"):
+            server.should_exit = True
+            await asyncio.wait_for(asyncio.shield(server_task), timeout=SHUTDOWN_TIMEOUT_S)
+    finally:
+        server.should_exit = True
+        server_task.cancel()
+        with contextlib.suppress(Exception, asyncio.CancelledError):
+            await server_task
         conn.close()
