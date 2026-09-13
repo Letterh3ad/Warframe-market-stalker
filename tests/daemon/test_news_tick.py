@@ -213,3 +213,27 @@ async def test_the_tick_goes_through_the_job_lock(ctx, monkeypatch):
     monkeypatch.setattr(news_jobs, "run", fake_run)
     await Daemon(ctx).run(max_iterations=1)
     assert kinds == ["ingest", "classify"]
+
+
+async def test_a_tick_that_loses_the_job_lock_says_so(ctx, monkeypatch):
+    """A refusal and a quiet tick both return zero counts.
+
+    A GUI-started classify runs for minutes and can span the whole tick interval,
+    so "0 new articles" would hide a tick that never ran at all.
+    """
+    details = []
+    original = Daemon._heartbeat
+
+    def spy(self, detail, status="running"):
+        details.append(detail)
+        return original(self, detail, status)
+
+    monkeypatch.setattr(Daemon, "_heartbeat", spy)
+
+    async def refuse(context, kind, on_progress=None):
+        return {"started": False, "reason": f"{kind} already running"}
+
+    monkeypatch.setattr(news_jobs, "run", refuse)
+    await Daemon(ctx).run(max_iterations=1)
+
+    assert any("already running" in d for d in details), details

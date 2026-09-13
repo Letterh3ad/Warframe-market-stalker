@@ -39,7 +39,12 @@ def current() -> dict | None:
 
 
 async def wait() -> None:
-    """Await the spawned task, if any. For tests and for a clean shutdown."""
+    """Await the spawned task, if any. A test seam.
+
+    Deliberately NOT called at shutdown: a classify is minutes long, and draining
+    it would put `wfm daemon stop` back where it was before 2026-09-13. A job
+    killed mid-run loses only the article in flight, since classify commits as it
+    goes and the rest of the queue stays PENDING for the next tick."""
     if _task is not None:
         await _task
 
@@ -63,29 +68,39 @@ async def _run_reserved(ctx: AppContext, kind: str, on_progress=None) -> dict:
     including when the exception comes from outside the news_service call (e.g.
     count_articles), so an outage can never wedge the slot past this run."""
     global _job, _reserved
+    # What `on_progress` raised, if anything. The slot is where a JOB's failure goes
+    # (a dead feed, a stopped Ollama); the caller's own control flow -- the daemon
+    # aborting a classify on stop -- has to come back out to the caller instead.
+    raised: list[BaseException] = []
     try:
         async with _lock:
-            total = ctx.news.count_articles(ArticleStatus.PENDING) if kind == "classify" else 0
             _job = {
                 "kind": kind,
                 "running": True,
                 "done": 0,
-                "total": total,
+                "total": 0,
                 "started_at": ctx.clock.utcnow(),
                 "finished_at": None,
                 "result": None,
                 "error": None,
             }
             try:
+                # Inside the try, not before the slot exists: spawn() hands the
+                # return value to nobody, so a read that fails here would otherwise
+                # be reported only as asyncio's never-retrieved-exception warning.
+                if kind == "classify":
+                    _job["total"] = ctx.news.count_articles(ArticleStatus.PENDING)
                 if kind == "ingest":
                     result = await news_service.ingest(ctx)
                 else:
                     result = await news_service.classify(
-                        ctx, on_progress=_chain_progress(on_progress)
+                        ctx, on_progress=_chain_progress(on_progress, raised)
                     )
                 _job["result"] = result
                 return result
             except Exception as exc:  # noqa: BLE001 - the slot is the error's destination
+                if raised and exc is raised[0]:
+                    raise
                 _job["error"] = str(exc)
                 return {"error": str(exc)}
             finally:
@@ -129,14 +144,21 @@ def _progress(external_id: str, done: int) -> None:
         _job["done"] = done
 
 
-def _chain_progress(on_progress):
+def _chain_progress(on_progress, raised: list):
     """The job slot's own counter always updates; a caller's callback, if any,
-    fires alongside it rather than instead of it."""
+    fires alongside it rather than instead of it.
+
+    Whatever the caller's callback raises is recorded in `raised` on the way past,
+    so the body can tell it apart from a failure of the job itself."""
     if on_progress is None:
         return _progress
 
     def _both(external_id: str, done: int) -> None:
         _progress(external_id, done)
-        on_progress(external_id, done)
+        try:
+            on_progress(external_id, done)
+        except BaseException as exc:
+            raised.append(exc)
+            raise
 
     return _both

@@ -371,6 +371,8 @@ class Daemon:
         self._last_news_tick = now
         try:
             ingested = await news_jobs.run(ctx, "ingest")
+            if self._news_refused(ingested):
+                return
             self._heartbeat(f"news: {ingested.get('articles_stored', 0)} new articles")
             if ctx.config.news_classifier == "none":
                 return
@@ -380,6 +382,8 @@ class Daemon:
                 if requeued:
                     log.info("news: requeued %d failed articles", requeued)
             summary = await news_jobs.run(ctx, "classify", on_progress=self._news_progress)
+            if self._news_refused(summary):
+                return
             self._heartbeat(
                 f"news: {summary.get('events', 0)} events from {summary.get('articles', 0)} articles"
             )
@@ -388,6 +392,18 @@ class Daemon:
         except Exception as exc:
             log.warning("news tick failed: %s", exc)
             self._heartbeat(f"news tick failed: {exc}")
+
+    def _news_refused(self, outcome: dict) -> bool:
+        """A job the lock turned down, reported rather than counted.
+
+        A refusal and a quiet tick both carry zero counts, so without this a GUI
+        classify that spans the interval reads as "0 new articles" -- a tick that
+        never ran, indistinguishable from one with nothing to do.
+        """
+        if outcome.get("started") is not False:
+            return False
+        self._heartbeat(f"news tick skipped: {outcome.get('reason', 'job refused')}")
+        return True
 
     def _news_retry_due(self, now: float) -> bool:
         return (

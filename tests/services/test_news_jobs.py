@@ -158,3 +158,53 @@ async def test_a_caller_supplied_progress_callback_also_fires(ctx, monkeypatch):
     await news_jobs.run(ctx, "classify", on_progress=lambda eid, n: seen.append((eid, n)))
 
     assert seen == [("news:1", 1)]
+
+
+async def test_an_exception_from_the_callers_progress_callback_is_not_swallowed(ctx, monkeypatch):
+    """The daemon aborts a long classify by raising from its progress callback.
+
+    The job slot is the destination for a *job's* failure (a dead feed, a stopped
+    Ollama), not for the caller's own control flow: if this is caught here, the
+    runner's `except _NewsInterrupted` never fires and `wfm daemon stop` during a
+    classify is heard a whole poll late, reported as a success.
+    """
+
+    class Interrupt(Exception):
+        pass
+
+    async def fake_classify(context, on_progress=None):
+        on_progress("a1", 1)
+        return {"events": 99}
+
+    monkeypatch.setattr(news_service, "classify", fake_classify)
+
+    def stop_now(external_id, done):
+        raise Interrupt
+
+    with pytest.raises(Interrupt):
+        await news_jobs.run(ctx, "classify", on_progress=stop_now)
+
+    # And the slot is not wedged: the next job still starts.
+    assert news_jobs._reserve("classify") is None
+
+
+async def test_a_failure_counting_the_queue_lands_in_the_slot_like_any_other(ctx, monkeypatch):
+    """`spawn` gives nobody the return value, so the slot is the only report there is.
+
+    A read that fails before the job body starts used to escape past the slot
+    entirely: the button re-enabled, /news/status still described the PREVIOUS
+    run, and the traceback surfaced only as asyncio's never-retrieved warning.
+    """
+
+    def boom(*a, **kw):
+        raise RuntimeError("database is locked")
+
+    monkeypatch.setattr(ctx.news, "count_articles", boom)
+
+    result = await news_jobs.run(ctx, "classify")
+
+    assert result == {"error": "database is locked"}
+    job = news_jobs.current()
+    assert job["kind"] == "classify"
+    assert job["running"] is False
+    assert job["error"] == "database is locked"
