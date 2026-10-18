@@ -17,3 +17,4 @@ __pycache__/
 wfm.toml
 wfm.pid
 wfm.autostart
+/CLAUDE.md
